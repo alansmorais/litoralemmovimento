@@ -45,36 +45,86 @@ export const VehicleFleetSection: React.FC = () => {
             <span>Nossa Frota</span>
           </div>
           <h2 className="font-serif-display text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Conforto para chegar bem ao destino
+            Frota Preparada para Cada Necessidade
           </h2>
           <p className="text-slate-300 text-base sm:text-lg mt-3 leading-relaxed">
-            A Chevrolet Spin 7 Lugares oferece o equilíbrio ideal entre espaço interno, estabilidade na serra e suavidade no trajeto.
+            Opções em <strong>Chevrolet Spin 7 Lugares</strong> (famílias e grupos até 6 pessoas) e <strong>Carro Executivo 4 Lugares</strong> (atendimento ágil para até 4 passageiros).
           </p>
         </div>
 
         {/* Showcase Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Seating Layout Blueprint */}
           <div className="lg:col-span-6 bg-slate-800/90 border border-slate-700 rounded-2xl p-6 sm:p-7 shadow-xl space-y-5">
             <div className="flex items-center justify-between border-b border-slate-700 pb-4">
               <div>
                 <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider block">
-                  Configuração Executiva da Cabine
+                  Opções de Veículo Disponíveis
                 </span>
                 <h3 className="font-serif-display font-bold text-xl sm:text-2xl text-white">
-                  Chevrolet Spin Premier
+                  Spin 7L & Carro 4L
                 </h3>
               </div>
-              <span className="bg-slate-900 text-amber-300 border border-slate-700 text-xs font-semibold px-3 py-1 rounded-full">
-                7 Assentos
-              </span>
+              <div className="flex gap-2">
+                <span className="bg-slate-900 text-amber-300 border border-slate-700 text-xs font-semibold px-3 py-1 rounded-full">
+                  7 Lugares
+                </span>
+                <span className="bg-slate-900 text-sky-300 border border-slate-700 text-xs font-semibold px-3 py-1 rounded-full">
+                  4 Lugares
+                </span>
+              </div>
+            </div>
+
+            {/* Vehicle Comparison Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-slate-950 p-4 rounded-xl border border-amber-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">🚐</span>
+                  <h4 className="font-bold text-sm text-white">Chevrolet Spin 7L</h4>
+                </div>
+                <ul className="text-xs text-slate-300 space-y-1.5">
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Até 6 passageiros + motorista</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Ar-condicionado duplo digital</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Porta-malas flexível até 710L</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-xl border border-sky-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">🚗</span>
+                  <h4 className="font-bold text-sm text-white">Carro Executivo 4L</h4>
+                </div>
+                <ul className="text-xs text-slate-300 space-y-1.5">
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                    <span>Até 4 passageiros confortáveis</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                    <span>Ar-condicionado & som Bluetooth</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                    <span>Ideal para casais e executivos</span>
+                  </li>
+                </ul>
+              </div>
             </div>
 
             {/* Visual Cabin Blueprint */}
             <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
               <div className="flex items-center justify-between text-xs text-slate-400 border-b border-slate-800 pb-2">
-                <span className="font-medium text-slate-300">Acomodação dos assentos:</span>
-                <span className="text-amber-400 font-mono text-[11px]">Capacidade: 6 passageiros + motorista</span>
+                <span className="font-medium text-slate-300">Layout da Minivan Spin:</span>
+                <span className="text-amber-400 font-mono text-[11px]">6 passageiros + motorista</span>
               </div>
 
               {/* Row 1 */}
@@ -156,16 +206,16 @@ export const VehicleFleetSection: React.FC = () => {
             {/* Quick Specs */}
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <span className="text-amber-400 font-bold block text-sm">1.8 Flex</span>
-                <span className="text-[10px] text-slate-400">Motorização Confiável</span>
+                <span className="text-amber-400 font-bold block text-sm">4 ou 7L</span>
+                <span className="text-[10px] text-slate-400">Opções no Form</span>
               </div>
               <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <span className="text-sky-400 font-bold block text-sm">Automático</span>
-                <span className="text-[10px] text-slate-400">Trocas Suaves</span>
+                <span className="text-sky-400 font-bold block text-sm">Climatizado</span>
+                <span className="text-[10px] text-slate-400">Ar Digital</span>
               </div>
               <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                <span className="text-amber-400 font-bold block text-sm">Ar Duplo</span>
-                <span className="text-[10px] text-slate-400">Climatização Traseira</span>
+                <span className="text-amber-400 font-bold block text-sm">Seguro</span>
+                <span className="text-[10px] text-slate-400">Regularizado</span>
               </div>
             </div>
           </div>

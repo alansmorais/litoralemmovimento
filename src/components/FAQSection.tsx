@@ -8,15 +8,19 @@ export const FAQSection: React.FC = () => {
   const faqs = [
     {
       q: 'Como faço meu agendamento? Posso agendar pelo site ou WhatsApp?',
-      a: 'Você pode fazer sua simulação e reserva instantânea diretamente pelo simulador em nosso site, escolhendo origem, destino, data e passageiros. Após o preenchimento, nosso sistema gera seu voucher e nossa equipe (Michelly) faz o contato imediato para confirmar todos os detalhes.',
+      a: 'Você pode fazer sua simulação e agendamento diretamente no formulário do site, escolhendo seu veículo (Spin 7L ou Sedã 4L), origem, destino, data e passageiros. Ao clicar em reservar, geramos seu voucher instantâneo e enviamos as informações diretamente para o WhatsApp do atendimento (Michelly) para confirmação rápida.',
     },
     {
-      q: 'Como funciona a travessia de balsa para Ilhabela no transfer privativo?',
-      a: 'No transfer privativo, você não precisa desembarcar ou se preocupar com a travessia. Nosso motorista acompanha todo o embarque na balsa e leva você no conforto da minivan com ar-condicionado até a porta da sua pousada, hotel ou casa em Ilhabela.',
+      q: 'Como funciona a ida para Ilhabela e a travessia de balsa?',
+      a: 'Temos duas modalidades: 1) Desembarque no Porto da Balsa em São Sebastião com valor padrão de R$ 700 no carro privativo; 2) Travessia com Carro Fechado para dentro da ilha a partir de R$ 900, sujeita a consulta prévia e disponibilidade de escala do motorista.',
     },
     {
-      q: 'Qual o espaço para bagagens na Chevrolet Spin de 7 Lugares?',
-      a: 'A Chevrolet Spin acomoda com conforto até 6 passageiros mais o motorista. Com até 4 a 5 passageiros, o porta-malas comporta várias malas grandes de viagem. Pranchas de surf com capa e equipamentos de praia também são transportados com segurança mediante aviso na reserva.',
+      q: 'Quais tipos de veículos estão disponíveis para reserva?',
+      a: 'Disponibilizamos a Chevrolet Spin de 7 Lugares (com ar-condicionado duplo digital, acomodando até 6 passageiros com malas grandes) e Carro Executivo de 4 Lugares (ideal para atendimentos individuais, casais ou executivos até 4 passageiros).',
+    },
+    {
+      q: 'Qual a área de atendimento em Caraguatatuba?',
+      a: 'Em Caraguatatuba atendemos exclusivamente a Rodoviária e os bairros situados no sentido São Sebastião (como Porto Novo, Praia das Palmeiras e Travessão).',
     },
     {
       q: 'O que acontece se meu voo em Guarulhos (GRU) ou Congonhas (CGH) atrasar?',
@@ -24,7 +28,7 @@ export const FAQSection: React.FC = () => {
     },
     {
       q: 'Como funciona caso eu precise fazer uma parada intermediária?',
-      a: 'Trabalhamos com total transparência. Paradas intermediárias para buscar outro passageiro ou fazer uma parada rápida podem ser adicionadas diretamente no simulador de agendamento por uma taxa fixa clara, sem surpresas de taxímetro.',
+      a: 'Trabalhamos com total transparência. Paradas intermediárias para buscar outro passageiro ou fazer uma parada rápida podem ser adicionadas diretamente no simulador de agendamento por uma taxa fixa de R$ 50/parada, sem surpresas de taxímetro.',
     },
     {
       q: 'Quais são as formas de pagamento aceitas?',

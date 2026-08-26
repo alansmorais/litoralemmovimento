@@ -2,9 +2,11 @@ export type TripStatus = 'Pendente' | 'Confirmado' | 'A caminho' | 'Em andamento
 
 export type TripType = 'Individual' | 'Compartilhada';
 
-export type DestinationCity = 'São Sebastião' | 'Ilhabela' | 'Caraguatatuba';
+export type VehicleCategory = 'spin_7' | 'sedan_4';
 
-export type OriginCity = 'São Paulo' | 'São Sebastião' | 'Ilhabela' | 'Caraguatatuba';
+export type DestinationCity = 'São Sebastião' | 'Ilhabela (Balsa São Sebastião)' | 'Ilhabela (Travessia Fechada)' | 'Caraguatatuba (Rodoviária / Sentido S. Sebastião)' | string;
+
+export type OriginCity = 'São Paulo' | 'São Sebastião' | 'Ilhabela (Balsa São Sebastião)' | 'Caraguatatuba (Rodoviária / Sentido S. Sebastião)' | string;
 
 export type UserRole = 'customer' | 'admin' | 'driver';
 
@@ -42,6 +44,7 @@ export interface Reservation {
   time: string;
   passengers: number;
   tripType: TripType;
+  vehicleCategory?: VehicleCategory;
   luggageCount: number;
   hasChildSeat: boolean;
   extraStops: ExtraStop[];

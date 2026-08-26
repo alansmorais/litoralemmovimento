@@ -19,6 +19,7 @@ import {
   Mail,
   Send,
   AlertCircle,
+  AlertTriangle,
   Sparkles,
   Plane,
   CreditCard,
@@ -55,6 +56,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
   const [pickupAddress, setPickupAddress] = useState('Aeroporto de Guarulhos (GRU) - Terminal 2');
   const [destination, setDestination] = useState(initialDestination);
   const [dropoffAddress, setDropoffAddress] = useState('');
+  const [vehicleCategory, setVehicleCategory] = useState<'spin_7' | 'sedan_4'>('spin_7');
   const [date, setDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -102,29 +104,29 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
       time: '09:00',
     },
     {
-      title: '🌴 SP ➔ Ilhabela',
-      label: 'São Paulo Capital ➔ Ilhabela (Vila / Balsa)',
+      title: '🌴 SP ➔ Balsa Ilhabela',
+      label: 'São Paulo Capital ➔ Balsa de São Sebastião / Ilhabela',
       orig: 'São Paulo',
-      dest: 'Ilhabela',
-      pick: 'Av. Paulista, Jardins ou Itaim Bibi, São Paulo',
-      drop: 'Vila Histórica / Praia do Curral, Ilhabela - SP',
+      dest: 'Ilhabela (Balsa São Sebastião)',
+      pick: 'Av. Paulista, Jardins ou Aeroportos, São Paulo',
+      drop: 'Porto da Balsa de São Sebastião (Embarque Ilhabela)',
       time: '07:30',
     },
     {
       title: '🚗 CGH ➔ Caraguatatuba',
-      label: 'Aeroporto Congonhas ➔ Caraguá',
+      label: 'Aeroporto Congonhas ➔ Rodoviária Caraguá',
       orig: 'São Paulo',
-      dest: 'Caraguatatuba',
+      dest: 'Caraguatatuba (Rodoviária / Sentido S. Sebastião)',
       pick: 'Aeroporto de Congonhas (CGH) - Portão Principal',
-      drop: 'Praia Martim de Sá / Tabatinga, Caraguatatuba - SP',
+      drop: 'Rodoviária de Caraguatatuba / Porto Novo - SP',
       time: '08:30',
     },
     {
-      title: '🏖️ Retorno Ilha ➔ SP',
-      label: 'Ilhabela ➔ São Paulo (Retorno)',
-      orig: 'Ilhabela',
+      title: '🏖️ Retorno Litoral ➔ SP',
+      label: 'São Sebastião ➔ São Paulo (Retorno)',
+      orig: 'São Sebastião',
       dest: 'São Paulo',
-      pick: 'Hotel / Pousada em Ilhabela',
+      pick: 'Pousada / Hotel no Litoral',
       drop: 'São Paulo Capital ou Aeroportos',
       time: '15:00',
     },
@@ -152,6 +154,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
     passengers,
     tripType,
     extraStopsCount: extraStops.length,
+    vehicleCategory,
   });
 
   // Calculate discount
@@ -217,8 +220,8 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
 
     try {
       let distanceKm = 195;
-      if (destination === 'Ilhabela' || origin === 'Ilhabela') distanceKm = 210;
-      if (destination === 'Caraguatatuba' || origin === 'Caraguatatuba') distanceKm = 175;
+      if (destination.includes('Ilhabela') || origin.includes('Ilhabela')) distanceKm = 210;
+      if (destination.includes('Caraguatatuba') || origin.includes('Caraguatatuba')) distanceKm = 175;
 
       const depositAmount = Number((finalTotalPrice * 0.5).toFixed(2));
       const remainingAmount = Number((finalTotalPrice - depositAmount).toFixed(2));
@@ -237,6 +240,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
         time,
         passengers,
         tripType,
+        vehicleCategory,
         luggageCount,
         hasChildSeat,
         extraStops,
@@ -464,9 +468,9 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                       id="select-origin"
                     >
                       <option value="São Paulo">São Paulo (Capital / Aeroportos GRU e CGH)</option>
-                      <option value="São Sebastião">São Sebastião (Maresias, Juquehy, Cambury)</option>
-                      <option value="Ilhabela">Ilhabela (Vila, Curral, Balsa)</option>
-                      <option value="Caraguatatuba">Caraguatatuba (Martim de Sá, Cocanha)</option>
+                      <option value="São Sebastião">São Sebastião (Maresias, Juquehy, Cambury, Centro)</option>
+                      <option value="Ilhabela (Balsa São Sebastião)">Ilhabela (Balsa São Sebastião)</option>
+                      <option value="Caraguatatuba (Rodoviária / Sentido S. Sebastião)">Caraguatatuba (Rodoviária / Sentido S. Sebastião)</option>
                     </select>
 
                     <input
@@ -490,9 +494,10 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-600 focus:bg-white rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
                       id="select-destination"
                     >
-                      <option value="São Sebastião">São Sebastião (Maresias, Juquehy, Cambury)</option>
-                      <option value="Ilhabela">Ilhabela (Com Travessia de Balsa)</option>
-                      <option value="Caraguatatuba">Caraguatatuba (Litoral Norte)</option>
+                      <option value="São Sebastião">São Sebastião (Maresias, Juquehy, Cambury, Centro)</option>
+                      <option value="Ilhabela (Balsa São Sebastião)">Ilhabela (Balsa São Sebastião - Desembarque Porto da Balsa)</option>
+                      <option value="Ilhabela (Travessia Fechada)">Ilhabela (Travessia Fechada para a Ilha • a partir de R$ 900)</option>
+                      <option value="Caraguatatuba (Rodoviária / Sentido S. Sebastião)">Caraguatatuba (Apenas Rodoviária & Sentido São Sebastião)</option>
                       <option value="São Paulo">São Paulo Capital / Aeroportos</option>
                     </select>
 
@@ -506,6 +511,27 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                     />
                   </div>
                 </div>
+
+                {/* Scope & Logistics Notice */}
+                {destination.includes('Travessia') && (
+                  <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-950 flex items-start gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-bold block text-amber-900">Aviso sobre Travessia de Balsa para Ilhabela:</strong>
+                      A travessia com carro fechado para o interior da ilha inicia a partir de R$ 900,00 e está sujeita a confirmação prévia e disponibilidade de escala do motorista. Caso prefira o desembarque no Porto da Balsa em São Sebastião, o valor padrão é de R$ 700,00.
+                    </div>
+                  </div>
+                )}
+
+                {destination.includes('Caraguatatuba') && (
+                  <div className="mt-3 p-3 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-950 flex items-start gap-2.5">
+                    <MapPin className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-bold block text-sky-900">Área Atendida em Caraguatatuba:</strong>
+                      Atendimento exclusivo na Rodoviária de Caraguatatuba e bairros no sentido São Sebastião (Porto Novo, Praia das Palmeiras e Travessão).
+                    </div>
+                  </div>
+                )}
 
                 {/* Extra Stops Section */}
                 <div className="mt-4 pt-3 border-t border-slate-100">
@@ -578,7 +604,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                     <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-mono">
                       3
                     </span>
-                    <span>Data, Horário de Embarque & Modalidade</span>
+                    <span>Veículo, Modalidade & Horário de Embarque</span>
                   </h3>
                   {/* Quick date shortcuts */}
                   <div className="flex items-center gap-1.5 text-[11px]">
@@ -607,44 +633,81 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                   </div>
                 </div>
 
-                {/* Service Type Selection Bar */}
-                <div className="mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                    <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                {/* Vehicle Choice & Trip Type */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                  {/* Vehicle Model Selector */}
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-2">
                       <Car className="w-3.5 h-3.5 text-amber-500" />
-                      Modalidade do Transfer:
+                      Tipo de Veículo:
                     </label>
-                    <span className="text-[11px] text-slate-500">
-                      {tripType === 'Individual'
-                        ? '✨ Spin 7L 100% Exclusiva para seu grupo ou família'
-                        : '👥 Vagas individuais em van compartilhada com ar duplo'}
-                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVehicleCategory('spin_7');
+                          if (passengers > 6) setPassengers(6);
+                        }}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer flex flex-col items-center justify-center text-center gap-1 ${
+                          vehicleCategory === 'spin_7'
+                            ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span className="text-[11px] font-bold">🚐 Spin 7 Lugares</span>
+                        <span className="text-[9px] opacity-80">Até 6 passageiros + malas</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVehicleCategory('sedan_4');
+                          if (passengers > 4) setPassengers(4);
+                          if (luggageCount > 4) setLuggageCount(4);
+                        }}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer flex flex-col items-center justify-center text-center gap-1 ${
+                          vehicleCategory === 'sedan_4'
+                            ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span className="text-[11px] font-bold">🚗 Carro 4 Lugares</span>
+                        <span className="text-[9px] opacity-80">Sedã executivo (até 4 pass.)</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setTripType('Individual')}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-2 ${
-                        tripType === 'Individual'
-                          ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Privativo (Carro Fechado)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTripType('Compartilhada')}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-2 ${
-                        tripType === 'Compartilhada'
-                          ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      <Users className="w-3.5 h-3.5 text-sky-400" />
-                      <span>Shuttle Compartilhado (Por Assento)</span>
-                    </button>
+
+                  {/* Trip Mode Selector */}
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                    <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-2">
+                      <Users className="w-3.5 h-3.5 text-sky-500" />
+                      Modalidade:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTripType('Individual')}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer flex flex-col items-center justify-center text-center gap-1 ${
+                          tripType === 'Individual'
+                            ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span className="text-[11px] font-bold">✨ Privativo</span>
+                        <span className="text-[9px] opacity-80">Veículo 100% exclusivo</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTripType('Compartilhada')}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer flex flex-col items-center justify-center text-center gap-1 ${
+                          tripType === 'Compartilhada'
+                            ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span className="text-[11px] font-bold">👥 Compartilhado</span>
+                        <span className="text-[9px] opacity-80">Por vaga / assento</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -664,10 +727,12 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                     <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-mono">
                       4
                     </span>
-                    <span>Ocupação & Mapa de Assentos (Chevrolet Spin 7L)</span>
+                    <span>
+                      Ocupação & Mapa de Assentos ({vehicleCategory === 'sedan_4' ? 'Carro 4 Lugares' : 'Chevrolet Spin 7L'})
+                    </span>
                   </h3>
                   <span className="text-[11px] text-sky-700 font-semibold">
-                    {passengers} de 7 Assentos Ocupados
+                    {passengers} de {vehicleCategory === 'sedan_4' ? 4 : 6} Assentos Ocupados
                   </span>
                 </div>
 
@@ -678,15 +743,17 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                     <div>
                       <div className="flex justify-between items-center mb-1">
                         <label className="text-xs font-bold text-slate-900">
-                          Nº de Passageiros ({passengers} pessoas)
+                          Nº de Passageiros ({passengers} {passengers === 1 ? 'pessoa' : 'pessoas'})
                         </label>
-                        <span className="text-[10px] text-slate-500">Capacidade max: 7 passageiros</span>
+                        <span className="text-[10px] text-slate-500">
+                          Capacidade máx: {vehicleCategory === 'sedan_4' ? '4 passageiros' : '6 passageiros + motorista'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <input
                           type="range"
                           min="1"
-                          max="7"
+                          max={vehicleCategory === 'sedan_4' ? 4 : 6}
                           value={passengers}
                           onChange={(e) => setPassengers(Number(e.target.value))}
                           className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-200 rounded-lg"
@@ -703,13 +770,15 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                         <label className="text-xs font-bold text-slate-900">
                           Malas / Volumes de Bagagem ({luggageCount} malas)
                         </label>
-                        <span className="text-[10px] text-slate-500">Porta-malas espaçoso</span>
+                        <span className="text-[10px] text-slate-500">
+                          {vehicleCategory === 'sedan_4' ? 'Porta-malas sedã (até 4 malas)' : 'Porta-malas espaçoso (até 6 malas)'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <input
                           type="range"
                           min="0"
-                          max="7"
+                          max={vehicleCategory === 'sedan_4' ? 4 : 6}
                           value={luggageCount}
                           onChange={(e) => setLuggageCount(Number(e.target.value))}
                           className="w-full accent-sky-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
@@ -764,13 +833,13 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                   <div className="md:col-span-5 bg-slate-900 text-white p-4 rounded-2xl border border-slate-800">
                     <div className="text-center mb-2">
                       <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
-                        Layout da Cabine • Spin 7L
+                        Layout da Cabine • {vehicleCategory === 'sedan_4' ? 'Carro 4 Lugares' : 'Spin 7L'}
                       </span>
                       <span className="text-[9px] text-slate-400">Frente / Para-brisa</span>
                     </div>
 
                     <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                      {/* Row 1: Driver + Passenger 1 */}
+                      {/* Row 1: Driver + Front Passenger */}
                       <div className="flex justify-center gap-4">
                         <div className="w-12 h-9 rounded-lg bg-slate-800 border border-slate-700 flex flex-col items-center justify-center text-[9px] text-slate-400">
                           <span>🚗</span>
@@ -788,7 +857,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                         </div>
                       </div>
 
-                      {/* Row 2: Middle 3 Seats (Passengers 2, 3, 4) */}
+                      {/* Row 2: Rear Seats */}
                       <div className="flex justify-center gap-2">
                         {[2, 3, 4].map((seatNum) => {
                           const isOccupied = passengers >= seatNum;
@@ -811,30 +880,32 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                         })}
                       </div>
 
-                      {/* Row 3: Rear 2 Seats (Passengers 5, 6, 7) */}
-                      <div className="flex justify-center gap-4">
-                        {[5, 6].map((seatNum) => {
-                          const isOccupied = passengers >= (seatNum === 6 ? 7 : 5);
-                          return (
-                            <div
-                              key={seatNum}
-                              className={`w-12 h-9 rounded-lg flex flex-col items-center justify-center text-[9px] font-bold transition-all ${
-                                isOccupied
-                                  ? 'bg-amber-400 text-slate-950 shadow-xs ring-1 ring-amber-300'
-                                  : 'bg-slate-800 text-slate-500 border border-slate-700'
-                              }`}
-                            >
-                              <span>👤</span>
-                              <span>{isOccupied ? `Assento ${seatNum}` : 'Livre'}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      {/* Row 3: 3rd Row only if Spin 7 */}
+                      {vehicleCategory === 'spin_7' && (
+                        <div className="flex justify-center gap-4">
+                          {[5, 6].map((seatNum) => {
+                            const isOccupied = passengers >= seatNum;
+                            return (
+                              <div
+                                key={seatNum}
+                                className={`w-12 h-9 rounded-lg flex flex-col items-center justify-center text-[9px] font-bold transition-all ${
+                                  isOccupied
+                                    ? 'bg-amber-400 text-slate-950 shadow-xs ring-1 ring-amber-300'
+                                    : 'bg-slate-800 text-slate-500 border border-slate-700'
+                                }`}
+                              >
+                                <span>👤</span>
+                                <span>{isOccupied ? `Assento ${seatNum}` : 'Livre'}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
 
                       {/* Trunk Luggage Indicator */}
                       <div className="text-center pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-center gap-1.5">
                         <Briefcase className="w-3 h-3 text-sky-400" />
-                        <span>Porta-malas: {luggageCount} de 7 volumes</span>
+                        <span>Porta-malas: {luggageCount} volumes</span>
                       </div>
                     </div>
                   </div>

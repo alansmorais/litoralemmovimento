@@ -339,6 +339,10 @@ export class StorageService {
 
   public static generateWhatsAppDeepLink(reservation: Reservation): string {
     const phone = COMPANY_CONTACT.phoneRaw; // Michelly: +55 12 98850-6597 (Central Litoral em Movimento)
+    const vehicleText = reservation.vehicleCategory === 'sedan_4'
+      ? 'Carro Executivo (até 4 passageiros)'
+      : 'Chevrolet Spin 7 Lugares (até 6 passageiros + motorista)';
+    
     const message = `*SOLICITAÇÃO DE AGENDAMENTO • LITORAL EM MOVIMENTO* 🚐🌴
 *A/C Michelly (Atendimento & Agendamentos)*
 ================================
@@ -353,7 +357,7 @@ export class StorageService {
 ⏰ *Horário:* ${reservation.time}
 👥 *Passageiros:* ${reservation.passengers} (${reservation.tripType === 'Individual' ? 'Privativo Exclusivo' : 'Shuttle Compartilhado'})
 🧳 *Bagagens:* ${reservation.luggageCount} volumes
-🚗 *Veículo:* Chevrolet Spin 7 Lugares com Ar-Condicionado
+🚗 *Veículo Selecionado:* ${vehicleText}
 
 ${reservation.extraStops.length > 0 ? `🛑 *Paradas Extras:* ${reservation.extraStops.map((s) => s.address).join(', ')}\n` : ''}${reservation.flightNumber ? `✈️ *Nº do Voo:* ${reservation.flightNumber}\n` : ''}${reservation.notes ? `📝 *Observações:* ${reservation.notes}\n` : ''}💰 *Valor Estimado:* R$ ${reservation.totalPrice.toFixed(2).replace('.', ',')}
 *Status:* ${reservation.status}
@@ -369,31 +373,33 @@ _Olá Michelly! Por favor, confirme a disponibilidade deste transfer._`;
     passengers: number;
     tripType: 'Individual' | 'Compartilhada';
     extraStopsCount: number;
+    crossesBalsaIsland?: boolean;
+    vehicleCategory?: 'spin_7' | 'sedan_4';
   }): { basePrice: number; stopsCost: number; totalPrice: number; depositAmount: number; remainingAmount: number } {
     const isLitoralToLitoral =
-      (params.origin === 'São Sebastião' || params.origin === 'Ilhabela' || params.origin === 'Caraguatatuba') &&
-      (params.destination === 'São Sebastião' || params.destination === 'Ilhabela' || params.destination === 'Caraguatatuba');
+      (params.origin.includes('São Sebastião') || params.origin.includes('Ilhabela') || params.origin.includes('Caraguatatuba')) &&
+      (params.destination.includes('São Sebastião') || params.destination.includes('Ilhabela') || params.destination.includes('Caraguatatuba'));
 
-    let base = 580;
-    if (params.destination === 'Ilhabela' || params.origin === 'Ilhabela') {
-      base = 640;
-    } else if (params.destination === 'Caraguatatuba' || params.origin === 'Caraguatatuba') {
-      base = 520;
+    const isIslandCrossing =
+      params.destination.includes('Travessia') ||
+      params.origin.includes('Travessia') ||
+      params.crossesBalsaIsland === true;
+
+    // Base private standard price is R$ 700,00
+    let base = 700;
+
+    // Crossing into Ilhabela with closed vehicle starts at R$ 900,00
+    if (isIslandCrossing) {
+      base = 900;
     }
 
     if (isLitoralToLitoral) {
-      base = 250;
+      base = isIslandCrossing ? 450 : 250;
     }
 
     let calculatedBase = base;
     if (params.tripType === 'Compartilhada') {
-      const perSeat =
-        params.destination === 'Ilhabela' || params.origin === 'Ilhabela'
-          ? PRICING_RULES.sharedSeatPrice['Ilhabela']
-          : params.destination === 'Caraguatatuba' || params.origin === 'Caraguatatuba'
-          ? PRICING_RULES.sharedSeatPrice['Caraguatatuba']
-          : PRICING_RULES.sharedSeatPrice['São Sebastião'];
-
+      const perSeat = 180;
       calculatedBase = perSeat * Math.max(1, params.passengers);
     }
 
