@@ -3,10 +3,15 @@ import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
 import { WhatWeOfferSection } from './components/WhatWeOfferSection';
 import { BookingFormSection } from './components/BookingFormSection';
+import { HowItWorksSection } from './components/HowItWorksSection';
+import { ServicesSection } from './components/ServicesSection';
 import { DestinationsGrid } from './components/DestinationsGrid';
 import { VehicleFleetSection } from './components/VehicleFleetSection';
+import { WhyChooseUsSection } from './components/WhyChooseUsSection';
 import { FAQSection } from './components/FAQSection';
+import { FinalCTASection } from './components/FinalCTASection';
 import { Footer } from './components/Footer';
+import { FloatingWhatsApp } from './components/FloatingWhatsApp';
 import { AdminDashboard } from './components/AdminDashboard';
 import { DriverAppView } from './components/DriverAppView';
 import { TrackRideModal } from './components/TrackRideModal';
@@ -26,6 +31,13 @@ export default function App() {
 
   const scrollToBooking = () => {
     const el = document.getElementById('agendar');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const scrollToDestinations = () => {
+    const el = document.getElementById('destinos');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
@@ -86,8 +98,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
-      {/* Top Header - Always visible with easy view switcher */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between overflow-x-hidden">
+      {/* 1. Header - Always visible with navigation and view switcher */}
       <Header
         currentView={currentView}
         setCurrentView={setCurrentView}
@@ -100,41 +112,57 @@ export default function App() {
       <main className="flex-1">
         {currentView === 'landing' && (
           <>
-            {/* 1. Hero Section mirroring the Flyer Layout */}
+            {/* 2. Hero Section */}
             <HeroSection
               onSelectDestination={handleSelectDestination}
               onScrollToBooking={scrollToBooking}
-              onOpenAIAdvisor={() => setIsAIModalOpen(true)}
+              onScrollToDestinations={scrollToDestinations}
+              onOpenAIModal={() => setIsAIModalOpen(true)}
             />
 
-            {/* 2. "O Que Oferecemos" - Navy background with 4 icon items & Spin Minivan */}
-            <WhatWeOfferSection onScrollToBooking={scrollToBooking} />
+            {/* 3. Quick Trust / Benefits (O Que Oferecemos) */}
+            <WhatWeOfferSection />
 
-            {/* 3. Interactive Booking Form & Instant Price Engine */}
+            {/* 4. Booking Section ("Reserve seu transfer") */}
             <BookingFormSection
               initialDestination={selectedDestination}
               onBookingSuccess={handleBookingSuccess}
               onOpenTrackModal={handleOpenTrackModal}
             />
 
-            {/* 4. Deep-dive into Destinations (São Sebastião, Ilhabela, Caraguatatuba) */}
+            {/* 5. Como Funciona (3-Step Clear Flow) */}
+            <HowItWorksSection onScrollToBooking={scrollToBooking} />
+
+            {/* 6. Serviços (Privativo, Compartilhado, Aeroportos, Eventos) */}
+            <ServicesSection onScrollToBooking={scrollToBooking} />
+
+            {/* 7. Destinos (São Sebastião, Ilhabela, Caraguatatuba) */}
             <DestinationsGrid
               onSelectDestination={handleSelectDestination}
               onScrollToBooking={scrollToBooking}
             />
 
-            {/* 5. Chevrolet Spin 7 Lugares Minivan Fleet Details */}
+            {/* 8. Frota (Chevrolet Spin 7 Lugares) */}
             <VehicleFleetSection />
 
-            {/* 6. FAQ Section */}
+            {/* 9. Por Que Litoral em Movimento (Trust & Operational Strength) */}
+            <WhyChooseUsSection />
+
+            {/* 10. FAQ Section */}
             <FAQSection />
 
-            {/* 7. Footer with trust badges & contacts */}
+            {/* 11. Final Conversion CTA */}
+            <FinalCTASection onScrollToBooking={scrollToBooking} />
+
+            {/* 12. Footer */}
             <Footer
               onScrollToBooking={scrollToBooking}
               onOpenAdmin={handleOpenAdmin}
               onOpenDriver={handleOpenDriver}
             />
+
+            {/* Floating Subtle WhatsApp Action */}
+            <FloatingWhatsApp />
           </>
         )}
 

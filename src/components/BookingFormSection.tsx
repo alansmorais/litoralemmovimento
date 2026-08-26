@@ -316,25 +316,45 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
   };
 
   return (
-    <section id="agendar" className="py-12 sm:py-20 bg-slate-50 relative border-t border-slate-200">
+    <section id="agendar" className="py-16 sm:py-24 bg-slate-50 relative border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12">
-          <div className="inline-flex items-center gap-2 bg-slate-900 text-slate-200 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-amber-400/40 mb-3 shadow-xs">
-            <Calendar className="w-3.5 h-3.5 text-amber-400" />
-            <span>Reserva Rápida & Garantida</span>
+        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+          <div className="inline-flex items-center gap-2 bg-slate-200/80 text-slate-800 text-xs font-semibold uppercase tracking-wider px-3.5 py-1.5 rounded-full mb-3">
+            <Calendar className="w-3.5 h-3.5 text-amber-600" />
+            <span>Simulador Online & Reserva</span>
           </div>
-          <h2 className="font-serif-display text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-wide">
-            SIMULADOR & AGENDAMENTO ONLINE
+          <h2 className="font-serif-display text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Reserve seu transfer
           </h2>
-          <p className="text-slate-600 text-sm sm:text-base mt-2">
-            Selecione uma rota frequente ou personalize seus pontos de embarque para calcular sua tarifa exata na Chevrolet Spin 7 Lugares.
+          <p className="text-slate-600 text-base sm:text-lg mt-3 leading-relaxed">
+            Informe sua viagem e veja as opções disponíveis com cálculo transparente e sem surpresas.
           </p>
 
+          {/* Trust checkmarks row */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-slate-700">
+            <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs font-medium">
+              <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              Atendimento personalizado
+            </span>
+            <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs font-medium">
+              <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              Reserva com confirmação
+            </span>
+            <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs font-medium">
+              <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              Veículo climatizado
+            </span>
+            <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs font-medium">
+              <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              Até 6 passageiros + motorista
+            </span>
+          </div>
+
           {/* Quick Route Presets Toolbar */}
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            <span className="text-xs font-bold text-slate-500 flex items-center gap-1 mr-1 py-1">
-              <Compass className="w-3.5 h-3.5 text-amber-500" />
+          <div className="mt-6 flex flex-wrap justify-center items-center gap-2">
+            <span className="text-xs font-semibold text-slate-600 flex items-center gap-1 mr-1 py-1">
+              <Compass className="w-3.5 h-3.5 text-amber-600" />
               Rotas Populares:
             </span>
             {routePresets.map((preset, idx) => (
@@ -342,7 +362,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                 key={idx}
                 type="button"
                 onClick={() => applyPreset(preset)}
-                className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-medium px-3 py-1.5 rounded-xl border border-slate-200 shadow-xs hover:border-amber-400 hover:text-slate-950 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-medium px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-400 hover:text-slate-950 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <span>{preset.title}</span>
               </button>

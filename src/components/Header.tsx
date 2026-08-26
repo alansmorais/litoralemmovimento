@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { BRAND_IMAGES, BRAND_COLORS, COMPANY_CONTACT } from '../data/mockData';
-import { Calendar, Phone, ShieldCheck, Clock, MapPin, Menu, X, Car, LayoutDashboard, Smartphone, Search, Sparkles } from 'lucide-react';
-import { UserRole } from '../types';
+import { BRAND_IMAGES, COMPANY_CONTACT } from '../data/mockData';
+import { Calendar, Phone, MapPin, Menu, X, Search, Sparkles, Car } from 'lucide-react';
 
 interface HeaderProps {
   currentView: 'landing' | 'admin' | 'driver' | 'tracking';
@@ -20,42 +19,53 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const navigateToSection = (sectionId: string) => {
+    setMobileMenuOpen(false);
+    if (currentView !== 'landing') {
+      setCurrentView('landing');
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else {
+      const el = document.getElementById(sectionId);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white transition-all w-full max-w-full overflow-x-hidden">
-      {/* Top micro-bar */}
-      <div className="bg-slate-900 text-xs py-1.5 px-3 sm:px-4 text-slate-300 border-b border-slate-800">
+    <header className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white transition-all w-full max-w-full">
+      {/* Subtle Top Micro-Bar */}
+      <div className="bg-slate-900/90 text-xs py-1.5 px-3 sm:px-6 text-slate-300 border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <span className="flex items-center gap-1.5 font-medium tracking-wide truncate text-[11px] sm:text-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="flex items-center gap-1.5 font-medium text-[11px] sm:text-xs text-slate-300 truncate">
               <MapPin className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
-              <span className="truncate">SÃO PAULO ⇌ LITORAL NORTE</span>
-            </span>
-            <span className="hidden md:inline-flex items-center gap-1 text-slate-300 text-xs flex-shrink-0">
-              <Car className="w-3.5 h-3.5 text-amber-400" />
-              Chevrolet Spin 7L
+              <span className="truncate">São Paulo ⇌ Litoral Norte (São Sebastião · Ilhabela · Caraguá)</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
             <button
               onClick={onOpenAIModal}
               id="header-ai-advisor-btn"
-              className="hidden sm:inline-flex items-center gap-1 text-xs bg-sky-950/80 hover:bg-sky-900 text-white px-2.5 py-0.5 rounded-full border border-sky-600/40 transition-colors cursor-pointer"
+              className="hidden md:inline-flex items-center gap-1 text-[11px] bg-slate-800 hover:bg-slate-750 text-slate-200 px-2.5 py-0.5 rounded-full border border-slate-700 transition-colors cursor-pointer"
             >
               <Sparkles className="w-3 h-3 text-amber-400" />
-              <span>Dicas IA</span>
+              <span>Dicas de Rota com IA</span>
             </button>
+
             <a
               href={`https://wa.me/${COMPANY_CONTACT.phoneRaw}?text=Ol%C3%A1%20Michelly!%20Gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20o%20transfer%20Litoral%20em%20Movimento.`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:text-amber-400 transition-colors text-[11px] sm:text-xs"
+              className="flex items-center gap-1.5 hover:text-amber-400 transition-colors text-[11px] sm:text-xs"
               title="Fale com Michelly pelo WhatsApp"
             >
-              <Phone className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-              <span className="font-semibold text-slate-200">
-                <span className="hidden xs:inline">Michelly: </span>
-                <strong className="text-amber-300 font-bold">{COMPANY_CONTACT.phone}</strong>
+              <Phone className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+              <span className="text-slate-300">
+                <span className="hidden sm:inline">{COMPANY_CONTACT.name}: </span>
+                <strong className="text-white font-semibold">{COMPANY_CONTACT.phone}</strong>
               </span>
             </a>
           </div>
@@ -63,16 +73,18 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Header Row */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center gap-2 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex justify-between items-center gap-3">
         {/* Brand Logo & Wordmark */}
         <div
-          onClick={() => setCurrentView('landing')}
-          className="flex items-center gap-2 sm:gap-3 cursor-pointer group min-w-0 flex-shrink"
+          onClick={() => {
+            setCurrentView('landing');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group min-w-0 flex-shrink"
           id="header-brand-logo"
         >
-          {/* Circular Emblem Logo */}
           <div className="relative flex-shrink-0">
-            <div className="w-10 h-10 sm:w-13 sm:h-13 rounded-full overflow-hidden border-2 border-amber-400 shadow-md shadow-black/50 group-hover:scale-105 transition-transform bg-slate-900 flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden border border-amber-400/80 shadow-xs bg-slate-900 flex items-center justify-center">
               <img
                 src={BRAND_IMAGES.logo}
                 alt="Litoral em Movimento Logo"
@@ -82,97 +94,76 @@ export const Header: React.FC<HeaderProps> = ({
                   target.style.display = 'none';
                 }}
               />
-              <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
             </div>
-            {/* Gold Arc Accent */}
-            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-400 border-2 border-slate-950" />
           </div>
 
           <div className="flex flex-col justify-center min-w-0">
-            <span className="font-serif-display font-extrabold text-sm xs:text-base sm:text-xl lg:text-2xl tracking-wider text-white leading-none whitespace-nowrap">
+            <span className="font-serif-display font-extrabold text-base sm:text-lg tracking-wide text-white leading-none whitespace-nowrap">
               LITORAL
             </span>
-            <span className="font-serif-display font-bold text-[9px] xs:text-[10px] sm:text-xs lg:text-sm tracking-wider sm:tracking-widest text-amber-400 leading-tight whitespace-nowrap mt-0.5">
+            <span className="font-serif-display font-bold text-[10px] sm:text-xs tracking-widest text-amber-400 leading-tight whitespace-nowrap mt-0.5">
               EM MOVIMENTO
             </span>
-            <p className="hidden md:flex text-[10px] text-slate-400 tracking-widest uppercase font-medium items-center gap-1 mt-0.5">
-              <span>Conforto</span> • <span>Segurança</span> • <span>Pontualidade</span>
-            </p>
           </div>
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-200">
+        <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">
           <button
             onClick={() => {
               setCurrentView('landing');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`transition-colors hover:text-amber-400 cursor-pointer ${
+            className={`transition-colors hover:text-white cursor-pointer ${
               currentView === 'landing' ? 'text-amber-400 font-semibold' : ''
             }`}
           >
             Início
           </button>
-          <a
-            href="#o-que-oferecemos"
-            onClick={(e) => {
-              if (currentView !== 'landing') {
-                e.preventDefault();
-                setCurrentView('landing');
-                setTimeout(() => {
-                  document.getElementById('o-que-oferecemos')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }
-            }}
-            className="transition-colors hover:text-amber-400"
+          <button
+            onClick={() => navigateToSection('como-funciona')}
+            className="transition-colors hover:text-white cursor-pointer"
           >
-            O Que Oferecemos
-          </a>
-          <a
-            href="#destinos"
-            onClick={(e) => {
-              if (currentView !== 'landing') {
-                e.preventDefault();
-                setCurrentView('landing');
-                setTimeout(() => {
-                  document.getElementById('destinos')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }
-            }}
-            className="transition-colors hover:text-amber-400"
+            Como Funciona
+          </button>
+          <button
+            onClick={() => navigateToSection('servicos')}
+            className="transition-colors hover:text-white cursor-pointer"
+          >
+            Serviços
+          </button>
+          <button
+            onClick={() => navigateToSection('destinos')}
+            className="transition-colors hover:text-white cursor-pointer"
           >
             Destinos
-          </a>
-          <a
-            href="#frota"
-            onClick={(e) => {
-              if (currentView !== 'landing') {
-                e.preventDefault();
-                setCurrentView('landing');
-                setTimeout(() => {
-                  document.getElementById('frota')?.scrollIntoView({ behavior: 'smooth' });
-                }, 100);
-              }
-            }}
-            className="transition-colors hover:text-amber-400"
+          </button>
+          <button
+            onClick={() => navigateToSection('frota')}
+            className="transition-colors hover:text-white cursor-pointer"
           >
-            Frota Spin 7L
-          </a>
+            Frota Spin
+          </button>
+          <button
+            onClick={() => navigateToSection('faq')}
+            className="transition-colors hover:text-white cursor-pointer"
+          >
+            FAQ
+          </button>
+        </nav>
 
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {/* Quick Track Ride Button */}
           <button
             onClick={onOpenTrackModal}
             id="nav-track-ride-btn"
-            className="flex items-center gap-1.5 text-xs text-slate-200 hover:text-white bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-700 transition-all cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 text-xs text-slate-300 hover:text-white bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
           >
             <Search className="w-3.5 h-3.5 text-sky-400" />
             <span>Rastrear Viagem</span>
           </button>
-        </nav>
 
-        {/* Action Buttons & Portal Switcher */}
-        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* Main Booking CTA */}
           <button
             onClick={() => {
@@ -184,18 +175,17 @@ export const Header: React.FC<HeaderProps> = ({
               }
             }}
             id="header-booking-btn"
-            className="inline-flex items-center gap-1.5 sm:gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs sm:text-sm px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer transform active:scale-95 whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 sm:gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer transform active:scale-95 whitespace-nowrap"
           >
             <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950 flex-shrink-0" />
-            <span className="hidden sm:inline">AGENDAR VIAGEM</span>
-            <span className="sm:hidden">AGENDAR</span>
+            <span>AGENDAR VIAGEM</span>
           </button>
 
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="lg:hidden p-2 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800 transition-colors flex-shrink-0 cursor-pointer"
-            aria-label="Abrir menu"
+            aria-label="Abrir menu de navegação"
             id="mobile-menu-toggle"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -206,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-slate-950 border-b border-slate-800 px-4 py-4 space-y-3">
-          <div className="flex flex-col gap-2 text-sm font-medium">
+          <div className="flex flex-col gap-1.5 text-sm font-medium">
             <button
               onClick={() => {
                 setCurrentView('landing');
@@ -217,67 +207,82 @@ export const Header: React.FC<HeaderProps> = ({
             >
               Início
             </button>
-            <a
-              href="#o-que-oferecemos"
-              onClick={() => {
-                setCurrentView('landing');
-                setMobileMenuOpen(false);
-              }}
-              className="text-left py-2 px-3 rounded-lg hover:bg-slate-800 text-white"
+            <button
+              onClick={() => navigateToSection('como-funciona')}
+              className="text-left py-2 px-3 rounded-lg hover:bg-slate-800 text-slate-300"
             >
-              O Que Oferecemos
-            </a>
-            <a
-              href="#destinos"
-              onClick={() => {
-                setCurrentView('landing');
-                setMobileMenuOpen(false);
-              }}
-              className="text-left py-2 px-3 rounded-lg hover:bg-slate-800 text-white"
+              Como Funciona
+            </button>
+            <button
+              onClick={() => navigateToSection('servicos')}
+              className="text-left py-2 px-3 rounded-lg hover:bg-slate-800 text-slate-300"
+            >
+              Serviços
+            </button>
+            <button
+              onClick={() => navigateToSection('destinos')}
+              className="text-left py-2 px-3 rounded-lg hover:bg-slate-800 text-slate-300"
             >
               Destinos (São Sebastião · Ilhabela · Caraguá)
-            </a>
-            <a
-              href="#frota"
-              onClick={() => {
-                setCurrentView('landing');
-                setMobileMenuOpen(false);
-              }}
-              className="text-left py-2 px-3 rounded-lg hover:bg-slate-800 text-white"
-            >
-              Frota Chevrolet Spin 7 Lugares
-            </a>
-            <button
-              onClick={() => {
-                onOpenTrackModal();
-                setMobileMenuOpen(false);
-              }}
-              className="flex items-center gap-2 text-left py-2 px-3 rounded-lg bg-slate-800 text-slate-200"
-            >
-              <Search className="w-4 h-4 text-sky-400" />
-              <span>Rastrear Viagem (Código ou Telefone)</span>
             </button>
             <button
-              onClick={() => {
-                onOpenAIModal();
-                setMobileMenuOpen(false);
-              }}
-              className="flex items-center gap-2 text-left py-2 px-3 rounded-lg bg-sky-950 text-white border border-sky-700/50"
+              onClick={() => navigateToSection('frota')}
+              className="text-left py-2 px-3 rounded-lg hover:bg-slate-800 text-slate-300"
             >
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Dicas de Rota & Balsa com IA</span>
+              Frota Chevrolet Spin
             </button>
             <button
-              onClick={() => {
-                setCurrentView('landing');
-                setMobileMenuOpen(false);
-                setTimeout(onScrollToBooking, 100);
-              }}
-              className="w-full mt-2 bg-amber-400 text-slate-950 font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+              onClick={() => navigateToSection('faq')}
+              className="text-left py-2 px-3 rounded-lg hover:bg-slate-800 text-slate-300"
             >
-              <Calendar className="w-4 h-4" />
-              <span>AGENDAMENTO DE VIAGENS</span>
+              Perguntas Frequentes (FAQ)
             </button>
+
+            <div className="pt-2 border-t border-slate-800 space-y-2">
+              <button
+                onClick={() => {
+                  onOpenTrackModal();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 text-left py-2 px-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800"
+              >
+                <Search className="w-4 h-4 text-sky-400" />
+                <span>Rastrear Viagem (Código ou Telefone)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onOpenAIModal();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 text-left py-2 px-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Planejar Rota com IA</span>
+              </button>
+
+              <a
+                href={`https://wa.me/${COMPANY_CONTACT.phoneRaw}?text=Ol%C3%A1%20Michelly!%20Gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20o%20transfer%20Litoral%20em%20Movimento.`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold"
+              >
+                <Phone className="w-4 h-4 text-emerald-400" />
+                <span>Falar no WhatsApp ({COMPANY_CONTACT.phone})</span>
+              </a>
+
+              <button
+                onClick={() => {
+                  setCurrentView('landing');
+                  setMobileMenuOpen(false);
+                  setTimeout(onScrollToBooking, 100);
+                }}
+                className="w-full bg-amber-400 text-slate-950 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm shadow-sm"
+              >
+                <Calendar className="w-4 h-4" />
+                <span>AGENDAR TRANSFER AGORA</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
