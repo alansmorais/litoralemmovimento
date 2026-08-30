@@ -1601,9 +1601,9 @@ function createJsonResponse(data) {
                               <span>{msg.status}</span>
                             </span>
 
-                            {msg.respondedBy && (
+                            {msg.answeredBy && (
                               <span className="text-[10px] text-slate-400 font-medium hidden md:inline">
-                                Por {msg.respondedBy}
+                                Por {msg.answeredBy}
                               </span>
                             )}
                           </div>
