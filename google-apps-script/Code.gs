@@ -353,8 +353,15 @@ function setupConfigSheet(ss) {
       ['PERCENTUAL_SINAL', '50%', 'Exigência de 50% de entrada para confirmação de vaga na Spin 7L'],
       ['FROTA_OFICIAL', 'Chevrolet Spin 7 Lugares', 'Modelo exclusivo da frota para conforto de famílias e malas'],
       ['ROTAS_PRINCIPAIS', 'São Paulo ⇌ São Sebastião, Ilhabela, Caraguatatuba', 'Corredor principal de atendimento'],
+      ['HORARIOS_SUBIDA_DIARIOS', '05:00, 08:30, 14:00, 18:30', 'Horários oficiais diários de subida (Litoral ➔ São Paulo / GRU)'],
+      ['HORARIOS_DESCIDA_SEMANA', '11:30, 14:30, 17:30, 22:00', 'Horários oficiais de descida de segunda a sexta (São Paulo ➔ Litoral)'],
+      ['HORARIOS_DESCIDA_FDS', '11:30, 13:00, 17:30, 21:30', 'Horários oficiais de descida de sábado e domingo (São Paulo ➔ Litoral)'],
+      ['TARIFA_CARAGUA_TIETE', 'R$ 80,00', 'Valor por vaga: Caraguatatuba (a partir da Rodoviária) ⇌ Metrô Tietê'],
+      ['TARIFA_SAO_SEBASTIAO_TIETE', 'R$ 90,00', 'Valor por vaga: São Sebastião (Balsa / Centro) ⇌ Metrô Tietê'],
+      ['TARIFA_AEROPORTO_GRU', 'R$ 150,00', 'Valor por vaga: Aeroporto Internacional de Guarulhos (GRU) ⇌ Litoral'],
+      ['EQUIPE_GESTAO', 'Eduardo, Edivam, Cludinei, Karine, Michelly', 'Equipe oficial autorizada para gestão de reservas e frota'],
       ['SENHA_SUPERADMIN_ALAN', 'alan2026', 'Senha master de acesso do Super Admin Alan Morais para Conexão API e Banco de Dados'],
-      ['SENHA_ADMIN_MICHELLY', 'litoral2026', 'Senha de acesso para o Painel Geral Administrativo']
+      ['SENHA_ADMIN_GERAL', 'litoral2026', 'Senha de acesso para o Painel Geral Administrativo (Eduardo, Edivam, Cludinei, Karine, Michelly)']
     ];
 
     sheet.getRange(2, 1, defaultConfigs.length, 3).setValues(defaultConfigs);

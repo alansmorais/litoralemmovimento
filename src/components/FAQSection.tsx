@@ -7,6 +7,10 @@ export const FAQSection: React.FC = () => {
 
   const faqs = [
     {
+      q: 'Quais são os horários e valores das viagens regulares (por vaga)?',
+      a: 'Nossas saídas regulares conectam o Metrô Portuguesa-Tietê, Aeroporto de Guarulhos (GRU), Caraguatatuba e São Sebastião (Balsa): \n• Subidas (Litoral ➔ SP/GRU): 05:00, 08:30, 14:00 e 18:30.\n• Descidas (SP/GRU ➔ Litoral): 11:30, 14:30, 17:30 e 22:00 (Segunda a Sexta) | Finais de semana: 11:30, 13:00, 17:30 e 21:30.\n• Tarifas por vaga: R$ 80 (Caraguatatuba até Rodoviária), R$ 90 (São Sebastião/Balsa) e R$ 150 (Aeroporto GRU). Duração média: 2h30 a 3h00.',
+    },
+    {
       q: 'Como faço meu agendamento? Posso agendar pelo site ou WhatsApp?',
       a: 'Você pode fazer sua simulação e agendamento diretamente no formulário do site, escolhendo seu veículo (Spin 7L ou Sedã 4L), origem, destino, data e passageiros. Ao clicar em reservar, geramos seu voucher instantâneo e enviamos as informações diretamente para o WhatsApp do atendimento (Michelly) para confirmação rápida.',
     },

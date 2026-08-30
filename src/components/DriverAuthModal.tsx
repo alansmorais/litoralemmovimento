@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Smartphone, ShieldCheck, KeyRound, AlertTriangle, UserCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Smartphone, ShieldCheck, KeyRound, AlertTriangle, UserCheck, X } from 'lucide-react';
 import { DRIVERS } from '../data/mockData';
 
 interface DriverAuthModalProps {
@@ -16,6 +16,16 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
   const [selectedDriverId, setSelectedDriverId] = useState(DRIVERS[0]?.id || 'drv-01');
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -35,15 +45,20 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn"
+    >
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full text-white shadow-2xl space-y-6 relative">
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors cursor-pointer"
           aria-label="Fechar"
         >
-          ✕
+          <X className="w-5 h-5" />
         </button>
 
         <div className="text-center space-y-2">

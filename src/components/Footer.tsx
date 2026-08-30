@@ -6,12 +6,14 @@ interface FooterProps {
   onScrollToBooking: () => void;
   onOpenAdmin: () => void;
   onOpenDriver: () => void;
+  onOpenContactModal?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onScrollToBooking,
   onOpenAdmin,
   onOpenDriver,
+  onOpenContactModal,
 }) => {
   return (
     <footer className="bg-slate-950 text-slate-300 border-t border-slate-800 pt-12 pb-8">
@@ -61,17 +63,22 @@ export const Footer: React.FC<FooterProps> = ({
               Atendimento & Central
             </h5>
             <div className="space-y-2 text-xs text-slate-400">
-              <a
-                href={COMPANY_CONTACT.whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 hover:text-amber-400 transition-colors"
-              >
-                <Phone className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                <span className="text-slate-200">
-                  <strong>{COMPANY_CONTACT.name}:</strong> {COMPANY_CONTACT.phone}
-                </span>
-              </a>
+              {onOpenContactModal ? (
+                <button
+                  onClick={onOpenContactModal}
+                  className="flex items-center gap-2 text-amber-400 hover:text-amber-300 font-semibold transition-colors cursor-pointer text-left"
+                >
+                  <Phone className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                  <span>Enviar Mensagem para a Central</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                  <span className="text-slate-200">
+                    <strong>{COMPANY_CONTACT.name}:</strong> {COMPANY_CONTACT.phone}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
                 <span>{COMPANY_CONTACT.email}</span>

@@ -1,12 +1,13 @@
 import React from 'react';
-import { Calendar, Phone, ArrowRight, MapPin, CheckCircle2 } from 'lucide-react';
+import { Calendar, Headphones, ArrowRight, MapPin, CheckCircle2, MessageSquare } from 'lucide-react';
 import { COMPANY_CONTACT } from '../data/mockData';
 
 interface FinalCTAProps {
   onScrollToBooking: () => void;
+  onOpenContactModal?: () => void;
 }
 
-export const FinalCTASection: React.FC<FinalCTAProps> = ({ onScrollToBooking }) => {
+export const FinalCTASection: React.FC<FinalCTAProps> = ({ onScrollToBooking, onOpenContactModal }) => {
   return (
     <section className="py-16 sm:py-20 bg-slate-900 text-white relative overflow-hidden border-t border-slate-800">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10 text-center">
@@ -35,15 +36,24 @@ export const FinalCTASection: React.FC<FinalCTAProps> = ({ onScrollToBooking }) 
             <ArrowRight className="w-4 h-4 text-slate-950" />
           </button>
 
-          <a
-            href={`https://wa.me/${COMPANY_CONTACT.phoneRaw}?text=Ol%C3%A1%20Michelly!%20Gostaria%20de%20tirar%20uma%20d%C3%BAvida%20sobre%20o%20transfer%20Litoral%20em%20Movimento.`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm sm:text-base px-6 py-4 rounded-xl border border-slate-700 transition-all"
-          >
-            <Phone className="w-4 h-4 text-emerald-400" />
-            <span>FALE PELO WHATSAPP</span>
-          </a>
+          {onOpenContactModal ? (
+            <button
+              onClick={onOpenContactModal}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm sm:text-base px-6 py-4 rounded-xl border border-slate-700 hover:border-amber-400/50 transition-all cursor-pointer"
+              id="final-cta-contact-btn"
+            >
+              <Headphones className="w-4 h-4 text-amber-400" />
+              <span>FALE COM A NOSSA CENTRAL</span>
+            </button>
+          ) : (
+            <button
+              onClick={onScrollToBooking}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm sm:text-base px-6 py-4 rounded-xl border border-slate-700 transition-all cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 text-emerald-400" />
+              <span>SIMULAR MINHA ROTA</span>
+            </button>
+          )}
         </div>
 
         {/* Quick Highlights */}

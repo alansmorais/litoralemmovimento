@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storageService';
-import { Reservation, Driver, AdminAccount, TripStatus, GPSDeviation } from '../types';
+import { Reservation, Driver, AdminAccount, TripStatus, GPSDeviation, ContactMessage, MessageStatus } from '../types';
 import { ADMIN_ACCOUNTS, DRIVERS, PRICING_RULES } from '../data/mockData';
 import {
   LayoutDashboard,
@@ -43,6 +43,9 @@ import {
   ShieldAlert,
   UserCheck,
   KeyRound,
+  MessageSquare,
+  Headphones,
+  CheckCheck,
 } from 'lucide-react';
 import { SuperAdminAuthModal } from './SuperAdminAuthModal';
 import {
@@ -69,11 +72,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [activeAdmin, setActiveAdmin] = useState<AdminAccount>(ADMIN_ACCOUNTS[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [destinationFilter, setDestinationFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'reservations' | 'calendar' | 'stats' | 'gps-audit'>('reservations');
+  const [activeTab, setActiveTab] = useState<'reservations' | 'calendar' | 'messages' | 'stats' | 'gps-audit' | 'team'>('reservations');
 
   // Selected reservation for modals
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
@@ -89,6 +93,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return false;
     }
   });
+
+  // Selected contact message for modal
+  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
+  const [messageNoteDraft, setMessageNoteDraft] = useState('');
+  const [messageStatusFilter, setMessageStatusFilter] = useState<string>('all');
 
   const isAlanMorais = activeAdmin.name.toLowerCase().includes('alan') || activeAdmin.role === 'Super Admin';
 
@@ -135,14 +144,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const loadData = () => {
     setReservations(StorageService.getReservations());
     setDrivers(StorageService.getDrivers());
+    setContactMessages(StorageService.getContactMessages());
   };
 
   useEffect(() => {
     loadData();
     const handleUpdate = () => loadData();
     window.addEventListener('reservations_updated', handleUpdate);
-    return () => window.removeEventListener('reservations_updated', handleUpdate);
+    window.addEventListener('contact_messages_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('reservations_updated', handleUpdate);
+      window.removeEventListener('contact_messages_updated', handleUpdate);
+    };
   }, []);
+
+  const handleUpdateMessageStatus = (id: string, newStatus: MessageStatus) => {
+    StorageService.updateContactMessageStatus(id, newStatus, `${activeAdmin.name} (${activeAdmin.role})`);
+    loadData();
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage((prev) => (prev ? { ...prev, status: newStatus } : null));
+    }
+  };
+
+  const handleSaveMessageNotes = (id: string) => {
+    StorageService.updateContactMessageNotes(id, messageNoteDraft);
+    loadData();
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage((prev) => (prev ? { ...prev, adminNotes: messageNoteDraft } : null));
+    }
+  };
+
+  const handleDeleteMessage = (id: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta mensagem da central?')) {
+      StorageService.deleteContactMessage(id);
+      loadData();
+      if (selectedMessage && selectedMessage.id === id) {
+        setSelectedMessage(null);
+      }
+    }
+  };
 
   // Filtered reservations
   const filteredReservations = reservations.filter((r) => {
@@ -172,6 +212,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     0
   );
   const pendingDepositCount = reservations.filter((r) => !r.depositPaid && r.status !== 'Cancelado').length;
+
+  // Contact Messages stats
+  const totalMessagesCount = contactMessages.length;
+  const pendingMessagesCount = contactMessages.filter((m) => m.status === 'Pendente').length;
+  const answeredMessagesCount = contactMessages.filter((m) => m.status === 'Respondida').length;
 
   const handleConfirmDeposit = (reservationId: string) => {
     StorageService.confirmDepositPayment(reservationId, 'PIX');
@@ -602,7 +647,7 @@ function createJsonResponse(data) {
               />
               <div>
                 <span className="font-bold text-white block leading-tight">{activeAdmin.name}</span>
-                <span className="text-[10px] text-amber-400 font-semibold">{activeAdmin.role}</span>
+                <span className="text-[10px] text-emerald-400 font-semibold">Online</span>
               </div>
               <select
                 value={activeAdmin.id}
@@ -611,11 +656,11 @@ function createJsonResponse(data) {
                   if (selected) setActiveAdmin(selected);
                 }}
                 className="bg-transparent text-slate-200 outline-none ml-1 cursor-pointer"
-                title="Trocar conta de administrador"
+                title="Selecionar usuário da gestão"
               >
                 {ADMIN_ACCOUNTS.map((acc) => (
                   <option key={acc.id} value={acc.id} className="bg-slate-900 text-white">
-                    {acc.name} ({acc.role})
+                    {acc.name}
                   </option>
                 ))}
               </select>
@@ -739,7 +784,7 @@ function createJsonResponse(data) {
           <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('reservations')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'reservations'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -748,8 +793,24 @@ function createJsonResponse(data) {
               📋 Tabela de Reservas ({reservations.length})
             </button>
             <button
+              onClick={() => setActiveTab('messages')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'messages'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Headphones className="w-3.5 h-3.5 text-amber-400" />
+              <span>Atendimento & Mensagens</span>
+              {pendingMessagesCount > 0 && (
+                <span className="bg-amber-400 text-slate-950 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
+                  {pendingMessagesCount}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab('calendar')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'calendar'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
@@ -776,6 +837,16 @@ function createJsonResponse(data) {
               }`}
             >
               🛰️ Auditoria de Rota & GPS
+            </button>
+            <button
+              onClick={() => setActiveTab('team')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'team'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              👥 Equipe de Gestão ({ADMIN_ACCOUNTS.length})
             </button>
           </div>
 
@@ -1346,6 +1417,430 @@ function createJsonResponse(data) {
                 <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-300">
                   💡 <strong>Vantagem sem Taxímetro:</strong> O cliente e o motorista mantêm a previsibilidade de um transfer executivo com valor fechado, enquanto desvios reais registrados via GPS são tarifados de forma justa e transparente.
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: ATENDIMENTO & MENSAGENS DO SITE (FALE CONOSCO) */}
+        {activeTab === 'messages' && (
+          <div className="space-y-6">
+            {/* Header & Quick stats */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-amber-400/15 text-amber-900 text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-1">
+                  <Headphones className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Central de Atendimento ao Cliente</span>
+                </div>
+                <h3 className="font-serif-display font-extrabold text-2xl text-slate-900">
+                  Mensagens & Solicitações do Formulário
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+                  Todas as dúvidas, orçamentos personalizados e mensagens enviadas pelos clientes através do formulário de contato do site são recebidas e gerenciadas aqui em tempo real.
+                </p>
+              </div>
+
+              {/* Status pills counter */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="bg-amber-50 border border-amber-200 px-3.5 py-2 rounded-xl text-center">
+                  <span className="text-[10px] text-amber-800 font-bold uppercase block">Pendentes</span>
+                  <span className="text-lg font-extrabold text-amber-900">{pendingMessagesCount}</span>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 px-3.5 py-2 rounded-xl text-center">
+                  <span className="text-[10px] text-emerald-800 font-bold uppercase block">Respondidas</span>
+                  <span className="text-lg font-extrabold text-emerald-900">{answeredMessagesCount}</span>
+                </div>
+                <div className="bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-center">
+                  <span className="text-[10px] text-slate-700 font-bold uppercase block">Total</span>
+                  <span className="text-lg font-extrabold text-slate-900">{totalMessagesCount}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter toolbar */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <button
+                  onClick={() => setMessageStatusFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    messageStatusFilter === 'all'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Todas ({contactMessages.length})
+                </button>
+                <button
+                  onClick={() => setMessageStatusFilter('Pendente')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    messageStatusFilter === 'Pendente'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                  }`}
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>Pendentes ({pendingMessagesCount})</span>
+                </button>
+                <button
+                  onClick={() => setMessageStatusFilter('Respondida')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    messageStatusFilter === 'Respondida'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                  }`}
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  <span>Respondidas ({answeredMessagesCount})</span>
+                </button>
+                <button
+                  onClick={() => setMessageStatusFilter('Arquivada')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    messageStatusFilter === 'Arquivada'
+                      ? 'bg-slate-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Arquivadas ({contactMessages.filter((m) => m.status === 'Arquivada').length})
+                </button>
+              </div>
+
+              <div className="w-full md:w-72 relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome, telefone, assunto..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-amber-400 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Messages List / Grid */}
+            {(() => {
+              const filtered = contactMessages.filter((msg) => {
+                const matchesFilter =
+                  messageStatusFilter === 'all' || msg.status === messageStatusFilter;
+                const matchesSearch =
+                  searchTerm === '' ||
+                  msg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  msg.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  msg.phone.includes(searchTerm) ||
+                  msg.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  msg.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  msg.ticketCode.toLowerCase().includes(searchTerm.toLowerCase());
+                return matchesFilter && matchesSearch;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="bg-white rounded-2xl p-12 border border-slate-200 text-center space-y-3">
+                    <div className="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                      <MessageSquare className="w-6 h-6" />
+                    </div>
+                    <h4 className="font-bold text-slate-900 text-base">
+                      Nenhuma mensagem encontrada
+                    </h4>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      Quando um passageiro preencher o formulário "Fale Conosco" no site, a mensagem aparecerá imediatamente nesta lista com notificações de status.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {filtered.map((msg) => {
+                    const cleanPhone = msg.phone.replace(/\D/g, '');
+                    const waNumber = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+                    const waText = encodeURIComponent(
+                      `Olá ${msg.name}! Aqui é a Michelly do Litoral em Movimento. Recebemos sua mensagem sobre "${msg.subject}" (Protocolo: ${msg.ticketCode}). Como posso te ajudar?`
+                    );
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`bg-white rounded-2xl p-5 border transition-all shadow-xs space-y-4 ${
+                          msg.status === 'Pendente'
+                            ? 'border-amber-300 ring-1 ring-amber-300/40 bg-amber-50/10'
+                            : msg.status === 'Respondida'
+                            ? 'border-slate-200'
+                            : 'border-slate-200 opacity-75 bg-slate-50/50'
+                        }`}
+                      >
+                        {/* Top Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-xs font-extrabold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg">
+                              {msg.ticketCode}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-500">
+                              {new Date(msg.createdAt).toLocaleDateString('pt-BR')} às{' '}
+                              {new Date(msg.createdAt).toLocaleTimeString('pt-BR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                            <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                              {msg.subject}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 ${
+                                msg.status === 'Pendente'
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                  : msg.status === 'Respondida'
+                                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                                  : 'bg-slate-100 text-slate-700 border border-slate-300'
+                              }`}
+                            >
+                              {msg.status === 'Pendente' && <AlertCircle className="w-3.5 h-3.5 text-amber-600" />}
+                              {msg.status === 'Respondida' && <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />}
+                              <span>{msg.status}</span>
+                            </span>
+
+                            {msg.respondedBy && (
+                              <span className="text-[10px] text-slate-400 font-medium hidden md:inline">
+                                Por {msg.respondedBy}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Customer Info & Message Body */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                          {/* Sender details */}
+                          <div className="lg:col-span-4 space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-xs">
+                            <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                              <span>{msg.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Phone className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                              <span className="font-mono">{msg.phone}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Mail className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
+                              <span className="truncate">{msg.email}</span>
+                            </div>
+                            {msg.preferredContact && (
+                              <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-200">
+                                Prefere retorno por: <strong className="text-slate-800 uppercase">{msg.preferredContact}</strong>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Message Content & Internal Notes */}
+                          <div className="lg:col-span-8 space-y-3">
+                            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+                              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Mensagem do Passageiro:
+                              </div>
+                              <p className="text-xs sm:text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+                                {msg.message}
+                              </p>
+                            </div>
+
+                            {/* Internal Admin Note */}
+                            <div className="flex items-center gap-2 text-xs">
+                              <input
+                                type="text"
+                                defaultValue={msg.adminNotes || ''}
+                                placeholder="Adicionar nota interna (ex: Passageiro prefere retorno após 18h)..."
+                                onBlur={(e) => {
+                                  if (e.target.value !== (msg.adminNotes || '')) {
+                                    StorageService.updateContactMessageNotes(msg.id, e.target.value);
+                                    loadData();
+                                  }
+                                }}
+                                className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 outline-none focus:border-amber-400 focus:bg-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action buttons footer */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
+                          {/* Quick response buttons */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <a
+                              href={`https://wa.me/${waNumber}?text=${waText}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => handleUpdateMessageStatus(msg.id, 'Respondida')}
+                              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl transition-colors shadow-xs"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                              <span>Responder no WhatsApp</span>
+                            </a>
+
+                            <a
+                              href={`mailto:${msg.email}?subject=Retorno:%20${encodeURIComponent(msg.subject)}%20[Protocolo:%20${msg.ticketCode}]&body=${encodeURIComponent(`Olá ${msg.name},\n\nRecebemos sua mensagem através da nossa central do Litoral em Movimento.\n\n`)}`}
+                              onClick={() => handleUpdateMessageStatus(msg.id, 'Respondida')}
+                              className="inline-flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold px-3.5 py-2 rounded-xl transition-colors shadow-xs"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                              <span>Responder por E-mail</span>
+                            </a>
+                          </div>
+
+                          {/* Status and management actions */}
+                          <div className="flex items-center gap-2">
+                            {msg.status !== 'Respondida' ? (
+                              <button
+                                onClick={() => handleUpdateMessageStatus(msg.id, 'Respondida')}
+                                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold transition-colors cursor-pointer"
+                              >
+                                Marcar Respondida
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleUpdateMessageStatus(msg.id, 'Pendente')}
+                                className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl font-bold transition-colors border border-amber-200 cursor-pointer"
+                              >
+                                Reabrir (Pendente)
+                              </button>
+                            )}
+
+                            {msg.status !== 'Arquivada' && (
+                              <button
+                                onClick={() => handleUpdateMessageStatus(msg.id, 'Arquivada')}
+                                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-medium transition-colors cursor-pointer"
+                              >
+                                Arquivar
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                              title="Excluir mensagem"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* TAB 5: TEAM MANAGEMENT */}
+        {activeTab === 'team' && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-amber-400/10 text-amber-900 text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-1">
+                  <UserCheck className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Equipe de Gestão Oficial</span>
+                </div>
+                <h3 className="font-serif-display font-extrabold text-2xl text-slate-900">
+                  Administradores & Gestores do Sistema
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Profissionais com credencial de acesso ao painel para controle de reservas, frota, financeiro e atendimento.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-600">Usuário Ativo:</span>
+                <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs">
+                  <img
+                    src={activeAdmin.avatarUrl}
+                    alt={activeAdmin.name}
+                    className="w-5 h-5 rounded-full object-cover border border-amber-400"
+                  />
+                  <span className="font-bold">{activeAdmin.name}</span>
+                  <span className="text-[10px] text-emerald-400 font-semibold">• Online</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Team Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {ADMIN_ACCOUNTS.map((admin) => {
+                const isActive = activeAdmin.id === admin.id;
+                return (
+                  <div
+                    key={admin.id}
+                    className={`bg-white rounded-2xl p-5 border transition-all shadow-xs flex flex-col justify-between ${
+                      isActive ? 'border-amber-400 ring-2 ring-amber-400/20 bg-amber-50/10' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={admin.avatarUrl}
+                            alt={admin.name}
+                            className="w-12 h-12 rounded-2xl object-cover border-2 border-slate-200 shadow-xs"
+                          />
+                          <div>
+                            <h4 className="font-bold text-lg text-slate-900 flex items-center gap-1.5">
+                              <span>{admin.name}</span>
+                              {isActive && (
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Sessão Ativa" />
+                              )}
+                            </h4>
+                            <span className="text-xs text-slate-500 font-medium">
+                              {admin.email}
+                            </span>
+                          </div>
+                        </div>
+
+                        {isActive && (
+                          <span className="text-[10px] bg-slate-900 text-white font-bold px-2 py-0.5 rounded-full">
+                            Sessão Ativa
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Status de Acesso:</span>
+                          <span className="text-emerald-700 font-bold flex items-center gap-1">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Autorizado</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[11px] text-slate-400 font-mono">{admin.id}</span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveAdmin(admin)}
+                        disabled={isActive}
+                        className={`text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-emerald-100 text-emerald-800 cursor-default'
+                            : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
+                        }`}
+                      >
+                        {isActive ? '✓ Selecionado' : 'Acessar como ' + admin.name}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Information Notice */}
+            <div className="bg-slate-900 text-slate-200 p-5 rounded-2xl border border-slate-800 flex items-start gap-3 text-xs">
+              <KeyRound className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-white font-bold block mb-1">
+                  Diretrizes de Segurança e Acesso da Equipe:
+                </strong>
+                <p className="text-slate-400 leading-relaxed">
+                  Os administradores <strong>Eduardo, Edivam, Cludinei, Karine e Michelly</strong> possuem acesso liberado para gerenciar todas as solicitações de transfer, acompanhar os sinais de 50%, despachar motoristas nas vans Spin 7L e Sedã 4L, e emitir vouchers oficiais para os passageiros.
+                </p>
               </div>
             </div>
           </div>

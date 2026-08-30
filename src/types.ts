@@ -92,7 +92,8 @@ export interface AdminAccount {
   id: string;
   name: string;
   email: string;
-  role: 'Super Admin' | 'Gestor de Tráfego' | 'Atendimento' | 'Financeiro';
+  role: 'Super Admin' | 'Gestão Geral' | 'Gestor de Tráfego' | 'Atendimento' | 'Financeiro' | 'Operações' | string;
+  phone?: string;
   avatarUrl: string;
 }
 
@@ -108,4 +109,22 @@ export interface DestinationInfo {
   startingPriceShared: number;
   imageUrl: string;
   highlightBadge: string;
+}
+
+export type MessageStatus = 'Pendente' | 'Respondida' | 'Arquivada';
+
+export interface ContactMessage {
+  id: string;
+  ticketCode: string;
+  createdAt: string;
+  name: string;
+  phone: string;
+  email: string;
+  subject: string;
+  message: string;
+  preferredContact: 'WhatsApp' | 'E-mail' | 'Telefone';
+  status: MessageStatus;
+  adminNotes?: string;
+  answeredAt?: string;
+  answeredBy?: string;
 }

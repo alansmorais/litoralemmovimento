@@ -35,6 +35,16 @@ export const TrackRideModal: React.FC<TrackRideModalProps> = ({ isOpen, onClose,
     }
   }, [isOpen, initialCode]);
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const performSearch = (searchVal: string) => {
@@ -95,7 +105,12 @@ export const TrackRideModal: React.FC<TrackRideModalProps> = ({ isOpen, onClose,
   const currentStep = getStepIndex(result?.status);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+    >
       <div className="bg-white text-slate-900 border-2 border-amber-400 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button

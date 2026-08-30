@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { BRAND_IMAGES, COMPANY_CONTACT } from '../data/mockData';
-import { Calendar, Phone, MapPin, Menu, X, Search, Sparkles, Car } from 'lucide-react';
+import { Calendar, Phone, MapPin, Menu, X, Search, Sparkles, Car, Clock } from 'lucide-react';
 
 interface HeaderProps {
   currentView: 'landing' | 'admin' | 'driver' | 'tracking';
   setCurrentView: (view: 'landing' | 'admin' | 'driver' | 'tracking') => void;
   onOpenTrackModal: () => void;
   onOpenAIModal: () => void;
+  onOpenAdmin: () => void;
+  onOpenDriver: () => void;
   onScrollToBooking: () => void;
+  onOpenContactModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,7 +18,10 @@ export const Header: React.FC<HeaderProps> = ({
   setCurrentView,
   onOpenTrackModal,
   onOpenAIModal,
+  onOpenAdmin,
+  onOpenDriver,
   onScrollToBooking,
+  onOpenContactModal,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -55,19 +61,24 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Dicas de Rota com IA</span>
             </button>
 
-            <a
-              href={`https://wa.me/${COMPANY_CONTACT.phoneRaw}?text=Ol%C3%A1%20Michelly!%20Gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20o%20transfer%20Litoral%20em%20Movimento.`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 hover:text-amber-400 transition-colors text-[11px] sm:text-xs"
-              title="Fale com Michelly pelo WhatsApp"
-            >
-              <Phone className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-              <span className="text-slate-300">
-                <span className="hidden sm:inline">{COMPANY_CONTACT.name}: </span>
-                <strong className="text-white font-semibold">{COMPANY_CONTACT.phone}</strong>
+            {onOpenContactModal ? (
+              <button
+                onClick={onOpenContactModal}
+                className="flex items-center gap-1.5 hover:text-amber-400 transition-colors text-[11px] sm:text-xs cursor-pointer"
+                title="Abrir Central de Atendimento & Dúvidas"
+              >
+                <Phone className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <span className="text-slate-300">
+                  <span className="hidden sm:inline">Central de Atendimento: </span>
+                  <strong className="text-white font-semibold">Fale Conosco</strong>
+                </span>
+              </button>
+            ) : (
+              <span className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-300">
+                <Phone className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <span>Central: <strong className="text-white">{COMPANY_CONTACT.phone}</strong></span>
               </span>
-            </a>
+            )}
           </div>
         </div>
       </div>
@@ -119,6 +130,13 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             Início
+          </button>
+          <button
+            onClick={() => navigateToSection('horarios')}
+            className="transition-colors text-amber-400 hover:text-amber-300 font-semibold cursor-pointer flex items-center gap-1"
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Horários & Tarifas</span>
           </button>
           <button
             onClick={() => navigateToSection('como-funciona')}
@@ -208,6 +226,12 @@ export const Header: React.FC<HeaderProps> = ({
               Início
             </button>
             <button
+              onClick={() => navigateToSection('horarios')}
+              className="text-left py-2 px-3 rounded-lg bg-amber-500/10 text-amber-300 font-semibold border border-amber-500/20"
+            >
+              ⏰ Horários & Tarifas Oficiais
+            </button>
+            <button
               onClick={() => navigateToSection('como-funciona')}
               className="text-left py-2 px-3 rounded-lg hover:bg-slate-800 text-slate-300"
             >
@@ -238,13 +262,13 @@ export const Header: React.FC<HeaderProps> = ({
               Perguntas Frequentes (FAQ)
             </button>
 
-            <div className="pt-2 border-t border-slate-800 space-y-2">
+            <div className="pt-3 border-t border-slate-800 space-y-2">
               <button
                 onClick={() => {
                   onOpenTrackModal();
                   setMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-2 text-left py-2 px-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800"
+                className="w-full flex items-center gap-2 text-left py-2.5 px-3 rounded-xl bg-slate-900 text-slate-200 border border-slate-800 font-semibold text-xs"
               >
                 <Search className="w-4 h-4 text-sky-400" />
                 <span>Rastrear Viagem (Código ou Telefone)</span>
@@ -255,21 +279,24 @@ export const Header: React.FC<HeaderProps> = ({
                   onOpenAIModal();
                   setMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-2 text-left py-2 px-3 rounded-lg bg-slate-900 text-slate-200 border border-slate-800"
+                className="w-full flex items-center gap-2 text-left py-2.5 px-3 rounded-xl bg-slate-900 text-slate-200 border border-slate-800 font-semibold text-xs"
               >
                 <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>Planejar Rota com IA</span>
+                <span>Assistente de Rota com IA</span>
               </button>
 
-              <a
-                href={`https://wa.me/${COMPANY_CONTACT.phoneRaw}?text=Ol%C3%A1%20Michelly!%20Gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20o%20transfer%20Litoral%20em%20Movimento.`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold"
-              >
-                <Phone className="w-4 h-4 text-emerald-400" />
-                <span>Falar no WhatsApp ({COMPANY_CONTACT.phone})</span>
-              </a>
+              {onOpenContactModal && (
+                <button
+                  onClick={() => {
+                    onOpenContactModal();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900 text-amber-300 border border-amber-400/30 text-xs font-bold"
+                >
+                  <Phone className="w-4 h-4 text-amber-400" />
+                  <span>Central de Atendimento & Dúvidas (Fale Conosco)</span>
+                </button>
+              )}
 
               <button
                 onClick={() => {
@@ -277,7 +304,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setMobileMenuOpen(false);
                   setTimeout(onScrollToBooking, 100);
                 }}
-                className="w-full bg-amber-400 text-slate-950 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm shadow-sm"
+                className="w-full bg-amber-400 text-slate-950 font-extrabold py-3 rounded-xl flex items-center justify-center gap-2 text-sm shadow-sm"
               >
                 <Calendar className="w-4 h-4" />
                 <span>AGENDAR TRANSFER AGORA</span>

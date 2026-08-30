@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
 import { WhatWeOfferSection } from './components/WhatWeOfferSection';
+import { TimetableSection } from './components/TimetableSection';
 import { BookingFormSection } from './components/BookingFormSection';
 import { HowItWorksSection } from './components/HowItWorksSection';
 import { ServicesSection } from './components/ServicesSection';
@@ -11,29 +12,97 @@ import { WhyChooseUsSection } from './components/WhyChooseUsSection';
 import { FAQSection } from './components/FAQSection';
 import { FinalCTASection } from './components/FinalCTASection';
 import { Footer } from './components/Footer';
-import { FloatingWhatsApp } from './components/FloatingWhatsApp';
+import { FloatingContactButton } from './components/FloatingContactButton';
 import { AdminDashboard } from './components/AdminDashboard';
 import { DriverAppView } from './components/DriverAppView';
 import { TrackRideModal } from './components/TrackRideModal';
 import { AISmartAssistantModal } from './components/AISmartAssistantModal';
+import { ContactSupportModal } from './components/ContactSupportModal';
 import { AdminAuthModal } from './components/AdminAuthModal';
 import { DriverAuthModal } from './components/DriverAuthModal';
-import { Reservation } from './types';
+import { Reservation, TripType } from './types';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'admin' | 'driver' | 'tracking'>('landing');
   const [selectedDestination, setSelectedDestination] = useState<string>('São Sebastião');
+  const [preloadRoute, setPreloadRoute] = useState<{
+    origin: string;
+    destination: string;
+    time: string;
+    tripType: TripType;
+  } | null>(null);
   const [isTrackModalOpen, setIsTrackModalOpen] = useState(false);
   const [trackRideCode, setTrackRideCode] = useState<string>('');
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const [isDriverAuthOpen, setIsDriverAuthOpen] = useState(false);
+
+  // Sync with URL hash for direct access to the 3 systems
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#admin' || hash === '#gestao') {
+        const isAuth = sessionStorage.getItem('litoral_admin_auth') === 'true';
+        if (isAuth) {
+          setCurrentView('admin');
+        } else {
+          setIsAdminAuthOpen(true);
+        }
+      } else if (hash === '#driver' || hash === '#motorista' || hash === '#pista') {
+        const isAuth = !!sessionStorage.getItem('litoral_driver_auth');
+        if (isAuth) {
+          setCurrentView('driver');
+        } else {
+          setIsDriverAuthOpen(true);
+        }
+      } else if (hash === '#rastreio' || hash === '#tracking') {
+        setIsTrackModalOpen(true);
+      } else if (hash === '#reservas' || hash === '#cliente' || hash === '#publico') {
+        setCurrentView('landing');
+      }
+    };
+
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const handleSelectSystem = (view: 'landing' | 'admin' | 'driver') => {
+    if (view === 'landing') {
+      window.location.hash = 'reservas';
+      setCurrentView('landing');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (view === 'admin') {
+      const isAuth = sessionStorage.getItem('litoral_admin_auth') === 'true';
+      if (isAuth) {
+        window.location.hash = 'admin';
+        setCurrentView('admin');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        setIsAdminAuthOpen(true);
+      }
+    } else if (view === 'driver') {
+      const isAuth = !!sessionStorage.getItem('litoral_driver_auth');
+      if (isAuth) {
+        window.location.hash = 'motorista';
+        setCurrentView('driver');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        setIsDriverAuthOpen(true);
+      }
+    }
+  };
 
   const scrollToBooking = () => {
     const el = document.getElementById('agendar');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleSelectRouteTime = (origin: string, destination: string, time: string, tripType: TripType) => {
+    setPreloadRoute({ origin, destination, time, tripType });
   };
 
   const scrollToDestinations = () => {
@@ -44,33 +113,23 @@ export default function App() {
   };
 
   const handleOpenAdmin = () => {
-    const isAuth = sessionStorage.getItem('litoral_admin_auth') === 'true';
-    if (isAuth) {
-      setCurrentView('admin');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      setIsAdminAuthOpen(true);
-    }
+    handleSelectSystem('admin');
   };
 
   const handleOpenDriver = () => {
-    const isAuth = !!sessionStorage.getItem('litoral_driver_auth');
-    if (isAuth) {
-      setCurrentView('driver');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      setIsDriverAuthOpen(true);
-    }
+    handleSelectSystem('driver');
   };
 
   const handleAdminAuthSuccess = () => {
     setIsAdminAuthOpen(false);
+    window.location.hash = 'admin';
     setCurrentView('admin');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDriverAuthSuccess = () => {
     setIsDriverAuthOpen(false);
+    window.location.hash = 'motorista';
     setCurrentView('driver');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -78,6 +137,7 @@ export default function App() {
   const handleLogoutAdmin = () => {
     sessionStorage.removeItem('litoral_admin_auth');
     sessionStorage.removeItem('litoral_admin_auth_time');
+    window.location.hash = 'reservas';
     setCurrentView('landing');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -105,7 +165,10 @@ export default function App() {
         setCurrentView={setCurrentView}
         onOpenTrackModal={() => handleOpenTrackModal()}
         onOpenAIModal={() => setIsAIModalOpen(true)}
+        onOpenAdmin={handleOpenAdmin}
+        onOpenDriver={handleOpenDriver}
         onScrollToBooking={scrollToBooking}
+        onOpenContactModal={() => setIsContactModalOpen(true)}
       />
 
       {/* Main Content Area based on active view */}
@@ -123,9 +186,16 @@ export default function App() {
             {/* 3. Quick Trust / Benefits (O Que Oferecemos) */}
             <WhatWeOfferSection />
 
+            {/* 3.5 Quadro de Horários & Tarifas Oficiais (Michelly) */}
+            <TimetableSection
+              onSelectRouteTime={handleSelectRouteTime}
+              onScrollToBooking={scrollToBooking}
+            />
+
             {/* 4. Booking Section ("Reserve seu transfer") */}
             <BookingFormSection
               initialDestination={selectedDestination}
+              preloadRoute={preloadRoute}
               onBookingSuccess={handleBookingSuccess}
               onOpenTrackModal={handleOpenTrackModal}
             />
@@ -152,17 +222,21 @@ export default function App() {
             <FAQSection />
 
             {/* 11. Final Conversion CTA */}
-            <FinalCTASection onScrollToBooking={scrollToBooking} />
+            <FinalCTASection
+              onScrollToBooking={scrollToBooking}
+              onOpenContactModal={() => setIsContactModalOpen(true)}
+            />
 
             {/* 12. Footer */}
             <Footer
               onScrollToBooking={scrollToBooking}
               onOpenAdmin={handleOpenAdmin}
               onOpenDriver={handleOpenDriver}
+              onOpenContactModal={() => setIsContactModalOpen(true)}
             />
 
-            {/* Floating Subtle WhatsApp Action */}
-            <FloatingWhatsApp />
+            {/* Floating Contact & Support Button (Opens modal form) */}
+            <FloatingContactButton onOpenContactModal={() => setIsContactModalOpen(true)} />
           </>
         )}
 
@@ -194,6 +268,11 @@ export default function App() {
       <AISmartAssistantModal
         isOpen={isAIModalOpen}
         onClose={() => setIsAIModalOpen(false)}
+      />
+
+      <ContactSupportModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
       />
 
       <AdminAuthModal

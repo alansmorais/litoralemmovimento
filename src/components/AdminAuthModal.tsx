@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Lock, Eye, EyeOff, AlertTriangle, KeyRound, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Lock, Eye, EyeOff, AlertTriangle, KeyRound, CheckCircle, X } from 'lucide-react';
 import { BRAND_IMAGES } from '../data/mockData';
 
 interface AdminAuthModalProps {
@@ -18,6 +18,16 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const validPasswords = [
@@ -25,7 +35,19 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     '12988506597',
     'admin',
     'spin7l',
+    'eduardo',
+    'eduardo2026',
+    'edivam',
+    'edivam2026',
+    'edivan',
+    'cludinei',
+    'cludinei2026',
+    'claudinei',
+    'karine',
+    'karine2026',
+    'michelly',
     'michelly2026',
+    'alan2026',
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,16 +72,21 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn"
+    >
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full text-white shadow-2xl space-y-6 relative">
         {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors cursor-pointer"
           aria-label="Fechar"
         >
-          ✕
+          <X className="w-5 h-5" />
         </button>
 
         {/* Header Icon & Brand */}
@@ -143,8 +170,8 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
         </form>
 
         <div className="border-t border-slate-800 pt-4 text-center">
-          <p className="text-[11px] text-slate-500">
-            Dica rápida da gerência: Use <code className="bg-slate-800 px-1.5 py-0.5 rounded text-amber-300">litoral2026</code> ou WhatsApp da Michelly.
+          <p className="text-[11px] text-slate-400">
+            Acesso autorizado para a equipe de gestão: <strong>Eduardo, Edivam, Cludinei, Karine e Michelly</strong>.
           </p>
         </div>
       </div>

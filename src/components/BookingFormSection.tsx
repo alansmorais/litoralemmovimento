@@ -39,12 +39,19 @@ import {
 
 interface BookingFormSectionProps {
   initialDestination?: string;
+  preloadRoute?: {
+    origin: string;
+    destination: string;
+    time: string;
+    tripType: TripType;
+  } | null;
   onBookingSuccess: (reservation: Reservation) => void;
   onOpenTrackModal?: (code?: string) => void;
 }
 
 export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
   initialDestination = 'São Sebastião',
+  preloadRoute,
   onBookingSuccess,
   onOpenTrackModal,
 }) => {
@@ -53,7 +60,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [origin, setOrigin] = useState('São Paulo');
-  const [pickupAddress, setPickupAddress] = useState('Aeroporto de Guarulhos (GRU) - Terminal 2');
+  const [pickupAddress, setPickupAddress] = useState('Estação Metrô Portuguesa-Tietê, São Paulo - SP');
   const [destination, setDestination] = useState(initialDestination);
   const [dropoffAddress, setDropoffAddress] = useState('');
   const [vehicleCategory, setVehicleCategory] = useState<'spin_7' | 'sedan_4'>('spin_7');
@@ -62,9 +69,34 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
   });
-  const [time, setTime] = useState('08:00');
-  const [passengers, setPassengers] = useState(2);
-  const [tripType, setTripType] = useState<TripType>('Individual');
+  const [time, setTime] = useState('11:30');
+  const [passengers, setPassengers] = useState(1);
+  const [tripType, setTripType] = useState<TripType>('Compartilhada');
+
+  React.useEffect(() => {
+    if (initialDestination) {
+      setDestination(initialDestination);
+    }
+  }, [initialDestination]);
+
+  React.useEffect(() => {
+    if (preloadRoute) {
+      setOrigin(preloadRoute.origin);
+      setDestination(preloadRoute.destination);
+      setTime(preloadRoute.time);
+      setTripType(preloadRoute.tripType);
+      if (preloadRoute.origin === 'São Sebastião') {
+        setPickupAddress('Balsa de São Sebastião / Centro Histórico');
+        setDropoffAddress('Estação Metrô Portuguesa-Tietê, São Paulo - SP');
+      } else if (preloadRoute.origin.includes('Caraguatatuba')) {
+        setPickupAddress('Rodoviária de Caraguatatuba');
+        setDropoffAddress('Estação Metrô Portuguesa-Tietê, São Paulo - SP');
+      } else {
+        setPickupAddress('Estação Metrô Portuguesa-Tietê, São Paulo - SP');
+        setDropoffAddress('Balsa de São Sebastião / Rodoviária Caraguá');
+      }
+    }
+  }, [preloadRoute]);
   const [luggageCount, setLuggageCount] = useState(2);
   const [hasChildSeat, setHasChildSeat] = useState(false);
   const [flightNumber, setFlightNumber] = useState('');
@@ -95,40 +127,44 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
   // Route Preset shortcuts
   const routePresets = [
     {
-      title: '✈️ GRU ➔ Maresias',
-      label: 'Aeroporto GRU ➔ Maresias (São Sebastião)',
+      title: '🚇 Tietê ➔ S. Sebastião (R$ 90)',
+      label: 'Metrô Portuguesa-Tietê ➔ Balsa São Sebastião',
       orig: 'São Paulo',
       dest: 'São Sebastião',
-      pick: 'Aeroporto Internacional de Guarulhos (GRU) - Terminal 2/3',
-      drop: 'Praia de Maresias, São Sebastião - SP',
-      time: '09:00',
+      pick: 'Estação Metrô Portuguesa-Tietê, São Paulo - SP',
+      drop: 'Balsa de São Sebastião / Centro Histórico',
+      time: '11:30',
+      type: 'Compartilhada' as TripType,
     },
     {
-      title: '🌴 SP ➔ Balsa Ilhabela',
-      label: 'São Paulo Capital ➔ Balsa de São Sebastião / Ilhabela',
-      orig: 'São Paulo',
-      dest: 'Ilhabela (Balsa São Sebastião)',
-      pick: 'Av. Paulista, Jardins ou Aeroportos, São Paulo',
-      drop: 'Porto da Balsa de São Sebastião (Embarque Ilhabela)',
-      time: '07:30',
-    },
-    {
-      title: '🚗 CGH ➔ Caraguatatuba',
-      label: 'Aeroporto Congonhas ➔ Rodoviária Caraguá',
+      title: '🚌 Tietê ➔ Caraguá (R$ 80)',
+      label: 'Metrô Portuguesa-Tietê ➔ Rodoviária Caraguatatuba',
       orig: 'São Paulo',
       dest: 'Caraguatatuba (Rodoviária / Sentido S. Sebastião)',
-      pick: 'Aeroporto de Congonhas (CGH) - Portão Principal',
-      drop: 'Rodoviária de Caraguatatuba / Porto Novo - SP',
-      time: '08:30',
+      pick: 'Estação Metrô Portuguesa-Tietê, São Paulo - SP',
+      drop: 'Rodoviária de Caraguatatuba / Porto Novo',
+      time: '14:30',
+      type: 'Compartilhada' as TripType,
     },
     {
-      title: '🏖️ Retorno Litoral ➔ SP',
-      label: 'São Sebastião ➔ São Paulo (Retorno)',
+      title: '✈️ Aeroporto GRU ➔ Litoral (R$ 150)',
+      label: 'Aeroporto de Guarulhos (GRU) ➔ Litoral Norte',
+      orig: 'São Paulo',
+      dest: 'São Sebastião',
+      pick: 'Aeroporto Internacional de Guarulhos (GRU) - Terminais 2/3',
+      drop: 'Balsa São Sebastião / Caraguatatuba',
+      time: '17:30',
+      type: 'Compartilhada' as TripType,
+    },
+    {
+      title: '🏖️ Subida: S. Sebastião ➔ Tietê (R$ 90)',
+      label: 'São Sebastião ➔ Metrô Portuguesa-Tietê',
       orig: 'São Sebastião',
       dest: 'São Paulo',
-      pick: 'Pousada / Hotel no Litoral',
-      drop: 'São Paulo Capital ou Aeroportos',
-      time: '15:00',
+      pick: 'Balsa de São Sebastião / Centro',
+      drop: 'Estação Metrô Portuguesa-Tietê, São Paulo - SP',
+      time: '08:30',
+      type: 'Compartilhada' as TripType,
     },
   ];
 
@@ -138,6 +174,9 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
     setPickupAddress(preset.pick);
     setDropoffAddress(preset.drop);
     setTime(preset.time);
+    if (preset.type) {
+      setTripType(preset.type);
+    }
   };
 
   // Quick Date presets
@@ -322,55 +361,110 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
   return (
     <section id="agendar" className="py-16 sm:py-24 bg-slate-50 relative border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
-          <div className="inline-flex items-center gap-2 bg-slate-200/80 text-slate-800 text-xs font-semibold uppercase tracking-wider px-3.5 py-1.5 rounded-full mb-3">
-            <Calendar className="w-3.5 h-3.5 text-amber-600" />
-            <span>Simulador Online & Reserva</span>
-          </div>
-          <h2 className="font-serif-display text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Reserve seu transfer
-          </h2>
-          <p className="text-slate-600 text-base sm:text-lg mt-3 leading-relaxed">
-            Informe sua viagem e veja as opções disponíveis com cálculo transparente e sem surpresas.
-          </p>
+        {/* Section Heading & Organized Presentation */}
+        <div className="max-w-4xl mx-auto mb-10 sm:mb-14">
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-2 bg-slate-900 text-amber-400 text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-xs">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Simulador Online & Reserva Transparente</span>
+            </div>
 
-          {/* Trust checkmarks row */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-slate-700">
-            <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs font-medium">
-              <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              Atendimento personalizado
-            </span>
-            <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs font-medium">
-              <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              Reserva com confirmação
-            </span>
-            <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs font-medium">
-              <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              Veículo climatizado
-            </span>
-            <span className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs font-medium">
-              <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              Até 6 passageiros + motorista
-            </span>
+            <h2 className="font-serif-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
+              Reserve seu transfer
+            </h2>
+
+            <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+              Informe sua viagem e veja as opções disponíveis com cálculo transparente e sem surpresas.
+            </p>
           </div>
 
-          {/* Quick Route Presets Toolbar */}
-          <div className="mt-6 flex flex-wrap justify-center items-center gap-2">
-            <span className="text-xs font-semibold text-slate-600 flex items-center gap-1 mr-1 py-1">
-              <Compass className="w-3.5 h-3.5 text-amber-600" />
-              Rotas Populares:
-            </span>
-            {routePresets.map((preset, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => applyPreset(preset)}
-                className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-medium px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-400 hover:text-slate-950 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-              >
-                <span>{preset.title}</span>
-              </button>
-            ))}
+          {/* 4 Pillars Grid - Clean, high contrast & structured */}
+          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center text-center sm:text-left gap-2.5 transition-all hover:border-amber-400">
+              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 block leading-tight">
+                  Atendimento personalizado
+                </strong>
+                <span className="text-[11px] text-slate-500 hidden sm:block">Apoio direto em cada etapa</span>
+              </div>
+            </div>
+
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center text-center sm:text-left gap-2.5 transition-all hover:border-amber-400">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 block leading-tight">
+                  Reserva com confirmação
+                </strong>
+                <span className="text-[11px] text-slate-500 hidden sm:block">Voucher e garantia de vaga</span>
+              </div>
+            </div>
+
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center text-center sm:text-left gap-2.5 transition-all hover:border-amber-400">
+              <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center flex-shrink-0">
+                <Car className="w-4 h-4" />
+              </div>
+              <div>
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 block leading-tight">
+                  Veículo climatizado
+                </strong>
+                <span className="text-[11px] text-slate-500 hidden sm:block">Frota Spin 7 Lugares</span>
+              </div>
+            </div>
+
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center text-center sm:text-left gap-2.5 transition-all hover:border-amber-400">
+              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+                <Users className="w-4 h-4" />
+              </div>
+              <div>
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 block leading-tight">
+                  Até 6 passageiros + motorista
+                </strong>
+                <span className="text-[11px] text-slate-500 hidden sm:block">Espaço amplo com bagageiro</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rotas Populares - Organized Interactive Cards */}
+          <div className="mt-8 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xs">
+                  <Compass className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 font-serif-display">
+                  Rotas Populares:
+                </h3>
+              </div>
+              <span className="text-[11px] text-slate-500 font-medium">
+                Clique na rota para preencher automaticamente os campos do simulador:
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {routePresets.map((preset, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  className="p-3.5 rounded-2xl bg-slate-50 hover:bg-amber-50/70 border border-slate-200 hover:border-amber-400 transition-all text-left group flex flex-col justify-between gap-2.5 cursor-pointer shadow-2xs hover:shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-1.5 w-full">
+                    <span className="text-xs font-bold text-slate-900 group-hover:text-amber-900 leading-tight">
+                      {preset.title}
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />
+                  </div>
+                  <span className="text-[11px] text-slate-500 line-clamp-1 block">
+                    {preset.label}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -715,6 +809,9 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                 <MonthlyBookingCalendar
                   selectedDate={date}
                   selectedTime={time}
+                  origin={origin}
+                  destination={destination}
+                  tripType={tripType}
                   onDateChange={setDate}
                   onTimeChange={setTime}
                 />

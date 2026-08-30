@@ -1,10 +1,41 @@
-import { Reservation, Driver, TripStatus, GPSDeviation } from '../types';
+import { Reservation, Driver, TripStatus, GPSDeviation, ContactMessage, MessageStatus } from '../types';
 import { INITIAL_RESERVATIONS, DRIVERS, PRICING_RULES, COMPANY_CONTACT } from '../data/mockData';
 
 const RESERVATIONS_STORAGE_KEY = 'litoral_em_movimento_reservations_v2';
 const DRIVERS_STORAGE_KEY = 'litoral_em_movimento_drivers_v1';
+const CONTACT_MESSAGES_STORAGE_KEY = 'litoral_em_movimento_contact_messages_v1';
 const GOOGLE_SCRIPT_STORAGE_KEY = 'litoral_em_movimento_gas_url_v1';
 const SUPER_ADMIN_PASSWORD_KEY = 'litoral_superadmin_password_custom_v1';
+
+const INITIAL_CONTACT_MESSAGES: ContactMessage[] = [
+  {
+    id: 'msg-1',
+    ticketCode: 'FAL-1082',
+    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+    name: 'Carolina Mendes',
+    phone: '(11) 99872-4411',
+    email: 'carolina.mendes@gmail.com',
+    subject: 'Cotação para Grupo em Juquehy',
+    message: 'Olá! Somos um grupo de 6 pessoas e gostaríamos de saber se vocês atendem com Spin 7 lugares para passar o feriado em Juquehy com 5 malas grandes.',
+    preferredContact: 'WhatsApp',
+    status: 'Pendente',
+  },
+  {
+    id: 'msg-2',
+    ticketCode: 'FAL-1081',
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    name: 'Dr. Rodrigo Albuquerque',
+    phone: '(12) 98114-5566',
+    email: 'rodrigo.albuquerque@advocacia.com.br',
+    subject: 'Transfer Corporativo Frequente',
+    message: 'Preciso de saídas semanais às quintas-feiras saindo do Aeroporto GRU direto para a Balsa de Ilhabela. Gostaria de entender como funciona a emissão de nota fiscal para empresa.',
+    preferredContact: 'E-mail',
+    status: 'Respondida',
+    adminNotes: 'Michelly respondeu por e-mail com a tabela corporativa e modelo de NF.',
+    answeredAt: new Date(Date.now() - 3600000 * 18).toISOString(),
+    answeredBy: 'Michelly (Gestão)',
+  },
+];
 
 export class StorageService {
   public static getSuperAdminPassword(): string {
@@ -124,7 +155,10 @@ export class StorageService {
     }
   }
 
-  public static async syncToGoogleSheets(action: 'createReservation' | 'confirmDeposit' | 'updateStatus', payload: any): Promise<void> {
+  public static async syncToGoogleSheets(
+    action: 'createReservation' | 'confirmDeposit' | 'updateStatus' | 'createContactMessage',
+    payload: any
+  ): Promise<void> {
     const scriptUrl = this.getGoogleScriptUrl();
     if (!scriptUrl) return;
 
@@ -399,7 +433,26 @@ _Olá Michelly! Por favor, confirme a disponibilidade deste transfer._`;
 
     let calculatedBase = base;
     if (params.tripType === 'Compartilhada') {
-      const perSeat = 180;
+      const origLower = params.origin.toLowerCase();
+      const destLower = params.destination.toLowerCase();
+
+      const isAirportGRU =
+        origLower.includes('guarulhos') ||
+        origLower.includes('gru') ||
+        destLower.includes('guarulhos') ||
+        destLower.includes('gru');
+
+      const isCaragua =
+        origLower.includes('caraguatatuba') ||
+        destLower.includes('caraguatatuba');
+
+      let perSeat = 90; // Default São Sebastião / Metrô Tietê / Balsa
+      if (isAirportGRU) {
+        perSeat = 150;
+      } else if (isCaragua) {
+        perSeat = 80;
+      }
+
       calculatedBase = perSeat * Math.max(1, params.passengers);
     }
 
@@ -415,5 +468,77 @@ _Olá Michelly! Por favor, confirme a disponibilidade deste transfer._`;
       depositAmount,
       remainingAmount,
     };
+  }
+
+  public static getContactMessages(): ContactMessage[] {
+    try {
+      const saved = localStorage.getItem(CONTACT_MESSAGES_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+      localStorage.setItem(CONTACT_MESSAGES_STORAGE_KEY, JSON.stringify(INITIAL_CONTACT_MESSAGES));
+      return INITIAL_CONTACT_MESSAGES;
+    } catch {
+      return INITIAL_CONTACT_MESSAGES;
+    }
+  }
+
+  public static saveContactMessages(messages: ContactMessage[]): void {
+    try {
+      localStorage.setItem(CONTACT_MESSAGES_STORAGE_KEY, JSON.stringify(messages));
+      window.dispatchEvent(new CustomEvent('contact_messages_updated', { detail: messages }));
+    } catch (e) {
+      console.error('Failed to save contact messages to localStorage', e);
+    }
+  }
+
+  public static createContactMessage(data: Omit<ContactMessage, 'id' | 'ticketCode' | 'createdAt' | 'status'>): ContactMessage {
+    const list = this.getContactMessages();
+    const newMsg: ContactMessage = {
+      ...data,
+      id: `msg-${Date.now()}`,
+      ticketCode: `FAL-${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: new Date().toISOString(),
+      status: 'Pendente',
+    };
+    list.unshift(newMsg);
+    this.saveContactMessages(list);
+
+    // Sync to Google Sheets if configured
+    this.syncToGoogleSheets('createContactMessage', { contactMessage: newMsg });
+
+    return newMsg;
+  }
+
+  public static updateContactMessageStatus(id: string, status: MessageStatus, answeredBy?: string): ContactMessage | null {
+    const list = this.getContactMessages();
+    const idx = list.findIndex((m) => m.id === id);
+    if (idx === -1) return null;
+
+    list[idx].status = status;
+    if (status === 'Respondida') {
+      list[idx].answeredAt = new Date().toISOString();
+      if (answeredBy) list[idx].answeredBy = answeredBy;
+    }
+    this.saveContactMessages(list);
+    return list[idx];
+  }
+
+  public static updateContactMessageNotes(id: string, adminNotes: string): ContactMessage | null {
+    const list = this.getContactMessages();
+    const idx = list.findIndex((m) => m.id === id);
+    if (idx === -1) return null;
+
+    list[idx].adminNotes = adminNotes;
+    this.saveContactMessages(list);
+    return list[idx];
+  }
+
+  public static deleteContactMessage(id: string): boolean {
+    const list = this.getContactMessages();
+    const filtered = list.filter((m) => m.id !== id);
+    if (filtered.length === list.length) return false;
+    this.saveContactMessages(filtered);
+    return true;
   }
 }
