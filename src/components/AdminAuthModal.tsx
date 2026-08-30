@@ -30,7 +30,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const validPasswords = [
+  const validFallbackPasswords = [
     'litoral2026',
     '12988506597',
     'admin',
@@ -50,25 +50,51 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     'alan2026',
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    setTimeout(() => {
-      const sanitized = password.trim().toLowerCase();
-      if (validPasswords.includes(sanitized)) {
-        // Save session flag in sessionStorage
+    const sanitized = password.trim().toLowerCase();
+
+    try {
+      // 1. Try Backend Authentication
+      const res = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: sanitized }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) {
+          sessionStorage.setItem('litoral_admin_token', data.token);
+        }
+        if (data.adminName) {
+          sessionStorage.setItem('litoral_admin_name', data.adminName);
+        }
         sessionStorage.setItem('litoral_admin_auth', 'true');
         sessionStorage.setItem('litoral_admin_auth_time', new Date().toISOString());
         setIsLoading(false);
         setPassword('');
         onSuccess();
-      } else {
-        setIsLoading(false);
-        setError('Senha de administrador incorreta. Tente novamente.');
+        return;
       }
-    }, 400);
+    } catch {
+      // Offline / standalone fallback
+    }
+
+    // 2. Local Fallback Verification
+    if (validFallbackPasswords.includes(sanitized)) {
+      sessionStorage.setItem('litoral_admin_auth', 'true');
+      sessionStorage.setItem('litoral_admin_auth_time', new Date().toISOString());
+      setIsLoading(false);
+      setPassword('');
+      onSuccess();
+    } else {
+      setIsLoading(false);
+      setError('Senha de administrador incorreta. Tente novamente.');
+    }
   };
 
   return (

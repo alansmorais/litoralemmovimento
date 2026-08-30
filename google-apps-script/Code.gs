@@ -35,6 +35,7 @@ var SHEET_RESERVAS = 'Reservas';
 var SHEET_MOTORISTAS = 'Motoristas';
 var SHEET_DASHBOARD = 'Dashboard';
 var SHEET_CONFIG = 'Configuracoes';
+var SHEET_SAC = 'Mensagens_SAC';
 
 /**
  * Menu personalizado que aparece no Google Sheets ao abrir a planilha
@@ -61,6 +62,7 @@ function setupAllSheets() {
   var sheetReservas = setupReservasSheet(ss);
   var sheetMotoristas = setupMotoristasSheet(ss);
   var sheetConfig = setupConfigSheet(ss);
+  var sheetSac = setupSacSheet(ss);
   var sheetDashboard = setupDashboardSheet(ss);
   
   // Ativa a aba de Reservas como padrão
@@ -68,7 +70,7 @@ function setupAllSheets() {
   
   try {
     SpreadsheetApp.getActiveSpreadsheet().toast(
-      'Todas as abas (Reservas, Motoristas, Dashboard, Configurações) foram configuradas com sucesso!',
+      'Todas as 5 abas (Reservas, Motoristas, Mensagens_SAC, Dashboard, Configurações) foram configuradas!',
       '✅ Litoral em Movimento',
       5
     );
@@ -78,8 +80,8 @@ function setupAllSheets() {
 
   return {
     status: 'success',
-    message: 'Todas as abas e cabeçalhos foram criados e formatados com sucesso!',
-    sheets: [SHEET_RESERVAS, SHEET_MOTORISTAS, SHEET_DASHBOARD, SHEET_CONFIG]
+    message: 'Todas as 5 abas e cabeçalhos foram criados e formatados com sucesso!',
+    sheets: [SHEET_RESERVAS, SHEET_MOTORISTAS, SHEET_SAC, SHEET_DASHBOARD, SHEET_CONFIG]
   };
 }
 
@@ -329,7 +331,70 @@ function setupMotoristasSheet(ss) {
 }
 
 /**
- * 3. Configuração da Aba de Configurações do Negócio
+ * 3. Configuração da Aba de SAC / Mensagens de Suporte
+ */
+function setupSacSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_SAC) || ss.insertSheet(SHEET_SAC);
+  
+  var headers = [
+    'ID Mensagem',
+    'Data / Hora',
+    'Nome do Cliente',
+    'Telefone (WhatsApp)',
+    'E-mail',
+    'Assunto / Categoria',
+    'Mensagem / Dúvida',
+    'Status Atendimento',
+    'Canal de Origem',
+    'Atendente / Respondido Por',
+    'Notas Internas'
+  ];
+
+  var headerRange = sheet.getRange(1, 1, 1, headers.length);
+  headerRange.setValues([headers]);
+  headerRange
+    .setBackground('#0F172A')
+    .setFontColor('#F8FAFC')
+    .setFontWeight('bold')
+    .setFontSize(10)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+
+  sheet.setRowHeight(1, 35);
+  sheet.setFrozenRows(1);
+
+  // Validação de status SAC
+  var ruleStatus = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Pendente', 'Em Atendimento', 'Respondido', 'Arquivado'], true)
+    .build();
+  sheet.getRange('H2:H').setDataValidation(ruleStatus);
+
+  if (sheet.getLastRow() <= 1) {
+    sheet.appendRow([
+      'msg-001',
+      new Date().toISOString(),
+      'Mariana Siqueira',
+      '(11) 99876-5432',
+      'mariana.siqueira@email.com',
+      'Dúvida sobre Bagagem na Spin 7L',
+      'Boa tarde! Gostaria de saber se cabem 4 malas grandes e 2 de bordo para 5 passageiros no Chevrolet Spin.',
+      'Respondido',
+      'WhatsApp / Site',
+      'Michelly (Gestão)',
+      'Cliente orientada que rebatendo a última fileira cabem perfeitamente.'
+    ]);
+  }
+
+  for (var col = 1; col <= headers.length; col++) {
+    sheet.autoResizeColumn(col);
+  }
+
+  return sheet;
+}
+
+/**
+ * 4. Configuração da Aba de Configurações do Negócio
  */
 function setupConfigSheet(ss) {
   if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -497,6 +562,30 @@ function doGet(e) {
       });
     }
     return createJsonResponse(drivers);
+  }
+
+  // Endpoint: Retornar Mensagens do SAC
+  if (action === 'getContactMessages' || action === 'getMessages') {
+    var sheetSac = ss.getSheetByName(SHEET_SAC) || setupSacSheet(ss);
+    var sacData = sheetSac.getDataRange().getValues();
+    var messages = [];
+    for (var m = 1; m < sacData.length; m++) {
+      if (!sacData[m][0]) continue;
+      messages.push({
+        id: String(sacData[m][0]),
+        createdAt: String(sacData[m][1]),
+        name: String(sacData[m][2]),
+        phone: String(sacData[m][3]),
+        email: String(sacData[m][4] || ''),
+        subject: String(sacData[m][5] || 'Geral'),
+        message: String(sacData[m][6] || ''),
+        status: String(sacData[m][7] || 'Pendente'),
+        channel: String(sacData[m][8] || 'Site / WhatsApp'),
+        answeredBy: String(sacData[m][9] || ''),
+        adminNotes: String(sacData[m][10] || '')
+      });
+    }
+    return createJsonResponse(messages);
   }
 
   // Endpoint Padrão: Retornar Reservas
@@ -670,7 +759,166 @@ function doPost(e) {
       });
     }
 
-    // 4. Atualizar Senha do Super Admin ou Chave de Configuração
+    // 4. Sincronização Completa de TUDO (Backup e Atualização Mestra do Dashboard)
+    if (action === 'syncAll') {
+      var syncResCount = 0;
+      var syncDrvCount = 0;
+      var syncMsgCount = 0;
+
+      // 4.1 Sincronizar Reservas
+      if (Array.isArray(payload.reservations)) {
+        var sheetRes = ss.getSheetByName(SHEET_RESERVAS) || setupReservasSheet(ss);
+        var existingData = sheetRes.getDataRange().getValues();
+        var existingIds = {};
+        for (var er = 1; er < existingData.length; er++) {
+          if (existingData[er][0]) existingIds[String(existingData[er][0])] = er + 1;
+        }
+
+        for (var rIdx = 0; rIdx < payload.reservations.length; rIdx++) {
+          var item = payload.reservations[rIdx];
+          var itemId = String(item.id || ('res-' + (new Date().getTime() + rIdx)));
+          var itemCode = String(item.code || ('LM-' + Math.floor(1000 + Math.random() * 9000)));
+          var tPrice = Number(item.totalPrice) || 0;
+          var depAmt = item.depositAmount ? Number(item.depositAmount) : Number((tPrice * 0.5).toFixed(2));
+          var remAmt = item.remainingAmount ? Number(item.remainingAmount) : Number((tPrice - depAmt).toFixed(2));
+          var dPaid = item.depositPaid === true;
+
+          var resRow = [
+            itemId, itemCode, item.createdAt || new Date().toISOString(),
+            item.customerName || '', item.customerPhone || '', item.customerEmail || '',
+            item.origin || '', item.originDetails || '', item.destination || '', item.destinationDetails || '',
+            item.date || '', item.time || '', item.passengers || 1, item.tripType || 'Individual (Exclusivo)',
+            item.luggageCount || 1, item.hasChildSeat ? 'Sim' : 'Não',
+            tPrice, depAmt, remAmt, dPaid ? 'Sim' : 'Não',
+            item.paymentMethod || 'PIX Copia e Cola', item.status || 'Pendente',
+            item.paymentStatus || (dPaid ? 'Sinal 50% Pago (Confirmado)' : 'Aguardando Sinal 50%'),
+            item.flightNumber || '', item.assignedDriverName || '', item.driverVehicle || '', item.notes || ''
+          ];
+
+          if (existingIds[itemId]) {
+            sheetRes.getRange(existingIds[itemId], 1, 1, resRow.length).setValues([resRow]);
+          } else {
+            sheetRes.appendRow(resRow);
+          }
+          syncResCount++;
+        }
+      }
+
+      // 4.2 Sincronizar Motoristas
+      if (Array.isArray(payload.drivers)) {
+        var sheetDrv = ss.getSheetByName(SHEET_MOTORISTAS) || setupMotoristasSheet(ss);
+        var drvData = sheetDrv.getDataRange().getValues();
+        var existingDrvIds = {};
+        for (var ed = 1; ed < drvData.length; ed++) {
+          if (drvData[ed][0]) existingDrvIds[String(drvData[ed][0])] = ed + 1;
+        }
+
+        for (var dIdx = 0; dIdx < payload.drivers.length; dIdx++) {
+          var drv = payload.drivers[dIdx];
+          var drvId = String(drv.id);
+          var drvRow = [
+            drvId, drv.name || '', drv.phone || '', drv.email || '',
+            drv.vehicleModel || 'Chevrolet Spin Premier 7L', drv.plate || '',
+            drv.status || 'Disponível', Number(drv.rating) || 5.0,
+            Number(drv.totalTrips) || 0, drv.pixKey || ''
+          ];
+
+          if (existingDrvIds[drvId]) {
+            sheetDrv.getRange(existingDrvIds[drvId], 1, 1, drvRow.length).setValues([drvRow]);
+          } else {
+            sheetDrv.appendRow(drvRow);
+          }
+          syncDrvCount++;
+        }
+      }
+
+      // 4.3 Sincronizar Mensagens do SAC
+      if (Array.isArray(payload.contactMessages)) {
+        var sheetSac = ss.getSheetByName(SHEET_SAC) || setupSacSheet(ss);
+        var sacData = sheetSac.getDataRange().getValues();
+        var existingSacIds = {};
+        for (var es = 1; es < sacData.length; es++) {
+          if (sacData[es][0]) existingSacIds[String(sacData[es][0])] = es + 1;
+        }
+
+        for (var mIdx = 0; mIdx < payload.contactMessages.length; mIdx++) {
+          var msg = payload.contactMessages[mIdx];
+          var msgId = String(msg.id);
+          var msgRow = [
+            msgId, msg.createdAt || new Date().toISOString(),
+            msg.name || '', msg.phone || '', msg.email || '',
+            msg.subject || 'Geral', msg.message || '',
+            msg.status || 'Pendente', msg.channel || 'Site / WhatsApp',
+            msg.answeredBy || '', msg.adminNotes || ''
+          ];
+
+          if (existingSacIds[msgId]) {
+            sheetSac.getRange(existingSacIds[msgId], 1, 1, msgRow.length).setValues([msgRow]);
+          } else {
+            sheetSac.appendRow(msgRow);
+          }
+          syncMsgCount++;
+        }
+      }
+
+      // 4.4 Sincronizar Configurações & Senhas
+      if (payload.configs && typeof payload.configs === 'object') {
+        var sheetConf = ss.getSheetByName(SHEET_CONFIG) || setupConfigSheet(ss);
+        var cData = sheetConf.getDataRange().getValues();
+        var confKeys = {};
+        for (var ck = 1; ck < cData.length; ck++) {
+          if (cData[ck][0]) confKeys[String(cData[ck][0]).trim()] = ck + 1;
+        }
+
+        for (var configKey in payload.configs) {
+          var configVal = String(payload.configs[configKey]);
+          if (confKeys[configKey]) {
+            sheetConf.getRange(confKeys[configKey], 2).setValue(configVal);
+          } else {
+            sheetConf.appendRow([configKey, configVal, 'Sincronizado via Painel Admin']);
+          }
+        }
+      }
+
+      // 4.5 Atualizar Dashboard
+      setupDashboardSheet(ss);
+
+      return createJsonResponse({
+        status: 'success',
+        message: 'Sincronização total concluída com sucesso no Google Sheets!',
+        details: {
+          reservationsSynced: syncResCount,
+          driversSynced: syncDrvCount,
+          messagesSynced: syncMsgCount
+        }
+      });
+    }
+
+    // 5. Criar Mensagem do SAC
+    if (action === 'createContactMessage') {
+      var sheetSacMsg = ss.getSheetByName(SHEET_SAC) || setupSacSheet(ss);
+      var msgObj = payload.message || payload;
+      var newMsgId = msgObj.id || ('msg-' + new Date().getTime());
+      sheetSacMsg.appendRow([
+        newMsgId,
+        msgObj.createdAt || new Date().toISOString(),
+        msgObj.name || '',
+        msgObj.phone || '',
+        msgObj.email || '',
+        msgObj.subject || 'Atendimento Geral',
+        msgObj.message || '',
+        msgObj.status || 'Pendente',
+        msgObj.channel || 'Site / WhatsApp',
+        msgObj.answeredBy || '',
+        msgObj.adminNotes || ''
+      ]);
+      return createJsonResponse({
+        status: 'success',
+        message: 'Mensagem de SAC registrada com sucesso na planilha!'
+      });
+    }
+
+    // 6. Atualizar Senha do Super Admin ou Chave de Configuração
     if (action === 'updateSuperAdminPassword' || action === 'updateConfig') {
       var sheetConf = ss.getSheetByName(SHEET_CONFIG) || setupConfigSheet(ss);
       var configKey = payload.key || 'SENHA_SUPERADMIN_ALAN';
@@ -698,7 +946,7 @@ function doPost(e) {
       });
     }
 
-    // 5. Executar Setup Geral
+    // 7. Executar Setup Geral
     if (action === 'setup') {
       var resSetup = setupAllSheets();
       return createJsonResponse(resSetup);

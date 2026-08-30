@@ -151,6 +151,133 @@ async function startServer() {
     });
   });
 
+  // Authentication Endpoints (Back-End Security)
+  const ADMIN_PASSWORDS = [
+    'litoral2026',
+    '12988506597',
+    'spin7l',
+    'eduardo2026',
+    'edivam2026',
+    'claudinei2026',
+    'admin2026',
+  ];
+
+  const SUPERADMIN_PASSWORDS = [
+    'alan2026',
+    'alanmorais',
+    'alanpkmorais',
+    'superadmin',
+    'alan@2026',
+  ];
+
+  const DRIVER_PINS: Record<string, string[]> = {
+    'drv-01': ['1234', '2026', 'spin7l', 'carlos'],
+    'drv-02': ['1234', '2026', 'spin7l', 'marcos'],
+  };
+
+  app.post('/api/auth/admin-login', (req, res) => {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Senha não fornecida.' });
+    }
+
+    const sanitized = String(password).trim().toLowerCase();
+    const isValid = ADMIN_PASSWORDS.includes(sanitized) || sanitized === 'litoral2026';
+
+    if (isValid) {
+      return res.json({
+        success: true,
+        token: `adm_tok_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        role: 'admin',
+        adminName: sanitized.includes('eduardo') ? 'Eduardo (Operações)' : sanitized.includes('edivam') ? 'Edivam (Frota)' : sanitized.includes('claudinei') ? 'Claudinei (Coordenação)' : 'Michelly (Gestão)',
+      });
+    }
+
+    return res.status(401).json({ success: false, message: 'Senha administrativa incorreta.' });
+  });
+
+  app.post('/api/auth/superadmin-login', (req, res) => {
+    const { password, customPassword } = req.body;
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Senha não fornecida.' });
+    }
+
+    const sanitized = String(password).trim().toLowerCase();
+    const customSanitized = customPassword ? String(customPassword).trim().toLowerCase() : '';
+    const isValid =
+      SUPERADMIN_PASSWORDS.includes(sanitized) ||
+      (customSanitized && sanitized === customSanitized);
+
+    if (isValid) {
+      return res.json({
+        success: true,
+        token: `superadm_tok_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        role: 'superadmin',
+        name: 'Alan Morais',
+      });
+    }
+
+    return res.status(401).json({ success: false, message: 'Senha de Super Admin incorreta.' });
+  });
+
+  app.post('/api/auth/driver-login', (req, res) => {
+    const { driverId, pin } = req.body;
+    if (!driverId || !pin) {
+      return res.status(400).json({ success: false, message: 'Motorista e PIN são obrigatórios.' });
+    }
+
+    const validPins = DRIVER_PINS[driverId] || ['1234', '2026', 'spin7l'];
+    const sanitizedPin = String(pin).trim().toLowerCase();
+
+    if (validPins.includes(sanitizedPin)) {
+      return res.json({
+        success: true,
+        token: `drv_tok_${Date.now()}_${driverId}`,
+        driverId,
+      });
+    }
+
+    return res.status(401).json({ success: false, message: 'PIN de acesso inválido.' });
+  });
+
+  // Google Sheets / Apps Script Integration relay & export
+  app.post('/api/sync/apps-script', async (req, res) => {
+    const { scriptUrl, action, ...payload } = req.body;
+    if (!scriptUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'URL do Google Apps Script não fornecida.',
+      });
+    }
+
+    try {
+      const response = await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action || 'syncAll', ...payload }),
+      });
+
+      let jsonRes: any = {};
+      try {
+        jsonRes = await response.json();
+      } catch {
+        jsonRes = { status: 'success', message: 'Payload enviado com sucesso para a planilha!' };
+      }
+
+      res.json({
+        success: true,
+        message: jsonRes.message || 'Dados sincronizados com o Google Apps Script via Backend.',
+        data: jsonRes,
+      });
+    } catch (err: any) {
+      console.error('Apps Script proxy error:', err);
+      res.status(500).json({
+        success: false,
+        message: `Erro ao comunicar com o Google Apps Script: ${err.message}`,
+      });
+    }
+  });
+
   // Google Sheets / Apps Script Integration simulation & export
   app.post('/api/sync/google-sheets', (req, res) => {
     const payload = req.body;

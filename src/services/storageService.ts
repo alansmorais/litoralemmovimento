@@ -156,21 +156,132 @@ export class StorageService {
   }
 
   public static async syncToGoogleSheets(
-    action: 'createReservation' | 'confirmDeposit' | 'updateStatus' | 'createContactMessage',
+    action:
+      | 'createReservation'
+      | 'confirmDeposit'
+      | 'updateStatus'
+      | 'createContactMessage'
+      | 'updateContactMessage'
+      | 'syncAll'
+      | 'syncAllReservations'
+      | 'syncAllDrivers'
+      | 'syncAllContactMessages'
+      | 'updateSuperAdminPassword'
+      | 'updateConfig',
     payload: any
-  ): Promise<void> {
+  ): Promise<{ success: boolean; message?: string }> {
     const scriptUrl = this.getGoogleScriptUrl();
-    if (!scriptUrl) return;
+    if (!scriptUrl) {
+      return { success: false, message: 'URL do Google Apps Script não configurada.' };
+    }
 
     try {
-      await fetch(scriptUrl, {
+      const response = await fetch(scriptUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action, ...payload }),
       });
-    } catch (e) {
+
+      let resData: any = {};
+      try {
+        resData = await response.json();
+      } catch {
+        resData = { status: 'sent' };
+      }
+
+      this.setLastSyncTimestamp();
+      return {
+        success: true,
+        message: resData.message || 'Sincronização com Google Apps Script concluída!',
+      };
+    } catch (e: any) {
       console.warn('Asynchronous Google Sheets sync warning:', e);
+      return {
+        success: false,
+        message: `Aviso na sincronização: ${e.message || 'Erro de rede ou permissão'}.`,
+      };
     }
+  }
+
+  public static getLastSyncTimestamp(): string | null {
+    try {
+      return localStorage.getItem('litoral_last_gas_sync_time');
+    } catch {
+      return null;
+    }
+  }
+
+  public static setLastSyncTimestamp(): void {
+    try {
+      localStorage.setItem('litoral_last_gas_sync_time', new Date().toISOString());
+    } catch {
+      // ignore
+    }
+  }
+
+  public static async syncAllToGoogleSheets(): Promise<{
+    success: boolean;
+    message: string;
+    details: { reservationsCount: number; driversCount: number; messagesCount: number };
+  }> {
+    const reservations = this.getReservations();
+    const drivers = this.getDrivers();
+    const contactMessages = this.getContactMessages();
+    const superAdminPassword = this.getSuperAdminPassword();
+
+    const payload = {
+      reservations,
+      drivers,
+      contactMessages,
+      configs: {
+        SENHA_SUPERADMIN_ALAN: superAdminPassword,
+        NOME_EMPRESA: COMPANY_CONTACT.name,
+        CONTATO_WHATSAPP: COMPANY_CONTACT.phone,
+        CHAVE_PIX_OFICIAL: COMPANY_CONTACT.pixKey,
+        SYNCED_AT: new Date().toISOString(),
+      },
+    };
+
+    const res = await this.syncToGoogleSheets('syncAll', payload);
+    return {
+      success: res.success,
+      message: res.message || 'Todos os dados do Painel foram enviados e salvos no Google Sheets!',
+      details: {
+        reservationsCount: reservations.length,
+        driversCount: drivers.length,
+        messagesCount: contactMessages.length,
+      },
+    };
+  }
+
+  public static async syncReservationsOnlyToGoogleSheets(): Promise<{ success: boolean; message: string; count: number }> {
+    const reservations = this.getReservations();
+    const res = await this.syncToGoogleSheets('syncAllReservations', { reservations });
+    return {
+      success: res.success,
+      message: res.message || `${reservations.length} reservas salvas no Google Sheets.`,
+      count: reservations.length,
+    };
+  }
+
+  public static async syncDriversOnlyToGoogleSheets(): Promise<{ success: boolean; message: string; count: number }> {
+    const drivers = this.getDrivers();
+    const res = await this.syncToGoogleSheets('syncAllDrivers', { drivers });
+    return {
+      success: res.success,
+      message: res.message || `${drivers.length} motoristas salvos no Google Sheets.`,
+      count: drivers.length,
+    };
+  }
+
+  public static async syncContactMessagesOnlyToGoogleSheets(): Promise<{ success: boolean; message: string; count: number }> {
+    const contactMessages = this.getContactMessages();
+    const res = await this.syncToGoogleSheets('syncAllContactMessages', { contactMessages });
+    return {
+      success: res.success,
+      message: res.message || `${contactMessages.length} mensagens do SAC salvas no Google Sheets.`,
+      count: contactMessages.length,
+    };
   }
 
   public static async fetchFromGoogleSheets(): Promise<Reservation[] | null> {

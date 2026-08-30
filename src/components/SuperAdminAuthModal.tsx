@@ -37,23 +37,47 @@ export const SuperAdminAuthModal: React.FC<SuperAdminAuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    setTimeout(() => {
-      const isValid = StorageService.verifySuperAdminPassword(password);
-      if (isValid) {
+    const customPass = StorageService.getSuperAdminPassword();
+
+    try {
+      // 1. Try Backend Authentication
+      const res = await fetch('/api/auth/superadmin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, customPassword: customPass }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) {
+          sessionStorage.setItem('litoral_superadmin_token', data.token);
+        }
         sessionStorage.setItem('litoral_superadmin_auth', 'true');
         setIsLoading(false);
         setPassword('');
         onSuccess();
-      } else {
-        setIsLoading(false);
-        setError('Senha de Super Admin incorreta. Acesso restrito a Alan Morais.');
+        return;
       }
-    }, 250);
+    } catch {
+      // Offline / standalone fallback
+    }
+
+    // 2. Local Fallback Verification
+    const isValid = StorageService.verifySuperAdminPassword(password);
+    if (isValid) {
+      sessionStorage.setItem('litoral_superadmin_auth', 'true');
+      setIsLoading(false);
+      setPassword('');
+      onSuccess();
+    } else {
+      setIsLoading(false);
+      setError('Senha de Super Admin incorreta. Acesso restrito a Alan Morais.');
+    }
   };
 
   return (

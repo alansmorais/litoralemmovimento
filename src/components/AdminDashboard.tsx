@@ -126,6 +126,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isSavingPassword, setIsSavingPassword] = useState<boolean>(false);
   const [passwordFeedback, setPasswordFeedback] = useState<{ success: boolean; message: string } | null>(null);
   const [currentSuperAdminPassword, setCurrentSuperAdminPassword] = useState<string>(StorageService.getSuperAdminPassword());
+  const [isSyncingAll, setIsSyncingAll] = useState<boolean>(false);
+  const [lastGasSyncTime, setLastGasSyncTime] = useState<string | null>(() => {
+    const ts = StorageService.getLastSyncTimestamp();
+    return ts ? new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
+  });
 
   const handleUpdateSuperAdminPassword = async () => {
     if (!newSuperAdminPassword.trim()) return;
@@ -349,17 +354,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
  * =======================================================================================
  * Cole este código completo no editor de Apps Script (Extensões -> Apps Script).
  * 
- * Abas automáticas criadas:
+ * Abas automáticas criadas e gerenciadas:
  * 1. "Reservas" (27 colunas, dropdowns, formatação de moeda R$, cores)
  * 2. "Motoristas" (Escala da frota Chevrolet Spin 7L)
- * 3. "Dashboard" (Fórmulas em tempo real de faturamento e sinais)
- * 4. "Configuracoes" (Dados da empresa, WhatsApp da Michelly, PIX)
+ * 3. "Mensagens_SAC" (Central de mensagens de clientes, WhatsApp e suporte)
+ * 4. "Dashboard" (Fórmulas em tempo real de faturamento e sinais)
+ * 5. "Configuracoes" (Dados da empresa, WhatsApp da Michelly, PIX, Senha Master)
  */
 
 var SHEET_RESERVAS = 'Reservas';
 var SHEET_MOTORISTAS = 'Motoristas';
 var SHEET_DASHBOARD = 'Dashboard';
 var SHEET_CONFIG = 'Configuracoes';
+var SHEET_SAC = 'Mensagens_SAC';
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('🚕 Litoral em Movimento')
@@ -376,8 +383,9 @@ function setupAllSheets() {
   setupReservasSheet(ss);
   setupMotoristasSheet(ss);
   setupConfigSheet(ss);
+  setupSacSheet(ss);
   setupDashboardSheet(ss);
-  return { status: 'success', message: 'Todas as abas foram configuradas com sucesso!' };
+  return { status: 'success', message: 'Todas as 5 abas configuradas com sucesso!' };
 }
 
 function setupReservasSheet(ss) {
@@ -397,7 +405,6 @@ function setupReservasSheet(ss) {
   sheet.setFrozenRows(1);
   sheet.getRange('Q2:S').setNumberFormat('R$ #,##0.00');
 
-  // Validações
   var ruleTipo = SpreadsheetApp.newDataValidation().requireValueInList(['Individual (Exclusivo)', 'Compartilhada'], true).build();
   sheet.getRange('N2:N').setDataValidation(ruleTipo);
   var ruleSimNao = SpreadsheetApp.newDataValidation().requireValueInList(['Sim', 'Não'], true).build();
@@ -418,6 +425,15 @@ function setupMotoristasSheet(ss) {
     sheet.appendRow(['drv-01', 'Carlos Silva', '(12) 98877-6655', 'carlos@litoralemmovimento.com.br', 'Chevrolet Spin Premier 7L', 'SP-LIT7A24', 'Disponível', 4.98, 342, '12988776655']);
     sheet.appendRow(['drv-02', 'Marcos Oliveira', '(11) 97654-3210', 'marcos@litoralemmovimento.com.br', 'Chevrolet Spin LTZ 7L', 'SP-MOV7B88', 'Disponível', 4.95, 289, '11976543210']);
   }
+  return sheet;
+}
+
+function setupSacSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_SAC) || ss.insertSheet(SHEET_SAC);
+  var headers = ['ID Mensagem', 'Data / Hora', 'Nome do Cliente', 'Telefone (WhatsApp)', 'E-mail', 'Assunto / Categoria', 'Mensagem / Dúvida', 'Status Atendimento', 'Canal de Origem', 'Atendente / Respondido Por', 'Notas Internas'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setBackground('#0F172A').setFontColor('#F8FAFC').setFontWeight('bold');
+  sheet.setFrozenRows(1);
   return sheet;
 }
 
@@ -463,6 +479,7 @@ function doGet(e) {
   if (action === 'ping') return createJsonResponse({ status: 'ok', message: 'Google Apps Script conectado com sucesso!', version: '2.0' });
   if (action === 'setup') return createJsonResponse(setupAllSheets());
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+
   if (action === 'getConfig') {
     var sheetConf = ss.getSheetByName(SHEET_CONFIG) || setupConfigSheet(ss);
     var confData = sheetConf.getDataRange().getValues();
@@ -472,6 +489,40 @@ function doGet(e) {
     }
     return createJsonResponse(configs);
   }
+
+  if (action === 'getDrivers') {
+    var sheetDrv = ss.getSheetByName(SHEET_MOTORISTAS) || setupMotoristasSheet(ss);
+    var drvData = sheetDrv.getDataRange().getValues();
+    var drivers = [];
+    for (var d = 1; d < drvData.length; d++) {
+      if (!drvData[d][0]) continue;
+      drivers.push({
+        id: String(drvData[d][0]), name: String(drvData[d][1]), phone: String(drvData[d][2]),
+        email: String(drvData[d][3] || ''), vehicleModel: String(drvData[d][4]),
+        plate: String(drvData[d][5]), status: String(drvData[d][6]),
+        rating: Number(drvData[d][7]) || 5.0, totalTrips: Number(drvData[d][8]) || 0
+      });
+    }
+    return createJsonResponse(drivers);
+  }
+
+  if (action === 'getContactMessages' || action === 'getMessages') {
+    var sheetSac = ss.getSheetByName(SHEET_SAC) || setupSacSheet(ss);
+    var sacData = sheetSac.getDataRange().getValues();
+    var messages = [];
+    for (var m = 1; m < sacData.length; m++) {
+      if (!sacData[m][0]) continue;
+      messages.push({
+        id: String(sacData[m][0]), createdAt: String(sacData[m][1]), name: String(sacData[m][2]),
+        phone: String(sacData[m][3]), email: String(sacData[m][4] || ''),
+        subject: String(sacData[m][5] || 'Geral'), message: String(sacData[m][6] || ''),
+        status: String(sacData[m][7] || 'Pendente'), channel: String(sacData[m][8] || 'Site / WhatsApp'),
+        answeredBy: String(sacData[m][9] || ''), adminNotes: String(sacData[m][10] || '')
+      });
+    }
+    return createJsonResponse(messages);
+  }
+
   var sheet = ss.getSheetByName(SHEET_RESERVAS) || setupReservasSheet(ss);
   var data = sheet.getDataRange().getValues();
   if (data.length <= 1) return createJsonResponse([]);
@@ -504,6 +555,99 @@ function doPost(e) {
     if (e.postData && e.postData.contents) payload = JSON.parse(e.postData.contents);
     else if (e.parameter) payload = e.parameter;
     var action = payload.action || 'createReservation';
+
+    if (action === 'syncAll') {
+      if (Array.isArray(payload.reservations)) {
+        var sheetRes = ss.getSheetByName(SHEET_RESERVAS) || setupReservasSheet(ss);
+        var existingData = sheetRes.getDataRange().getValues();
+        var existingIds = {};
+        for (var er = 1; er < existingData.length; er++) {
+          if (existingData[er][0]) existingIds[String(existingData[er][0])] = er + 1;
+        }
+        for (var rIdx = 0; rIdx < payload.reservations.length; rIdx++) {
+          var item = payload.reservations[rIdx];
+          var itemId = String(item.id || ('res-' + (new Date().getTime() + rIdx)));
+          var itemCode = String(item.code || ('LM-' + Math.floor(1000 + Math.random() * 9000)));
+          var tPrice = Number(item.totalPrice) || 0;
+          var depAmt = item.depositAmount ? Number(item.depositAmount) : Number((tPrice * 0.5).toFixed(2));
+          var remAmt = item.remainingAmount ? Number(item.remainingAmount) : Number((tPrice - depAmt).toFixed(2));
+          var dPaid = item.depositPaid === true;
+          var resRow = [
+            itemId, itemCode, item.createdAt || new Date().toISOString(),
+            item.customerName || '', item.customerPhone || '', item.customerEmail || '',
+            item.origin || '', item.originDetails || '', item.destination || '', item.destinationDetails || '',
+            item.date || '', item.time || '', item.passengers || 1, item.tripType || 'Individual (Exclusivo)',
+            item.luggageCount || 1, item.hasChildSeat ? 'Sim' : 'Não',
+            tPrice, depAmt, remAmt, dPaid ? 'Sim' : 'Não',
+            item.paymentMethod || 'PIX Copia e Cola', item.status || 'Pendente',
+            item.paymentStatus || (dPaid ? 'Sinal 50% Pago (Confirmado)' : 'Aguardando Sinal 50%'),
+            item.flightNumber || '', item.assignedDriverName || '', item.driverVehicle || '', item.notes || ''
+          ];
+          if (existingIds[itemId]) sheetRes.getRange(existingIds[itemId], 1, 1, resRow.length).setValues([resRow]);
+          else sheetRes.appendRow(resRow);
+        }
+      }
+
+      if (Array.isArray(payload.drivers)) {
+        var sheetDrv = ss.getSheetByName(SHEET_MOTORISTAS) || setupMotoristasSheet(ss);
+        var drvData = sheetDrv.getDataRange().getValues();
+        var existingDrvIds = {};
+        for (var ed = 1; ed < drvData.length; ed++) {
+          if (drvData[ed][0]) existingDrvIds[String(drvData[ed][0])] = ed + 1;
+        }
+        for (var dIdx = 0; dIdx < payload.drivers.length; dIdx++) {
+          var drv = payload.drivers[dIdx];
+          var drvId = String(drv.id);
+          var drvRow = [
+            drvId, drv.name || '', drv.phone || '', drv.email || '',
+            drv.vehicleModel || 'Chevrolet Spin Premier 7L', drv.plate || '',
+            drv.status || 'Disponível', Number(drv.rating) || 5.0,
+            Number(drv.totalTrips) || 0, drv.pixKey || ''
+          ];
+          if (existingDrvIds[drvId]) sheetDrv.getRange(existingDrvIds[drvId], 1, 1, drvRow.length).setValues([drvRow]);
+          else sheetDrv.appendRow(drvRow);
+        }
+      }
+
+      if (Array.isArray(payload.contactMessages)) {
+        var sheetSac = ss.getSheetByName(SHEET_SAC) || setupSacSheet(ss);
+        var sacData = sheetSac.getDataRange().getValues();
+        var existingSacIds = {};
+        for (var es = 1; es < sacData.length; es++) {
+          if (sacData[es][0]) existingSacIds[String(sacData[es][0])] = es + 1;
+        }
+        for (var mIdx = 0; mIdx < payload.contactMessages.length; mIdx++) {
+          var msg = payload.contactMessages[mIdx];
+          var msgId = String(msg.id);
+          var msgRow = [
+            msgId, msg.createdAt || new Date().toISOString(),
+            msg.name || '', msg.phone || '', msg.email || '',
+            msg.subject || 'Geral', msg.message || '',
+            msg.status || 'Pendente', msg.channel || 'Site / WhatsApp',
+            msg.answeredBy || '', msg.adminNotes || ''
+          ];
+          if (existingSacIds[msgId]) sheetSac.getRange(existingSacIds[msgId], 1, 1, msgRow.length).setValues([msgRow]);
+          else sheetSac.appendRow(msgRow);
+        }
+      }
+
+      if (payload.configs && typeof payload.configs === 'object') {
+        var sheetConf = ss.getSheetByName(SHEET_CONFIG) || setupConfigSheet(ss);
+        var cData = sheetConf.getDataRange().getValues();
+        var confKeys = {};
+        for (var ck = 1; ck < cData.length; ck++) {
+          if (cData[ck][0]) confKeys[String(cData[ck][0]).trim()] = ck + 1;
+        }
+        for (var configKey in payload.configs) {
+          var configVal = String(payload.configs[configKey]);
+          if (confKeys[configKey]) sheetConf.getRange(confKeys[configKey], 2).setValue(configVal);
+          else sheetConf.appendRow([configKey, configVal, 'Sincronizado via Painel Admin']);
+        }
+      }
+
+      setupDashboardSheet(ss);
+      return createJsonResponse({ status: 'success', message: 'Sincronização de todos os dados realizada no Google Sheets!' });
+    }
 
     if (action === 'createReservation') {
       var res = payload.reservation || payload;
@@ -575,12 +719,42 @@ function createJsonResponse(data) {
     setTimeout(() => setCopiedGasCode(false), 3000);
   };
 
+  const handleSyncAllToGoogleAppsScript = async () => {
+    setIsSyncingAll(true);
+    setSyncStatus('Enviando TUDO (Reservas, Motoristas, Mensagens SAC, Senhas) para o Google Apps Script...');
+    try {
+      const res = await StorageService.syncAllToGoogleSheets();
+      setIsSyncingAll(false);
+      const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      setLastGasSyncTime(timeStr);
+      setSyncStatus(`✓ Salvo com sucesso no Apps Script! (${res.details.reservationsCount} reservas, ${res.details.driversCount} motoristas, ${res.details.messagesCount} mensagens)`);
+    } catch (e: any) {
+      setIsSyncingAll(false);
+      setSyncStatus(`Aviso ao salvar no Apps Script: ${e.message || 'Verifique conexão'}`);
+    }
+    setTimeout(() => setSyncStatus(null), 5000);
+  };
+
   const handleSyncGoogleSheets = async () => {
     setSyncStatus('Sincronizando todas as reservas com Google Sheets...');
-    for (const res of reservations) {
-      await StorageService.syncToGoogleSheets('createReservation', { reservation: res });
-    }
-    setSyncStatus(`Sucesso: ${reservations.length} reservas sincronizadas.`);
+    const res = await StorageService.syncReservationsOnlyToGoogleSheets();
+    setSyncStatus(`Sucesso: ${res.count} reservas sincronizadas no Google Sheets.`);
+    const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    setLastGasSyncTime(timeStr);
+    setTimeout(() => setSyncStatus(null), 4000);
+  };
+
+  const handleSyncDriversOnly = async () => {
+    setSyncStatus('Sincronizando motoristas com Google Sheets...');
+    const res = await StorageService.syncDriversOnlyToGoogleSheets();
+    setSyncStatus(`Sucesso: ${res.count} motoristas sincronizados no Google Sheets.`);
+    setTimeout(() => setSyncStatus(null), 4000);
+  };
+
+  const handleSyncMessagesOnly = async () => {
+    setSyncStatus('Sincronizando mensagens do SAC com Google Sheets...');
+    const res = await StorageService.syncContactMessagesOnlyToGoogleSheets();
+    setSyncStatus(`Sucesso: ${res.count} mensagens do SAC salvas na planilha.`);
     setTimeout(() => setSyncStatus(null), 4000);
   };
 
@@ -674,6 +848,29 @@ function createJsonResponse(data) {
               <Car className="w-3.5 h-3.5" />
               <span>Ver App do Motorista</span>
             </button>
+
+            {/* Salvar TUDO no Apps Script Button */}
+            <button
+              onClick={handleSyncAllToGoogleAppsScript}
+              disabled={isSyncingAll}
+              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+              title="Salva todas as reservas, motoristas, SAC e configurações no Google Apps Script"
+            >
+              {isSyncingAll ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5 text-emerald-200" />
+              )}
+              <span>{isSyncingAll ? 'Salvando no Apps Script...' : 'Salvar TUDO no Apps Script'}</span>
+            </button>
+
+            {/* Sync Timestamp Badge */}
+            {lastGasSyncTime && (
+              <span className="hidden xl:inline-flex items-center gap-1 text-[11px] bg-slate-900 border border-slate-700 text-emerald-300 px-2.5 py-1.5 rounded-xl font-mono">
+                <CheckCircle className="w-3 h-3 text-emerald-400" />
+                <span>Salvo: {lastGasSyncTime}</span>
+              </span>
+            )}
 
             {/* Developer / Technical API Settings - Only visible / accessible for Super Admin Alan Morais */}
             {isAlanMorais && (
@@ -1904,24 +2101,55 @@ function createJsonResponse(data) {
             </div>
 
             {/* Quick Actions Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-              <span className="text-xs text-slate-600 font-medium">Sincronização Direta com Planilha:</span>
-              <div className="flex items-center gap-2">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-xs text-slate-700 font-bold flex items-center gap-1.5">
+                  <Database className="w-4 h-4 text-emerald-600" />
+                  <span>Sincronização & Backup com Google Apps Script:</span>
+                </span>
+                {lastGasSyncTime && (
+                  <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                    Última sincronização: {lastGasSyncTime}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
                 <button
                   type="button"
-                  onClick={handleImportFromGas}
-                  className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-xs"
+                  onClick={handleSyncAllToGoogleAppsScript}
+                  disabled={isSyncingAll}
+                  className="sm:col-span-2 lg:col-span-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <RefreshCw className="w-3.5 h-3.5 text-slate-600" />
-                  <span>Puxar da Planilha</span>
+                  {isSyncingAll ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>Salvar TUDO no Apps Script</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleSyncGoogleSheets}
-                  className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                  className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-xs"
+                  title="Sincroniza apenas a lista de reservas"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Sincronizar Todas</span>
+                  <Send className="w-3.5 h-3.5 text-sky-600" />
+                  <span>Reservas ({reservations.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSyncDriversOnly}
+                  className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-xs"
+                  title="Sincroniza a frota de motoristas Spin 7L"
+                >
+                  <Car className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Motoristas ({drivers.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSyncMessagesOnly}
+                  className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-xs"
+                  title="Sincroniza as mensagens do SAC"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>SAC ({contactMessages.length})</span>
                 </button>
               </div>
             </div>
