@@ -16,7 +16,7 @@ export const FAQSection: React.FC = () => {
     },
     {
       q: 'Como funciona a ida para Ilhabela e a travessia de balsa?',
-      a: 'Temos duas modalidades: 1) Desembarque no Porto da Balsa em São Sebastião com valor padrão de R$ 700 no carro privativo; 2) Travessia com Carro Fechado para dentro da ilha a partir de R$ 900, sujeita a consulta prévia e disponibilidade de escala do motorista.',
+      a: 'Temos duas modalidades: 1) Desembarque no Porto da Balsa em São Sebastião (com saídas regulares por R$ 90/vaga ou carro privativo sob consulta); 2) Travessia com Carro Fechado para dentro da ilha (a partir de R$ 900, sujeita a consulta prévia e disponibilidade de escala do motorista).',
     },
     {
       q: 'Quais tipos de veículos estão disponíveis para reserva?',

@@ -96,9 +96,9 @@ export const DestinationsGrid: React.FC<DestinationsGridProps> = ({
 
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <span className="text-[10px] text-slate-500 block">Privativo a partir de</span>
+                      <span className="text-[10px] text-slate-500 block">Vagas regulares a partir de</span>
                       <strong className="text-lg font-serif-display font-bold text-slate-900">
-                        R$ {dest.startingPriceIndividual},00
+                        R$ {dest.startingPriceShared},00 <span className="text-xs font-normal text-slate-500 font-sans">/ assento</span>
                       </strong>
                     </div>
 

@@ -82,8 +82,8 @@ export const DESTINATIONS: DestinationInfo[] = [
   {
     id: 'ilhabela',
     name: 'Ilhabela (Balsa São Sebastião)',
-    tagline: 'Desembarque no Porto da Balsa (R$ 90/vaga ou R$ 700 privativo) ou Travessia Fechada (R$ 900)',
-    description: 'Desembarque direto no terminal da Balsa de São Sebastião a R$ 90/assento. Para travessia com carro fechado para o interior da ilha, serviço exclusivo a partir de R$ 900 sob consulta prévia.',
+    tagline: 'Desembarque no Porto da Balsa (R$ 90/vaga) ou Travessia Fechada',
+    description: 'Desembarque direto no terminal da Balsa de São Sebastião a R$ 90/assento. Para travessia com carro fechado para o interior da ilha, serviço exclusivo sob consulta prévia.',
     popularSpots: ['Porto da Balsa (São Sebastião)', 'Embarque Balsa', 'Travessia Ilha (Carro Fechado - Sob Consulta)'],
     estimatedDistanceKm: 210,
     estimatedTimeHours: '2h30 a 3h00',

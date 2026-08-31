@@ -612,7 +612,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <div>
                       <strong className="font-bold block text-amber-900">Aviso sobre Travessia de Balsa para Ilhabela:</strong>
-                      A travessia com carro fechado para o interior da ilha inicia a partir de R$ 900,00 e está sujeita a confirmação prévia e disponibilidade de escala do motorista. Caso prefira o desembarque no Porto da Balsa em São Sebastião, o valor padrão é de R$ 700,00.
+                      A travessia com carro fechado para o interior da ilha inicia a partir de R$ 900,00 e está sujeita a confirmação prévia e disponibilidade de escala do motorista. Também disponibilizamos o desembarque direto no terminal do Porto da Balsa em São Sebastião.
                     </div>
                   </div>
                 )}

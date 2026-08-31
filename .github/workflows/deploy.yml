@@ -35,7 +35,8 @@ jobs:
       - name: Build static site
         run: |
           npx vite build --base=./
-          if [ -f CNAME ]; then cp CNAME dist/CNAME; fi
+          cp dist/index.html dist/404.html
+          if [ -f public/CNAME ]; then cp public/CNAME dist/CNAME; elif [ -f CNAME ]; then cp CNAME dist/CNAME; fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
