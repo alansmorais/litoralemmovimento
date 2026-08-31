@@ -203,13 +203,6 @@ export const TimetableSection: React.FC<TimetableSectionProps> = ({
                   </div>
                 </div>
               </div>
-
-              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <span>
-                  <strong>Opção Privativa (Carro Fechado):</strong> Para viagem exclusiva com seu grupo em qualquer horário 24h, valor fechado de <strong>R$ 700,00</strong> na Spin 7L.
-                </span>
-              </div>
             </div>
 
             {/* Departure Times Grid (6 cols) */}
