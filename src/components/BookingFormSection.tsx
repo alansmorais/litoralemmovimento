@@ -562,7 +562,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                       id="select-origin"
                     >
                       <option value="São Paulo">São Paulo (Capital / Aeroportos GRU e CGH)</option>
-                      <option value="São Sebastião">São Sebastião (Maresias, Juquehy, Cambury, Centro)</option>
+                      <option value="São Sebastião">São Sebastião (Balsa & Centro Histórico)</option>
                       <option value="Ilhabela (Balsa São Sebastião)">Ilhabela (Balsa São Sebastião)</option>
                       <option value="Caraguatatuba (Rodoviária / Sentido S. Sebastião)">Caraguatatuba (Rodoviária / Sentido S. Sebastião)</option>
                     </select>
@@ -588,7 +588,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-600 focus:bg-white rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
                       id="select-destination"
                     >
-                      <option value="São Sebastião">São Sebastião (Maresias, Juquehy, Cambury, Centro)</option>
+                      <option value="São Sebastião">São Sebastião (Balsa & Centro Histórico)</option>
                       <option value="Ilhabela (Balsa São Sebastião)">Ilhabela (Balsa São Sebastião - Desembarque Porto da Balsa)</option>
                       <option value="Ilhabela (Travessia Fechada)">Ilhabela (Travessia Fechada para a Ilha • a partir de R$ 900)</option>
                       <option value="Caraguatatuba (Rodoviária / Sentido S. Sebastião)">Caraguatatuba (Apenas Rodoviária & Sentido São Sebastião)</option>
@@ -597,7 +597,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
 
                     <input
                       type="text"
-                      placeholder="Endereço de entrega (Ex: Pousada Maresias ou Rua / Número)"
+                      placeholder="Endereço de entrega (Ex: Hotel no Centro ou Porto da Balsa)"
                       value={dropoffAddress}
                       onChange={(e) => setDropoffAddress(e.target.value)}
                       className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-sky-600 rounded-xl text-xs text-slate-900 outline-none"

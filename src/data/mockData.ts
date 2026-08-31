@@ -45,7 +45,7 @@ export const OFFICIAL_TIMETABLE = {
     title: 'Subida (Litoral ➔ São Paulo & GRU)',
     description: 'Saídas de São Sebastião e Caraguatatuba com destino ao Metrô Portuguesa-Tietê e Aeroporto de Guarulhos (GRU).',
     rates: [
-      { from: 'São Sebastião (Balsa / Centro / Praias)', to: 'Metrô Portuguesa-Tietê', price: 90 },
+      { from: 'São Sebastião (Balsa & Centro Histórico)', to: 'Metrô Portuguesa-Tietê', price: 90 },
       { from: 'Caraguatatuba (a partir da Rodoviária)', to: 'Metrô Portuguesa-Tietê', price: 80 },
       { from: 'São Sebastião / Caraguatatuba', to: 'Aeroporto Internacional de Guarulhos (GRU)', price: 150 },
     ],
@@ -69,9 +69,9 @@ export const DESTINATIONS: DestinationInfo[] = [
   {
     id: 'sao-sebastiao',
     name: 'São Sebastião',
-    tagline: 'Maresias, Juquehy, Cambury, Boiçucanga e Balsa / Centro Histórico',
-    description: 'Praias renomadas com saídas regulares a partir de R$ 90/vaga (Metrô Tietê) ou privativo porta a porta em Spin 7L.',
-    popularSpots: ['Maresias', 'Juquehy', 'Cambury', 'Boiçucanga', 'Balsa São Sebastião'],
+    tagline: 'Porto da Balsa para Ilhabela, Centro Histórico e Região Central',
+    description: 'Conexão direta com a Balsa de Ilhabela e Centro de São Sebastião a partir de R$ 90/vaga (Metrô Tietê) ou privativo porta a porta em Spin 7L.',
+    popularSpots: ['Porto da Balsa', 'Centro Histórico', 'Rua da Praia', 'Terminal Urbano'],
     estimatedDistanceKm: 195,
     estimatedTimeHours: '2h30 a 3h00',
     startingPriceIndividual: 700,

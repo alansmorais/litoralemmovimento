@@ -986,7 +986,7 @@ function insertSampleReservation() {
     'Aeroporto Internacional de Guarulhos (GRU)',
     'Terminal 3 - Desembarque Internacional',
     'São Sebastião',
-    'Praia de Maresias - Condomínio Sirena',
+    'Porto da Balsa - Centro Histórico',
     new Date().toISOString().split('T')[0],
     '14:30',
     4,

@@ -50,7 +50,7 @@ export const Footer: React.FC<FooterProps> = ({
               Destinos Atendidos
             </h5>
             <ul className="space-y-1.5 text-xs text-slate-400">
-              <li>São Sebastião (Maresias, Juquehy, Cambury)</li>
+              <li>São Sebastião (Balsa & Centro Histórico)</li>
               <li>Ilhabela (Vila, Praia do Curral, Balsa)</li>
               <li>Caraguatatuba (Martim de Sá, Cocanha)</li>
               <li>Aeroportos de Guarulhos (GRU) e Congonhas (CGH)</li>
