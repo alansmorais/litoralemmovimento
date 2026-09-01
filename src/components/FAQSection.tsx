@@ -12,7 +12,7 @@ export const FAQSection: React.FC = () => {
     },
     {
       q: 'Como faço meu agendamento? Posso agendar pelo site ou WhatsApp?',
-      a: 'Você pode fazer sua simulação e agendamento diretamente no formulário do site, escolhendo seu veículo (Spin 7L ou Sedã 4L), origem, destino, data e passageiros. Ao clicar em reservar, geramos seu voucher instantâneo e enviamos as informações diretamente para o WhatsApp do atendimento (Michelly) para confirmação rápida.',
+      a: 'Você pode fazer sua simulação e agendamento diretamente no formulário do site, escolhendo seu veículo (Spin 7L ou Sedã 4L), origem, destino, data e passageiros. Ao clicar em reservar, geramos seu voucher instantâneo e enviamos as informações diretamente para a nossa central de atendimento via WhatsApp para confirmação rápida.',
     },
     {
       q: 'Como funciona a ida para Ilhabela e a travessia de balsa?',

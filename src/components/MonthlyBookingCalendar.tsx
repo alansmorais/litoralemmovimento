@@ -162,7 +162,7 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
     return orig.includes('sebastião') || orig.includes('caraguatatuba') || orig.includes('ilhabela');
   }, [origin]);
 
-  // Master available departure slots: ONLY the exact hours requested by Michelly
+  // Master available departure slots: Official schedule
   const availableSlots: TimeSlot[] = useMemo(() => {
     if (isSubida) {
       // Subida (Litoral ➔ São Paulo & GRU): 05:00, 08:30, 14:00, 18:30 (Diariamente)
@@ -345,11 +345,11 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
                 <span>Fim de Semana (Horário Ajustado)</span>
               </span>
             </div>
-            <span className="text-slate-400 font-medium">Linha Regular Michelly</span>
+            <span className="text-slate-400 font-medium">Linha Regular Oficial</span>
           </div>
         </div>
 
-        {/* RIGHT: ONLY Michelly's Official Available Hours (5 Cols on desktop) */}
+        {/* RIGHT: Official Available Hours (5 Cols on desktop) */}
         <div className="lg:col-span-5 p-4 sm:p-5 bg-slate-50/50 flex flex-col justify-between">
           <div>
             {/* Header for Time Slots */}

@@ -45,8 +45,6 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     'claudinei',
     'karine',
     'karine2026',
-    'michelly',
-    'michelly2026',
     'alan2026',
   ];
 
@@ -145,7 +143,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
               </div>
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Senha de acesso (ex: litoral2026)"
+                placeholder="Digite sua senha de acesso"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoFocus
@@ -197,7 +195,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
 
         <div className="border-t border-slate-800 pt-4 text-center">
           <p className="text-[11px] text-slate-400">
-            Acesso autorizado para a equipe de gestão: <strong>Eduardo, Edivam, Cludinei, Karine e Michelly</strong>.
+            Acesso autorizado para a equipe de gestão e administradores cadastrados.
           </p>
         </div>
       </div>

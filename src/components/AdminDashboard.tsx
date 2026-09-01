@@ -359,7 +359,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
  * 2. "Motoristas" (Escala da frota Chevrolet Spin 7L)
  * 3. "Mensagens_SAC" (Central de mensagens de clientes, WhatsApp e suporte)
  * 4. "Dashboard" (Fórmulas em tempo real de faturamento e sinais)
- * 5. "Configuracoes" (Dados da empresa, WhatsApp da Michelly, PIX, Senha Master)
+ * 5. "Configuracoes" (Dados da empresa, WhatsApp, PIX, Senha Master)
  */
 
 var SHEET_RESERVAS = 'Reservas';
@@ -444,12 +444,12 @@ function setupConfigSheet(ss) {
   sheet.setFrozenRows(1);
   if (sheet.getLastRow() <= 1) {
     sheet.appendRow(['NOME_EMPRESA', 'Litoral em Movimento Transfer Executivo', 'Nome oficial da empresa']);
-    sheet.appendRow(['CONTATO_WHATSAPP', '(12) 98850-6597 (Michelly)', 'WhatsApp oficial de atendimento']);
+    sheet.appendRow(['CONTATO_WHATSAPP', '(12) 98850-6597', 'WhatsApp oficial de atendimento']);
     sheet.appendRow(['CHAVE_PIX_OFICIAL', '12988506597', 'Chave PIX para sinal 50%']);
     sheet.appendRow(['PERCENTUAL_SINAL', '50%', 'Exigência de 50% para reserva']);
     sheet.appendRow(['FROTA_OFICIAL', 'Chevrolet Spin 7 Lugares', 'Frota oficial']);
     sheet.appendRow(['SENHA_SUPERADMIN_ALAN', 'alan2026', 'Senha master Super Admin Alan Morais']);
-    sheet.appendRow(['SENHA_ADMIN_MICHELLY', 'litoral2026', 'Senha de acesso Painel Admin']);
+    sheet.appendRow(['SENHA_ADMIN_GERAL', 'litoral2026', 'Senha de acesso Painel Admin']);
   }
   return sheet;
 }
@@ -849,19 +849,19 @@ function createJsonResponse(data) {
               <span>Ver App do Motorista</span>
             </button>
 
-            {/* Salvar TUDO no Apps Script Button */}
+            {/* Salvar TUDO no Banco de Dados em Nuvem Button */}
             <button
               onClick={handleSyncAllToGoogleAppsScript}
               disabled={isSyncingAll}
               className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-              title="Salva todas as reservas, motoristas, SAC e configurações no Google Apps Script"
+              title="Salva todas as reservas, motoristas, SAC e configurações no banco de dados em nuvem"
             >
               {isSyncingAll ? (
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Save className="w-3.5 h-3.5 text-emerald-200" />
               )}
-              <span>{isSyncingAll ? 'Salvando no Apps Script...' : 'Salvar TUDO no Apps Script'}</span>
+              <span>{isSyncingAll ? 'Sincronizando Nuvem...' : 'Sincronizar Nuvem'}</span>
             </button>
 
             {/* Sync Timestamp Badge */}
@@ -1052,7 +1052,7 @@ function createJsonResponse(data) {
             <button
               onClick={exportCSV}
               className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-              title="Baixar Planilha CSV"
+              title="Baixar Relatório em formato CSV"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Exportar CSV</span>
@@ -1061,10 +1061,10 @@ function createJsonResponse(data) {
             <button
               onClick={handleSyncGoogleSheets}
               className="bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
-              title="Sincronizar reservas atuais com a planilha Google Sheets"
+              title="Sincronizar reservas com o banco de dados em nuvem"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Sync</span>
+              <span>Sync Nuvem</span>
             </button>
           </div>
         </div>
@@ -1751,7 +1751,7 @@ function createJsonResponse(data) {
                     const cleanPhone = msg.phone.replace(/\D/g, '');
                     const waNumber = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
                     const waText = encodeURIComponent(
-                      `Olá ${msg.name}! Aqui é a Michelly do Litoral em Movimento. Recebemos sua mensagem sobre "${msg.subject}" (Protocolo: ${msg.ticketCode}). Como posso te ajudar?`
+                      `Olá ${msg.name}! Aqui é a Central de Atendimento do Litoral em Movimento. Recebemos sua mensagem sobre "${msg.subject}" (Protocolo: ${msg.ticketCode}). Como posso te ajudar?`
                     );
 
                     return (
@@ -2036,7 +2036,7 @@ function createJsonResponse(data) {
                   Diretrizes de Segurança e Acesso da Equipe:
                 </strong>
                 <p className="text-slate-400 leading-relaxed">
-                  Os administradores <strong>Eduardo, Edivam, Cludinei, Karine e Michelly</strong> possuem acesso liberado para gerenciar todas as solicitações de transfer, acompanhar os sinais de 50%, despachar motoristas nas vans Spin 7L e Sedã 4L, e emitir vouchers oficiais para os passageiros.
+                  Os administradores <strong>Eduardo, Edivam, Claudinei e Karine</strong> possuem acesso liberado para gerenciar todas as solicitações de transfer, acompanhar os sinais de 50%, despachar motoristas nas vans Spin 7L e Sedã 4L, e emitir vouchers oficiais para os passageiros.
                 </p>
               </div>
             </div>
@@ -2105,7 +2105,7 @@ function createJsonResponse(data) {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-xs text-slate-700 font-bold flex items-center gap-1.5">
                   <Database className="w-4 h-4 text-emerald-600" />
-                  <span>Sincronização & Backup com Google Apps Script:</span>
+                  <span>Sincronização & Backup do Banco de Dados:</span>
                 </span>
                 {lastGasSyncTime && (
                   <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
@@ -2122,7 +2122,7 @@ function createJsonResponse(data) {
                   className="sm:col-span-2 lg:col-span-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
                   {isSyncingAll ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>Salvar TUDO no Apps Script</span>
+                  <span>Salvar Dados na Nuvem</span>
                 </button>
                 <button
                   type="button"
@@ -2241,8 +2241,8 @@ function createJsonResponse(data) {
 
               <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
                 <input
-                  type="text"
-                  placeholder={`Digite a nova senha (senha atual ativa: ${currentSuperAdminPassword})`}
+                  type="password"
+                  placeholder="Digite a nova senha master..."
                   value={newSuperAdminPassword}
                   onChange={(e) => setNewSuperAdminPassword(e.target.value)}
                   className="flex-1 px-4 py-2.5 bg-white border border-amber-300 rounded-xl text-xs text-slate-900 outline-none focus:border-amber-500 font-mono shadow-xs"

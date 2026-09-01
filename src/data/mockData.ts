@@ -16,7 +16,7 @@ export const BRAND_COLORS = {
 };
 
 export const COMPANY_CONTACT = {
-  name: 'Michelly',
+  name: 'Central de Atendimento',
   role: 'Atendimento & Agendamento',
   phone: '(12) 98850-6597',
   phoneInternational: '+55 12 98850-6597',
@@ -25,7 +25,7 @@ export const COMPANY_CONTACT = {
   whatsappUrl: 'https://wa.me/5512988506597',
   pixKey: '12988506597',
   pixKeyType: 'Telefone (Celular)',
-  pixBeneficiary: 'Litoral em Movimento • Michelly',
+  pixBeneficiary: 'Litoral em Movimento • Transfer Executivo',
   pixBank: 'Banco Inter',
 };
 
@@ -172,13 +172,6 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     email: 'karine@litoralemmovimento.com.br',
     role: 'Gestão',
     avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80',
-  },
-  {
-    id: 'adm-05',
-    name: 'Michelly',
-    email: 'michelly@litoralemmovimento.com.br',
-    role: 'Gestão',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80',
   },
   {
     id: 'adm-06',

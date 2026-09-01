@@ -109,10 +109,10 @@ export const SuperAdminAuthModal: React.FC<SuperAdminAuthModalProps> = ({
               <span>Restrito: Super Admin Alan Morais</span>
             </div>
             <h3 className="font-serif-display font-extrabold text-2xl text-white">
-              Conexão API & Banco de Dados
+              Conexão & Banco de Dados em Nuvem
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Insira a senha do Super Administrador <strong>Alan Morais</strong> para acessar a configuração técnica da API e Google Apps Script.
+              Insira a senha de segurança do Super Administrador <strong>Alan Morais</strong> para gerenciar conexões técnicas e sincronização do sistema.
             </p>
           </div>
         </div>
@@ -157,14 +157,14 @@ export const SuperAdminAuthModal: React.FC<SuperAdminAuthModalProps> = ({
             <div className="flex items-center justify-between text-slate-300">
               <span className="font-semibold flex items-center gap-1">
                 <Database className="w-3 h-3 text-amber-400" />
-                <span>Armazenada no Banco de Dados:</span>
+                <span>Armazenamento Central em Nuvem:</span>
               </span>
               <span className="text-amber-400 font-mono text-[10px] bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
-                Google Sheets • Configuracoes
+                Segurança • Ativa
               </span>
             </div>
             <p className="text-[10px] text-slate-400 leading-tight">
-              A senha pode ser alterada diretamente no painel interno ou na aba <strong>Configuracoes</strong> da sua planilha Google.
+              Acesso exclusivo para gerenciamento de banco de dados, motoristas e integrações do sistema.
             </p>
           </div>
 

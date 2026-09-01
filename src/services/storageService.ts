@@ -31,9 +31,9 @@ const INITIAL_CONTACT_MESSAGES: ContactMessage[] = [
     message: 'Preciso de saídas semanais às quintas-feiras saindo do Aeroporto GRU direto para a Balsa de Ilhabela. Gostaria de entender como funciona a emissão de nota fiscal para empresa.',
     preferredContact: 'E-mail',
     status: 'Respondida',
-    adminNotes: 'Michelly respondeu por e-mail com a tabela corporativa e modelo de NF.',
+    adminNotes: 'Atendimento respondeu por e-mail com a tabela corporativa e modelo de NF.',
     answeredAt: new Date(Date.now() - 3600000 * 18).toISOString(),
-    answeredBy: 'Michelly (Gestão)',
+    answeredBy: 'Atendimento (Gestão)',
   },
 ];
 
@@ -483,13 +483,13 @@ export class StorageService {
   }
 
   public static generateWhatsAppDeepLink(reservation: Reservation): string {
-    const phone = COMPANY_CONTACT.phoneRaw; // Michelly: +55 12 98850-6597 (Central Litoral em Movimento)
+    const phone = COMPANY_CONTACT.phoneRaw; // Central Litoral em Movimento
     const vehicleText = reservation.vehicleCategory === 'sedan_4'
       ? 'Carro Executivo (até 4 passageiros)'
       : 'Chevrolet Spin 7 Lugares (até 6 passageiros + motorista)';
     
     const message = `*SOLICITAÇÃO DE AGENDAMENTO • LITORAL EM MOVIMENTO* 🚐🌴
-*A/C Michelly (Atendimento & Agendamentos)*
+*A/C Central de Atendimento & Agendamentos*
 ================================
 *Código da Reserva:* ${reservation.code}
 *Nome:* ${reservation.customerName}
@@ -507,7 +507,7 @@ export class StorageService {
 ${reservation.extraStops.length > 0 ? `🛑 *Paradas Extras:* ${reservation.extraStops.map((s) => s.address).join(', ')}\n` : ''}${reservation.flightNumber ? `✈️ *Nº do Voo:* ${reservation.flightNumber}\n` : ''}${reservation.notes ? `📝 *Observações:* ${reservation.notes}\n` : ''}💰 *Valor Estimado:* R$ ${reservation.totalPrice.toFixed(2).replace('.', ',')}
 *Status:* ${reservation.status}
 ================================
-_Olá Michelly! Por favor, confirme a disponibilidade deste transfer._`;
+_Olá! Por favor, confirme a disponibilidade deste transfer._`;
 
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   }

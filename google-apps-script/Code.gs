@@ -381,7 +381,7 @@ function setupSacSheet(ss) {
       'Boa tarde! Gostaria de saber se cabem 4 malas grandes e 2 de bordo para 5 passageiros no Chevrolet Spin.',
       'Respondido',
       'WhatsApp / Site',
-      'Michelly (Gestão)',
+      'Atendimento (Gestão)',
       'Cliente orientada que rebatendo a última fileira cabem perfeitamente.'
     ]);
   }
@@ -410,10 +410,10 @@ function setupConfigSheet(ss) {
   if (sheet.getLastRow() <= 1) {
     var defaultConfigs = [
       ['NOME_EMPRESA', 'Litoral em Movimento Transfer Executivo', 'Nome oficial da empresa nos vouchers'],
-      ['RESPONSAVEL_ATENDIMENTO', 'Michelly', 'Responsável principal pelo agendamento no WhatsApp'],
+      ['RESPONSAVEL_ATENDIMENTO', 'Central de Atendimento', 'Responsável principal pelo agendamento no WhatsApp'],
       ['TELEFONE_WHATSAPP', '(12) 98850-6597', 'WhatsApp oficial para suporte e atendimento'],
       ['CHAVE_PIX_OFICIAL', '12988506597', 'Chave PIX para recebimento do sinal de 50%'],
-      ['BENEFICIARIO_PIX', 'Litoral em Movimento • Michelly', 'Nome cadastrado no banco para conferência PIX'],
+      ['BENEFICIARIO_PIX', 'Litoral em Movimento • Transfer Executivo', 'Nome cadastrado no banco para conferência PIX'],
       ['BANCO_PIX', 'Banco Inter', 'Instituição bancária receptora'],
       ['PERCENTUAL_SINAL', '50%', 'Exigência de 50% de entrada para confirmação de vaga na Spin 7L'],
       ['FROTA_OFICIAL', 'Chevrolet Spin 7 Lugares', 'Modelo exclusivo da frota para conforto de famílias e malas'],
@@ -424,9 +424,9 @@ function setupConfigSheet(ss) {
       ['TARIFA_CARAGUA_TIETE', 'R$ 80,00', 'Valor por vaga: Caraguatatuba (a partir da Rodoviária) ⇌ Metrô Tietê'],
       ['TARIFA_SAO_SEBASTIAO_TIETE', 'R$ 90,00', 'Valor por vaga: São Sebastião (Balsa / Centro) ⇌ Metrô Tietê'],
       ['TARIFA_AEROPORTO_GRU', 'R$ 150,00', 'Valor por vaga: Aeroporto Internacional de Guarulhos (GRU) ⇌ Litoral'],
-      ['EQUIPE_GESTAO', 'Eduardo, Edivam, Cludinei, Karine, Michelly', 'Equipe oficial autorizada para gestão de reservas e frota'],
+      ['EQUIPE_GESTAO', 'Eduardo, Edivam, Claudinei, Karine', 'Equipe oficial autorizada para gestão de reservas e frota'],
       ['SENHA_SUPERADMIN_ALAN', 'alan2026', 'Senha master de acesso do Super Admin Alan Morais para Conexão API e Banco de Dados'],
-      ['SENHA_ADMIN_GERAL', 'litoral2026', 'Senha de acesso para o Painel Geral Administrativo (Eduardo, Edivam, Cludinei, Karine, Michelly)']
+      ['SENHA_ADMIN_GERAL', 'litoral2026', 'Senha de acesso para o Painel Geral Administrativo']
     ];
 
     sheet.getRange(2, 1, defaultConfigs.length, 3).setValues(defaultConfigs);
@@ -531,13 +531,19 @@ function doGet(e) {
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Endpoint: Retornar Configurações
+  // Endpoint: Retornar Configurações (com proteção de senhas)
   if (action === 'getConfig') {
     var sheetConf = ss.getSheetByName(SHEET_CONFIG) || setupConfigSheet(ss);
     var confData = sheetConf.getDataRange().getValues();
     var configs = {};
     for (var c = 1; c < confData.length; c++) {
-      if (confData[c][0]) configs[confData[c][0]] = confData[c][1];
+      var key = String(confData[c][0] || '').trim();
+      if (!key) continue;
+      // Não expor senhas em chamadas públicas
+      if (key.indexOf('SENHA_') === 0 && (!e.parameter.authToken || e.parameter.authToken !== 'AUTH_ADMIN')) {
+        continue;
+      }
+      configs[key] = confData[c][1];
     }
     return createJsonResponse(configs);
   }

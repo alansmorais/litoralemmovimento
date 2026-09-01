@@ -451,7 +451,7 @@ export const TimetableSection: React.FC<TimetableSectionProps> = ({
             </div>
             <div>
               <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                Precisa de um horário personalizado ou tirar dúvidas com a Michelly?
+                Precisa de um horário personalizado ou tirar dúvidas?
               </h4>
               <p className="text-xs text-slate-500">
                 Atendimento ágil pelo WhatsApp ({COMPANY_CONTACT.phone}) para confirmação imediata de vagas.
@@ -460,12 +460,12 @@ export const TimetableSection: React.FC<TimetableSectionProps> = ({
           </div>
 
           <a
-            href={`https://wa.me/${COMPANY_CONTACT.phoneRaw}?text=Ol%C3%A1%20Michelly!%20Gostaria%20de%20consultar%20a%20disponibilidade%20de%20hor%C3%A1rios%20para%20o%20transfer.`}
+            href={`https://wa.me/${COMPANY_CONTACT.phoneRaw}?text=Ol%C3%A1!%20Gostaria%20de%20consultar%20a%20disponibilidade%20de%20hor%C3%A1rios%20para%20o%20transfer.`}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-5 py-3 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer flex-shrink-0 whitespace-nowrap"
           >
-            <span>Falar com Michelly</span>
+            <span>Falar no WhatsApp</span>
             <ArrowRight className="w-4 h-4" />
           </a>
         </div>

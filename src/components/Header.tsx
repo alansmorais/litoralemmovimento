@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BRAND_IMAGES, COMPANY_CONTACT } from '../data/mockData';
-import { Calendar, Phone, MapPin, Menu, X, Search, Sparkles, Car, Clock } from 'lucide-react';
+import { Calendar, Phone, MapPin, Menu, X, Search, Sparkles, Car, Clock, Lock } from 'lucide-react';
 
 interface HeaderProps {
   currentView: 'landing' | 'admin' | 'driver' | 'tracking';
@@ -51,7 +51,17 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-4 flex-shrink-0">
+            <button
+              onClick={onOpenAdmin}
+              id="header-admin-portal-btn"
+              className="inline-flex items-center gap-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 px-2.5 py-0.5 rounded-full border border-slate-700 transition-colors cursor-pointer"
+              title="Acesso restrito para administradores"
+            >
+              <Lock className="w-3 h-3 text-amber-400" />
+              <span>Painel Admin</span>
+            </button>
+
             <button
               onClick={onOpenAIModal}
               id="header-ai-advisor-btn"
@@ -297,6 +307,17 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>Central de Atendimento & Dúvidas (Fale Conosco)</span>
                 </button>
               )}
+
+              <button
+                onClick={() => {
+                  onOpenAdmin();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 text-left py-2.5 px-3 rounded-xl bg-slate-900 text-amber-300 border border-slate-800 hover:border-amber-400/40 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                <Lock className="w-4 h-4 text-amber-400" />
+                <span>Painel de Controle Admin (Restrito)</span>
+              </button>
 
               <button
                 onClick={() => {

@@ -186,7 +186,7 @@ export default function App() {
             {/* 3. Quick Trust / Benefits (O Que Oferecemos) */}
             <WhatWeOfferSection />
 
-            {/* 3.5 Quadro de Horários & Tarifas Oficiais (Michelly) */}
+            {/* 3.5 Quadro de Horários & Tarifas Oficiais */}
             <TimetableSection
               onSelectRouteTime={handleSelectRouteTime}
               onScrollToBooking={scrollToBooking}
