@@ -53,6 +53,16 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-center gap-2.5 sm:gap-4 flex-shrink-0">
             <button
+              onClick={onOpenDriver}
+              id="header-driver-portal-btn"
+              className="inline-flex items-center gap-1.5 text-[11px] bg-sky-950/90 hover:bg-sky-900 text-sky-300 hover:text-sky-200 px-2.5 py-0.5 rounded-full border border-sky-600/50 transition-colors cursor-pointer font-semibold shadow-xs"
+              title="Acesso direto ao App do Motorista"
+            >
+              <Car className="w-3 h-3 text-sky-400" />
+              <span>App Motorista</span>
+            </button>
+
+            <button
               onClick={onOpenAdmin}
               id="header-admin-portal-btn"
               className="inline-flex items-center gap-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 px-2.5 py-0.5 rounded-full border border-slate-700 transition-colors cursor-pointer"
@@ -112,7 +122,11 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.currentTarget;
-                  target.style.display = 'none';
+                  if (!target.src.includes('raw.githubusercontent.com')) {
+                    target.src = 'https://raw.githubusercontent.com/alansmorais/litoralemmovimento/refs/heads/main/images/logo.jpg';
+                  } else {
+                    target.style.display = 'none';
+                  }
                 }}
               />
             </div>
@@ -307,6 +321,17 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>Central de Atendimento & Dúvidas (Fale Conosco)</span>
                 </button>
               )}
+
+              <button
+                onClick={() => {
+                  onOpenDriver();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 text-left py-2.5 px-3 rounded-xl bg-sky-950/80 text-sky-300 border border-sky-600/40 hover:border-sky-400 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                <Car className="w-4 h-4 text-sky-400" />
+                <span>Aplicativo do Motorista (Cockpit Veicular)</span>
+              </button>
 
               <button
                 onClick={() => {

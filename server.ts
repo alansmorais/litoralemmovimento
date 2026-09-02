@@ -79,6 +79,23 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Explicitly serve Service Worker and Manifest with proper PWA headers
+  app.get('/sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Service-Worker-Allowed', '/');
+    res.sendFile(path.join(process.cwd(), 'public', 'sw.js'));
+  });
+
+  app.get('/manifest.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+    res.sendFile(path.join(process.cwd(), 'public', 'manifest.json'));
+  });
+
+  // Serve static assets and images
+  app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
+  app.use('/images', express.static(path.join(process.cwd(), 'images')));
+  app.use(express.static(path.join(process.cwd(), 'public')));
+
   // Health check
   app.get('/api/health', (req, res) => {
     res.json({
@@ -156,10 +173,16 @@ async function startServer() {
     'litoral2026',
     '12988506597',
     'spin7l',
-    'eduardo2026',
-    'edivam2026',
-    'claudinei2026',
+    'admin',
     'admin2026',
+    'eduardo',
+    'eduardo2026',
+    'edivam',
+    'edivam2026',
+    'karine',
+    'karine2026',
+    'michelly',
+    'michelly2026',
   ];
 
   const SUPERADMIN_PASSWORDS = [
@@ -171,8 +194,9 @@ async function startServer() {
   ];
 
   const DRIVER_PINS: Record<string, string[]> = {
-    'drv-01': ['1234', '2026', 'spin7l', 'carlos'],
-    'drv-02': ['1234', '2026', 'spin7l', 'marcos'],
+    'drv-01': ['1234', '2026', 'spin7l', 'eduardo'],
+    'drv-02': ['1234', '2026', 'spin7l', 'edivam'],
+    'drv-03': ['1234', '2026', 'spin7l', 'karine'],
   };
 
   app.post('/api/auth/admin-login', (req, res) => {
@@ -189,7 +213,15 @@ async function startServer() {
         success: true,
         token: `adm_tok_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         role: 'admin',
-        adminName: sanitized.includes('eduardo') ? 'Eduardo (Operações)' : sanitized.includes('edivam') ? 'Edivam (Frota)' : sanitized.includes('claudinei') ? 'Claudinei (Coordenação)' : 'Michelly (Gestão)',
+        adminName: sanitized.includes('eduardo')
+          ? 'Eduardo (Operações)'
+          : sanitized.includes('edivam')
+          ? 'Edivam (Frota)'
+          : sanitized.includes('karine')
+          ? 'Karine (Atendimento)'
+          : sanitized.includes('michelly')
+          ? 'Michelly (Gestão)'
+          : 'Gestão Administrativa',
       });
     }
 

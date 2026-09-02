@@ -29,7 +29,7 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const validPins = ['1234', '2026', 'spin7l', 'carlos', 'marcos'];
+  const validPins = ['1234', '2026', 'spin7l', 'eduardo', 'edivam', 'karine'];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +38,8 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
     const sanitized = pin.trim().toLowerCase();
     if (validPins.includes(sanitized) || sanitized.length >= 4) {
       sessionStorage.setItem('litoral_driver_auth', selectedDriverId);
+      localStorage.setItem('litoral_driver_auth', selectedDriverId);
+      localStorage.setItem('litoral_preferred_view', 'driver');
       onSuccess();
     } else {
       setError('PIN de motorista incorreto. Padrão operacional: 1234');

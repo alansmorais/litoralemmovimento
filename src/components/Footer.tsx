@@ -28,6 +28,12 @@ export const Footer: React.FC<FooterProps> = ({
                   src={BRAND_IMAGES.logo}
                   alt="Litoral em Movimento"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.src.includes('raw.githubusercontent.com')) {
+                      target.src = 'https://raw.githubusercontent.com/alansmorais/litoralemmovimento/refs/heads/main/images/logo.jpg';
+                    }
+                  }}
                 />
               </div>
               <div>

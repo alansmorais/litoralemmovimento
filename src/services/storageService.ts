@@ -2,7 +2,7 @@ import { Reservation, Driver, TripStatus, GPSDeviation, ContactMessage, MessageS
 import { INITIAL_RESERVATIONS, DRIVERS, PRICING_RULES, COMPANY_CONTACT } from '../data/mockData';
 
 const RESERVATIONS_STORAGE_KEY = 'litoral_em_movimento_reservations_v2';
-const DRIVERS_STORAGE_KEY = 'litoral_em_movimento_drivers_v1';
+const DRIVERS_STORAGE_KEY = 'litoral_em_movimento_drivers_v2';
 const CONTACT_MESSAGES_STORAGE_KEY = 'litoral_em_movimento_contact_messages_v1';
 const GOOGLE_SCRIPT_STORAGE_KEY = 'litoral_em_movimento_gas_url_v1';
 const SUPER_ADMIN_PASSWORD_KEY = 'litoral_superadmin_password_custom_v1';
@@ -167,7 +167,9 @@ export class StorageService {
       | 'syncAllDrivers'
       | 'syncAllContactMessages'
       | 'updateSuperAdminPassword'
-      | 'updateConfig',
+      | 'updateConfig'
+      | 'updateDriverStatus'
+      | 'confirmBoardingPayment',
     payload: any
   ): Promise<{ success: boolean; message?: string }> {
     const scriptUrl = this.getGoogleScriptUrl();
@@ -338,6 +340,110 @@ export class StorageService {
     } catch (e) {
       return DRIVERS;
     }
+  }
+
+  public static saveDrivers(drivers: Driver[]): void {
+    try {
+      localStorage.setItem(DRIVERS_STORAGE_KEY, JSON.stringify(drivers));
+      window.dispatchEvent(new CustomEvent('drivers_updated', { detail: drivers }));
+    } catch (e) {
+      console.error('Failed to save drivers to storage', e);
+    }
+  }
+
+  public static getDriverById(id: string): Driver | null {
+    const list = this.getDrivers();
+    return list.find((d) => d.id === id) || null;
+  }
+
+  public static updateDriverStatus(driverId: string, activeStatus: 'Disponível' | 'Em Viagem' | 'Descanso'): Driver | null {
+    const list = this.getDrivers();
+    const idx = list.findIndex((d) => d.id === driverId);
+    if (idx === -1) return null;
+
+    list[idx].activeStatus = activeStatus;
+    this.saveDrivers(list);
+
+    // Sync to backend if needed
+    this.syncToGoogleSheets('updateDriverStatus', {
+      driverId,
+      activeStatus,
+    });
+
+    return list[idx];
+  }
+
+  public static updateDriverLocation(driverId: string, address: string, lat?: number, lng?: number): Driver | null {
+    const list = this.getDrivers();
+    const idx = list.findIndex((d) => d.id === driverId);
+    if (idx === -1) return null;
+
+    list[idx].currentLocation = {
+      lat: lat ?? list[idx].currentLocation?.lat ?? -23.5505,
+      lng: lng ?? list[idx].currentLocation?.lng ?? -45.4158,
+      address,
+    };
+    this.saveDrivers(list);
+    return list[idx];
+  }
+
+  public static getLoggedDriverId(): string | null {
+    try {
+      return sessionStorage.getItem('litoral_driver_auth') || localStorage.getItem('litoral_driver_auth');
+    } catch {
+      return null;
+    }
+  }
+
+  public static setLoggedDriverId(driverId: string | null): void {
+    try {
+      if (driverId) {
+        sessionStorage.setItem('litoral_driver_auth', driverId);
+        localStorage.setItem('litoral_driver_auth', driverId);
+        localStorage.setItem('litoral_preferred_view', 'driver');
+      } else {
+        sessionStorage.removeItem('litoral_driver_auth');
+        localStorage.removeItem('litoral_driver_auth');
+        localStorage.removeItem('litoral_preferred_view');
+      }
+    } catch (e) {
+      console.error('Failed to set logged driver id', e);
+    }
+  }
+
+  public static getPreferredView(): 'landing' | 'admin' | 'driver' | null {
+    try {
+      return (localStorage.getItem('litoral_preferred_view') as any) || null;
+    } catch {
+      return null;
+    }
+  }
+
+  public static setPreferredView(view: 'landing' | 'admin' | 'driver'): void {
+    try {
+      localStorage.setItem('litoral_preferred_view', view);
+    } catch (e) {
+      console.error('Failed to set preferred view', e);
+    }
+  }
+
+  public static confirmBoardingPayment(reservationId: string, paymentMethod: 'PIX' | 'Cartão' | 'Dinheiro' = 'PIX'): Reservation | null {
+    const list = this.getReservations();
+    const idx = list.findIndex((r) => r.id === reservationId);
+    if (idx === -1) return null;
+
+    list[idx].paymentStatus = 'Pago (PIX)';
+    list[idx].depositPaid = true;
+    list[idx].remainingAmount = 0;
+    this.saveReservations(list);
+
+    this.syncToGoogleSheets('confirmBoardingPayment', {
+      id: list[idx].id,
+      code: list[idx].code,
+      paymentMethod,
+    });
+
+    return list[idx];
   }
 
   public static addReservation(reservation: Omit<Reservation, 'id' | 'code' | 'createdAt'>): Reservation {
