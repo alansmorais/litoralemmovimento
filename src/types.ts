@@ -73,6 +73,9 @@ export interface Reservation {
 export interface Driver {
   id: string;
   name: string;
+  username?: string; // Login curto (ex: 'eduardo', 'edivam', 'karine')
+  pin?: string; // PIN / Senha de acesso
+  mustChangePassword?: boolean; // Trocar senha no 1º acesso
   email: string;
   phone: string;
   photoUrl: string;
@@ -90,11 +93,15 @@ export interface Driver {
 
 export interface AdminAccount {
   id: string;
+  username: string; // Login curto (ex: 'alan', 'eduardo', 'edivam', 'karine', 'michelly', 'admin')
+  password?: string; // Senha de acesso configurável no Google Sheets
+  mustChangePassword?: boolean; // Trocar senha no 1º acesso
   name: string;
-  email: string;
+  email?: string;
   role: 'Super Admin' | 'Gestão Geral' | 'Gestor de Tráfego' | 'Atendimento' | 'Financeiro' | 'Operações' | string;
   phone?: string;
-  avatarUrl: string;
+  avatarUrl?: string;
+  status?: 'Ativo' | 'Inativo';
 }
 
 export interface DestinationInfo {

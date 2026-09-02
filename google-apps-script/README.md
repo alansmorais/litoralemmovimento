@@ -60,6 +60,63 @@ VITE_GOOGLE_APPS_SCRIPT_URL=https://script.google.com/macros/s/AKfycbx.../exec
 
 ---
 
+## 🔐 Onde Criar Usuários, Senhas e Troca no 1º Acesso na Planilha
+
+Você pode cadastrar e gerenciar as senhas de **Motoristas** e de **Administradores** diretamente nas abas da sua planilha Google!
+
+### 🚕 1. Para os Motoristas (Aba `Motoristas`)
+Na aba **`Motoristas`**, você encontra as seguintes colunas essenciais de autenticação:
+
+| Coluna | Cabeçalho | Exemplo | Descrição |
+|---|---|---|---|
+| **A** | `ID Motorista` | `drv-01` | Identificador único do motorista |
+| **B** | `Nome do Motorista` | `Eduardo Silveira` | Nome exibido no app e vouchers |
+| **C** | **`Usuário (Login Curto)`** | `eduardo` | Nome de usuário curto para login direto |
+| **D** | **`PIN / Senha de Acesso`** | `1234` | Senha ou PIN de 4 a 6 dígitos |
+| **E** | **`Trocar Senha 1º Acesso?`** | `Sim` ou `Não` | Se marcado como `Sim`, o motorista é forçado a criar um novo PIN no primeiro login |
+| **F** | `Telefone (WhatsApp)` | `(12) 98850-6597` | Contato do motorista |
+| **G** | `E-mail` | `eduardo@litoralemmovimento.com.br` | E-mail corporativo |
+| **H** | `Veículo Oficial` | `Chevrolet Spin Premier 7L` | Carro de operação |
+| **I** | `Placa` | `SP-LIT7A24` | Placa do veículo |
+| **J** | `Status Atual` | `Disponível` | Disponível / Em Viagem / Descanso |
+| **K** | `Avaliação Média` | `4.98` | Nota média de passageiros |
+| **L** | `Viagens Concluídas` | `342` | Total de corridas |
+| **M** | `Chave PIX Repasse` | `12988506597` | Chave PIX para repasse |
+
+> 💡 **Como funciona a troca no 1º Acesso do Motorista:**
+> 1. Você cadastra o motorista com o PIN inicial (ex: `1234`) e coloca a Coluna E como **`Sim`**.
+> 2. O motorista abre o app, digita o usuário (`eduardo`) e o PIN (`1234`).
+> 3. O sistema detecta o primeiro acesso e abre automaticamente a tela **"Criar Novo PIN Pessoal"**.
+> 4. O motorista define seu novo PIN seguro.
+> 5. O aplicativo atualiza imediatamente a planilha: a Coluna D recebe o novo PIN e a Coluna E é alterada para **`Não`** automaticamente!
+
+---
+
+### 🛡️ 2. Para os Usuários do Painel Admin (Aba `Usuarios_Admin`)
+Na aba **`Usuarios_Admin`**, você pode cadastrar toda a equipe de gestão:
+
+| Coluna | Cabeçalho | Exemplo | Descrição |
+|---|---|---|---|
+| **A** | `ID Usuário` | `adm-05` | Identificador único do administrador |
+| **B** | **`Usuário (Login Curto)`** | `alan` | Usuário curto para entrar no painel |
+| **C** | `Nome Completo` | `Alan Morais` | Nome completo do gestor |
+| **D** | `Cargo / Função` | `Super Admin` | Cargo (Super Admin, Gestão Operacional, etc.) |
+| **E** | **`Senha de Acesso`** | `alan2026` | Senha atual de acesso |
+| **F** | **`Trocar Senha 1º Acesso?`** | `Sim` ou `Não` | Se `Sim`, exige troca de senha no 1º login |
+| **G** | `E-mail` | `alanpkmorais@gmail.com` | E-mail de recuperação e avisos |
+| **H** | `Telefone (WhatsApp)` | `(12) 98850-6597` | WhatsApp de contato |
+| **I** | `Status` | `Ativo` | `Ativo` ou `Inativo` |
+
+> 💡 **Usuários Padrão Já Pré-Cadastrados:**
+> - `alan`: Super Admin (Senha: `alan2026` - Acesso total)
+> - `eduardo`: Gestão Operacional (Senha inicial: `litoral2026`, Troca no 1º Acesso: `Sim`)
+> - `edivam`: Gestão de Frota (Senha inicial: `litoral2026`, Troca no 1º Acesso: `Sim`)
+> - `karine`: Gestão de Atendimento (Senha inicial: `litoral2026`, Troca no 1º Acesso: `Sim`)
+> - `michelly`: Gestão Administrativa (Senha inicial: `litoral2026`, Troca no 1º Acesso: `Sim`)
+> - `admin`: Acesso Geral (Senha inicial: `litoral2026`)
+
+---
+
 ## 📊 Estrutura Automática de Colunas na Planilha
 
 O script cria automaticamente a aba `Reservas` com as seguintes 27 colunas formatadas:

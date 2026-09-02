@@ -1,8 +1,9 @@
-import { Reservation, Driver, TripStatus, GPSDeviation, ContactMessage, MessageStatus } from '../types';
-import { INITIAL_RESERVATIONS, DRIVERS, PRICING_RULES, COMPANY_CONTACT } from '../data/mockData';
+import { Reservation, Driver, TripStatus, GPSDeviation, ContactMessage, MessageStatus, AdminAccount } from '../types';
+import { INITIAL_RESERVATIONS, DRIVERS, PRICING_RULES, COMPANY_CONTACT, ADMIN_ACCOUNTS } from '../data/mockData';
 
 const RESERVATIONS_STORAGE_KEY = 'litoral_em_movimento_reservations_v2';
 const DRIVERS_STORAGE_KEY = 'litoral_em_movimento_drivers_v2';
+const ADMINS_STORAGE_KEY = 'litoral_em_movimento_admins_v2';
 const CONTACT_MESSAGES_STORAGE_KEY = 'litoral_em_movimento_contact_messages_v1';
 const GOOGLE_SCRIPT_STORAGE_KEY = 'litoral_em_movimento_gas_url_v1';
 const SUPER_ADMIN_PASSWORD_KEY = 'litoral_superadmin_password_custom_v1';
@@ -169,6 +170,8 @@ export class StorageService {
       | 'updateSuperAdminPassword'
       | 'updateConfig'
       | 'updateDriverStatus'
+      | 'updateDriverPassword'
+      | 'updateAdminPassword'
       | 'confirmBoardingPayment',
     payload: any
   ): Promise<{ success: boolean; message?: string }> {
@@ -228,12 +231,14 @@ export class StorageService {
   }> {
     const reservations = this.getReservations();
     const drivers = this.getDrivers();
+    const admins = this.getAdmins();
     const contactMessages = this.getContactMessages();
     const superAdminPassword = this.getSuperAdminPassword();
 
     const payload = {
       reservations,
       drivers,
+      admins,
       contactMessages,
       configs: {
         SENHA_SUPERADMIN_ALAN: superAdminPassword,
@@ -490,6 +495,226 @@ export class StorageService {
     return list[idx];
   }
 
+  public static getDriverByUsernameOrId(query: string): Driver | null {
+    if (!query) return null;
+    const clean = query.trim().toLowerCase();
+    const list = this.getDrivers();
+    return (
+      list.find(
+        (d) =>
+          d.id.toLowerCase() === clean ||
+          (d.username && d.username.toLowerCase() === clean) ||
+          d.name.toLowerCase().includes(clean)
+      ) || null
+    );
+  }
+
+  public static async updateDriverPassword(
+    driverIdOrUsername: string,
+    newPin: string
+  ): Promise<{ success: boolean; message: string }> {
+    const sanitized = newPin.trim();
+    if (!sanitized || sanitized.length < 4) {
+      return { success: false, message: 'O PIN/senha deve conter no mínimo 4 caracteres ou dígitos.' };
+    }
+
+    const list = this.getDrivers();
+    const clean = driverIdOrUsername.trim().toLowerCase();
+    const idx = list.findIndex(
+      (d) =>
+        d.id.toLowerCase() === clean ||
+        (d.username && d.username.toLowerCase() === clean)
+    );
+
+    if (idx === -1) {
+      return { success: false, message: 'Motorista não encontrado para atualização.' };
+    }
+
+    list[idx].pin = sanitized;
+    list[idx].mustChangePassword = false;
+    this.saveDrivers(list);
+
+    // Sync to backend server
+    fetch('/api/auth/driver-change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driverId: list[idx].id,
+        username: list[idx].username,
+        newPin: sanitized,
+      }),
+    }).catch(() => {});
+
+    // Sync to Google Sheets
+    this.syncToGoogleSheets('updateDriverPassword', {
+      driverId: list[idx].id,
+      username: list[idx].username,
+      pin: sanitized,
+      mustChangePassword: false,
+    }).catch(() => {});
+
+    return {
+      success: true,
+      message: `PIN do motorista ${list[idx].name} alterado com sucesso e sincronizado!`,
+    };
+  }
+
+  public static getAdmins(): AdminAccount[] {
+    try {
+      const data = localStorage.getItem(ADMINS_STORAGE_KEY);
+      if (!data) {
+        localStorage.setItem(ADMINS_STORAGE_KEY, JSON.stringify(ADMIN_ACCOUNTS));
+        return ADMIN_ACCOUNTS;
+      }
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      return ADMIN_ACCOUNTS;
+    } catch (e) {
+      return ADMIN_ACCOUNTS;
+    }
+  }
+
+  public static saveAdmins(admins: AdminAccount[]): void {
+    try {
+      localStorage.setItem(ADMINS_STORAGE_KEY, JSON.stringify(admins));
+      window.dispatchEvent(new CustomEvent('admins_updated', { detail: admins }));
+    } catch (e) {
+      console.error('Failed to save admins to storage', e);
+    }
+  }
+
+  public static getAdminByUsernameOrId(query: string): AdminAccount | null {
+    if (!query) return null;
+    const clean = query.trim().toLowerCase();
+    const list = this.getAdmins();
+    return (
+      list.find(
+        (a) =>
+          a.id.toLowerCase() === clean ||
+          (a.username && a.username.toLowerCase() === clean) ||
+          a.name.toLowerCase().includes(clean)
+      ) || null
+    );
+  }
+
+  public static async updateAdminPassword(
+    adminIdOrUsername: string,
+    newPass: string
+  ): Promise<{ success: boolean; message: string }> {
+    const sanitized = newPass.trim();
+    if (!sanitized || sanitized.length < 4) {
+      return { success: false, message: 'A nova senha deve ter pelo menos 4 caracteres.' };
+    }
+
+    const list = this.getAdmins();
+    const clean = adminIdOrUsername.trim().toLowerCase();
+    const idx = list.findIndex(
+      (a) =>
+        a.id.toLowerCase() === clean ||
+        (a.username && a.username.toLowerCase() === clean)
+    );
+
+    if (idx === -1) {
+      return { success: false, message: 'Usuário administrador não encontrado.' };
+    }
+
+    list[idx].password = sanitized;
+    list[idx].mustChangePassword = false;
+    this.saveAdmins(list);
+
+    // If it's Alan Morais / SuperAdmin, also update superadmin password
+    if (list[idx].username === 'alan' || list[idx].role === 'Super Admin') {
+      localStorage.setItem(SUPER_ADMIN_PASSWORD_KEY, sanitized);
+    }
+
+    // Sync to backend server
+    fetch('/api/auth/admin-change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adminId: list[idx].id,
+        username: list[idx].username,
+        newPassword: sanitized,
+      }),
+    }).catch(() => {});
+
+    // Sync to Google Sheets
+    this.syncToGoogleSheets('updateAdminPassword', {
+      adminId: list[idx].id,
+      username: list[idx].username,
+      password: sanitized,
+      mustChangePassword: false,
+    }).catch(() => {});
+
+    return {
+      success: true,
+      message: `Senha do usuário ${list[idx].name} alterada com sucesso e sincronizada!`,
+    };
+  }
+
+  public static async syncAccountsFromGoogleSheets(): Promise<{ success: boolean; message: string }> {
+    const scriptUrl = this.getGoogleScriptUrl();
+    if (!scriptUrl) {
+      return { success: false, message: 'URL do Apps Script não configurada.' };
+    }
+
+    try {
+      // 1. Fetch Drivers from Sheets
+      const drvUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getDrivers` : `${scriptUrl}?action=getDrivers`;
+      const drvRes = await fetch(drvUrl);
+      if (drvRes.ok) {
+        const sheetDrivers = await drvRes.json();
+        if (Array.isArray(sheetDrivers) && sheetDrivers.length > 0) {
+          const currentDrivers = this.getDrivers();
+          const merged = currentDrivers.map((cd) => {
+            const sd = sheetDrivers.find((d: any) => d.id === cd.id || (d.username && d.username === cd.username));
+            if (!sd) return cd;
+            return {
+              ...cd,
+              name: sd.name || cd.name,
+              phone: sd.phone || cd.phone,
+              email: sd.email || cd.email,
+              vehicleModel: sd.vehicleModel || cd.vehicleModel,
+              plate: sd.plate || cd.plate,
+              rating: sd.rating || cd.rating,
+              username: sd.username || cd.username || cd.name.split(' ')[0].toLowerCase(),
+              pin: sd.pin || cd.pin || '1234',
+              mustChangePassword: sd.mustChangePassword !== undefined ? sd.mustChangePassword : cd.mustChangePassword,
+            };
+          });
+          this.saveDrivers(merged);
+        }
+      }
+
+      // 2. Fetch Admins from Sheets
+      const admUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getAdmins` : `${scriptUrl}?action=getAdmins`;
+      const admRes = await fetch(admUrl);
+      if (admRes.ok) {
+        const sheetAdmins = await admRes.json();
+        if (Array.isArray(sheetAdmins) && sheetAdmins.length > 0) {
+          const currentAdmins = this.getAdmins();
+          const mergedAdmins = currentAdmins.map((ca) => {
+            const sa = sheetAdmins.find((a: any) => a.id === ca.id || (a.username && a.username === ca.username));
+            if (!sa) return ca;
+            return {
+              ...ca,
+              name: sa.name || ca.name,
+              role: sa.role || ca.role,
+              username: sa.username || ca.username,
+              password: sa.password || ca.password || 'litoral2026',
+              mustChangePassword: sa.mustChangePassword !== undefined ? sa.mustChangePassword : ca.mustChangePassword,
+            };
+          });
+          this.saveAdmins(mergedAdmins);
+        }
+      }
+
+      return { success: true, message: 'Usuários e senhas sincronizados com a planilha Google Sheets!' };
+    } catch (e: any) {
+      return { success: false, message: `Erro ao sincronizar do Google Sheets: ${e.message}` };
+    }
+  }
+
   public static getLoggedDriverId(): string | null {
     try {
       return sessionStorage.getItem('litoral_driver_auth') || localStorage.getItem('litoral_driver_auth');
@@ -509,6 +734,7 @@ export class StorageService {
         localStorage.removeItem('litoral_driver_auth');
         localStorage.removeItem('litoral_preferred_view');
       }
+      window.dispatchEvent(new CustomEvent('driver_auth_changed', { detail: driverId }));
     } catch (e) {
       console.error('Failed to set logged driver id', e);
     }

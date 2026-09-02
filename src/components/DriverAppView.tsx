@@ -38,21 +38,30 @@ import {
   Share2,
   BellRing,
   Wifi,
+  ArrowLeftRight,
+  UserCheck,
+  KeyRound,
+  X,
 } from 'lucide-react';
 
 interface DriverAppViewProps {
   onBackToSite: () => void;
   onOpenAdmin?: () => void;
+  onLogout?: () => void;
+  onSwitchDriver?: () => void;
 }
 
 export const DriverAppView: React.FC<DriverAppViewProps> = ({
   onBackToSite,
   onOpenAdmin,
+  onLogout,
+  onSwitchDriver,
 }) => {
   const [drivers, setDrivers] = useState<Driver[]>(StorageService.getDrivers());
   const loggedId = StorageService.getLoggedDriverId() || DRIVERS[0].id;
   const currentDriver = StorageService.getDriverById(loggedId) || DRIVERS[0];
   const [selectedDriver, setSelectedDriver] = useState<Driver>(currentDriver);
+  const [isSwitchDriverModalOpen, setIsSwitchDriverModalOpen] = useState(false);
   
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [activeTab, setActiveTab] = useState<'active' | 'schedule' | 'gps-nav' | 'checklist' | 'earnings'>('active');
@@ -101,8 +110,27 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
     setReservations(allReservations);
     const updatedDrivers = StorageService.getDrivers();
     setDrivers(updatedDrivers);
-    const current = StorageService.getDriverById(selectedDriver.id) || updatedDrivers[0];
+    const activeLoggedId = StorageService.getLoggedDriverId();
+    const current = (activeLoggedId ? StorageService.getDriverById(activeLoggedId) : null) || StorageService.getDriverById(selectedDriver.id) || updatedDrivers[0];
     setSelectedDriver(current);
+  };
+
+  const handleSelectDriver = (driver: Driver) => {
+    setSelectedDriver(driver);
+    StorageService.setLoggedDriverId(driver.id);
+    setIsSwitchDriverModalOpen(false);
+    performSync();
+  };
+
+  const handleLogout = () => {
+    if (window.confirm(`Deseja realmente sair da conta do motorista ${selectedDriver.name}?`)) {
+      StorageService.setLoggedDriverId(null);
+      if (onLogout) {
+        onLogout();
+      } else {
+        onBackToSite();
+      }
+    }
   };
 
   const performSync = async () => {
@@ -158,12 +186,19 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
     const handleUpdate = () => loadData();
     window.addEventListener('reservations_updated', handleUpdate);
     window.addEventListener('drivers_updated', handleUpdate);
+    window.addEventListener('driver_auth_changed', handleUpdate);
 
     // Check if app is already running as standalone PWA
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
     setIsStandaloneMode(isStandalone);
+
+    // If no driver has been selected yet, prompt the switch driver modal immediately
+    const initialLoggedId = StorageService.getLoggedDriverId();
+    if (!initialLoggedId) {
+      setIsSwitchDriverModalOpen(true);
+    }
 
     // Capture PWA install prompt
     const handleBeforeInstallPrompt = (e: any) => {
@@ -178,6 +213,7 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
       window.removeEventListener('focus', handleVisibility);
       window.removeEventListener('reservations_updated', handleUpdate);
       window.removeEventListener('drivers_updated', handleUpdate);
+      window.removeEventListener('driver_auth_changed', handleUpdate);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, [selectedDriver.id]);
@@ -321,13 +357,18 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
       {/* 1. TOP NATIVE APP BAR (MOBILE-FIRST COCKPIT) */}
       <header className="bg-slate-900 border-b border-slate-800 px-4 py-3 sticky top-0 z-40 shadow-lg">
         <div className="max-w-lg mx-auto flex items-center justify-between gap-2">
-          {/* Driver Avatar & Identity */}
-          <div className="flex items-center gap-2.5">
-            <div className="relative">
+          {/* Driver Avatar & Identity (Clickable to switch driver) */}
+          <button
+            type="button"
+            onClick={() => setIsSwitchDriverModalOpen(true)}
+            className="flex items-center gap-2.5 text-left p-1 -m-1 rounded-2xl hover:bg-slate-800/80 transition-all group cursor-pointer focus:outline-none"
+            title="Clique para trocar de motorista ou gerenciar perfil"
+          >
+            <div className="relative flex-shrink-0">
               <img
                 src={selectedDriver.photoUrl}
                 alt={selectedDriver.name}
-                className="w-11 h-11 rounded-full object-cover border-2 border-amber-400 shadow-md"
+                className="w-11 h-11 rounded-full object-cover border-2 border-amber-400 shadow-md group-hover:border-sky-400 transition-colors"
               />
               <span
                 className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-slate-900 ${
@@ -340,24 +381,25 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
               />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h1 className="font-serif-display font-extrabold text-sm text-white leading-tight">
-                  {selectedDriver.name}
+                <h1 className="font-serif-display font-extrabold text-sm text-white leading-tight truncate flex items-center gap-1">
+                  <span>{selectedDriver.name}</span>
+                  <ArrowLeftRight className="w-3 h-3 text-sky-400 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                 </h1>
-                <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded font-black tracking-tight">
+                <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded font-black tracking-tight flex-shrink-0">
                   ★ {selectedDriver.rating}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                <Car className="w-3 h-3 text-sky-400 inline" />
+              <p className="text-[11px] text-slate-400 flex items-center gap-1 truncate">
+                <Car className="w-3 h-3 text-sky-400 inline flex-shrink-0" />
                 <span>Spin 7L • {selectedDriver.plate}</span>
               </p>
             </div>
-          </div>
+          </button>
 
           {/* Quick Actions & Status Menu */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Status Selector Pill */}
             <select
               value={selectedDriver.activeStatus}
@@ -375,15 +417,35 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
               <option value="Descanso">🟡 Em Pausa</option>
             </select>
 
+            {/* Quick Switch Driver Button */}
+            <button
+              onClick={() => setIsSwitchDriverModalOpen(true)}
+              className="bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 px-2.5 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+              title="Trocar para outro motorista da frota"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5 text-sky-400" />
+              <span>Trocar</span>
+            </button>
+
+            {/* Quick Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 px-2.5 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+              title="Desconectar / Sair da conta deste motorista"
+            >
+              <LogOut className="w-3.5 h-3.5 text-red-400" />
+              <span>Sair</span>
+            </button>
+
             {/* Install Standalone App Button */}
             {!isStandaloneMode && (
               <button
                 onClick={handleInstallPWA}
-                className="bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 px-2.5 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 transition-colors cursor-pointer"
+                className="bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 p-2 sm:px-2.5 sm:py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1 transition-colors cursor-pointer"
                 title="Instalar App Standalone no Celular / Tela de Início"
               >
                 <Download className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Instalar App</span>
+                <span className="hidden md:inline">Instalar</span>
               </button>
             )}
 
@@ -395,21 +457,46 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
             >
               <Phone className="w-4 h-4" />
             </button>
-
-            {/* Exit to Site / Switch Driver */}
-            <button
-              onClick={onBackToSite}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-xl text-xs transition-colors cursor-pointer"
-              title="Encerrar sessão do motorista"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </header>
 
       {/* 2. MAIN COCKPIT BODY */}
       <main className="max-w-lg mx-auto w-full px-4 py-3 flex-1 space-y-4">
+        {/* Driver Session & Quick Switcher Card */}
+        <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-sky-500/15 border border-sky-400/30 text-sky-400 flex items-center justify-center flex-shrink-0">
+              <UserCheck className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase font-black tracking-wider text-slate-400">Motorista Conectado</p>
+              <p className="text-xs font-black text-white truncate flex items-center gap-1.5">
+                <span>{selectedDriver.name}</span>
+                <span className="text-[11px] font-normal text-slate-400 hidden sm:inline">({selectedDriver.plate})</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => setIsSwitchDriverModalOpen(true)}
+              className="flex items-center gap-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              title="Trocar para outro motorista da frota"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <span>Trocar</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              title="Sair da conta e desconectar"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sair</span>
+            </button>
+          </div>
+        </div>
+
         {/* Real-time Multi-Device Sync Status Bar */}
         <div className="bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-2xl flex items-center justify-between gap-2 shadow-sm text-xs">
           <div className="flex items-center gap-2">
@@ -1452,16 +1539,160 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
         </div>
       )}
 
+      {/* 3.5 MODAL: TROCAR DE MOTORISTA OU FAZER LOGOUT */}
+      {isSwitchDriverModalOpen && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsSwitchDriverModalOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn"
+        >
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full text-white shadow-2xl space-y-5 relative">
+            <button
+              type="button"
+              onClick={() => setIsSwitchDriverModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border-2 border-sky-400 text-sky-400 flex items-center justify-center flex-shrink-0 shadow-lg shadow-sky-500/10">
+                <ArrowLeftRight className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-serif-display font-extrabold text-xl text-white">
+                  Trocar Motorista
+                </h3>
+                <p className="text-xs text-slate-400 leading-snug">
+                  Selecione quem está conduzindo a Spin 7L nesta jornada.
+                </p>
+              </div>
+            </div>
+
+            {/* List of Available Drivers */}
+            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+              {drivers.map((drv) => {
+                const isCurrent = drv.id === selectedDriver.id;
+                return (
+                  <div
+                    key={drv.id}
+                    onClick={() => !isCurrent && handleSelectDriver(drv)}
+                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      isCurrent
+                        ? 'bg-amber-400/10 border-amber-400/60 shadow-sm'
+                        : 'bg-slate-950/70 border-slate-800 hover:border-sky-500/50 hover:bg-slate-950 cursor-pointer'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative flex-shrink-0">
+                        <img
+                          src={drv.photoUrl}
+                          alt={drv.name}
+                          className={`w-11 h-11 rounded-full object-cover border-2 ${
+                            isCurrent ? 'border-amber-400' : 'border-slate-700'
+                          }`}
+                        />
+                        <span
+                          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-900 ${
+                            drv.activeStatus === 'Disponível'
+                              ? 'bg-emerald-500'
+                              : drv.activeStatus === 'Em Viagem'
+                              ? 'bg-sky-400'
+                              : 'bg-amber-500'
+                          }`}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-bold text-sm text-white truncate">{drv.name}</p>
+                          <span className="text-[10px] text-amber-400 font-bold">★ {drv.rating}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {drv.vehicleModel.split('•')[0]} • Placa {drv.plate}
+                        </p>
+                        <p className="text-[10px] text-slate-500">{drv.phone}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex-shrink-0">
+                      {isCurrent ? (
+                        <span className="bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2.5 py-1 rounded-lg">
+                          Ativo Agora
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSelectDriver(drv)}
+                          className="bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-black px-3 py-1.5 rounded-xl transition-transform active:scale-95 cursor-pointer"
+                        >
+                          Alternar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Actions: PIN Login with another driver OR Full Logout */}
+            <div className="border-t border-slate-800 pt-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSwitchDriverModalOpen(false);
+                  if (onSwitchDriver) onSwitchDriver();
+                }}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <KeyRound className="w-4 h-4 text-sky-400" />
+                <span>Entrar com PIN de Outro Motorista</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSwitchDriverModalOpen(false);
+                  handleLogout();
+                }}
+                className="w-full bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/40 text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 text-red-400" />
+                <span>Desconectar / Fazer Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 4. DRIVER BOTTOM STATUS FOOTER */}
       <footer className="bg-slate-900/90 border-t border-slate-800 py-2.5 px-4 text-center text-[10px] text-slate-400 sticky bottom-0 z-30">
-        <div className="max-w-lg mx-auto flex items-center justify-between">
-          <span className="flex items-center gap-1 text-slate-300">
-            <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-            <span>Motorista Conectado • {selectedDriver.name}</span>
-          </span>
-          <span className="text-slate-400">
-            Central: {COMPANY_CONTACT.phone}
-          </span>
+        <div className="max-w-lg mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="flex items-center gap-1 text-slate-300 truncate">
+              <Radio className="w-3 h-3 text-emerald-400 animate-pulse flex-shrink-0" />
+              <span className="truncate">Motorista • <strong>{selectedDriver.name}</strong></span>
+            </span>
+            <button
+              onClick={() => setIsSwitchDriverModalOpen(true)}
+              className="text-[10px] text-sky-400 hover:text-sky-300 font-bold underline cursor-pointer flex-shrink-0"
+            >
+              Trocar
+            </button>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={handleLogout}
+              className="text-[10px] text-red-400 hover:text-red-300 font-bold underline cursor-pointer"
+            >
+              Sair
+            </button>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-400">
+              Central: {COMPANY_CONTACT.phone}
+            </span>
+          </div>
         </div>
       </footer>
     </div>

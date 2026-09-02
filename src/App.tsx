@@ -180,7 +180,18 @@ export default function App() {
     StorageService.setPreferredView('driver');
     window.location.hash = 'motorista';
     setCurrentView('driver');
+    window.dispatchEvent(new CustomEvent('driver_auth_changed'));
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLogoutDriver = () => {
+    StorageService.setLoggedDriverId(null);
+    StorageService.setPreferredView('landing');
+    setIsDriverAuthOpen(true);
+  };
+
+  const handleSwitchDriver = () => {
+    setIsDriverAuthOpen(true);
   };
 
   const handleLogoutAdmin = () => {
@@ -310,6 +321,8 @@ export default function App() {
           <DriverAppView
             onBackToSite={handleBackFromDriver}
             onOpenAdmin={handleOpenAdmin}
+            onLogout={handleLogoutDriver}
+            onSwitchDriver={handleSwitchDriver}
           />
         )}
       </main>
@@ -342,7 +355,12 @@ export default function App() {
 
       <DriverAuthModal
         isOpen={isDriverAuthOpen}
-        onClose={() => setIsDriverAuthOpen(false)}
+        onClose={() => {
+          setIsDriverAuthOpen(false);
+          if (!StorageService.getLoggedDriverId() && currentView === 'driver') {
+            handleBackFromDriver();
+          }
+        }}
         onSuccess={handleDriverAuthSuccess}
       />
     </div>

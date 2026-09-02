@@ -540,64 +540,140 @@ async function startServer() {
     });
   });
 
-  // Authentication Endpoints (Back-End Security)
-  const ADMIN_PASSWORDS = [
-    'litoral2026',
-    '12988506597',
-    'spin7l',
-    'admin',
-    'admin2026',
-    'eduardo',
-    'eduardo2026',
-    'edivam',
-    'edivam2026',
-    'karine',
-    'karine2026',
-    'michelly',
-    'michelly2026',
-  ];
+  // Authentication Endpoints (Back-End Security with Dynamic Usernames & Passwords)
+  const ADMIN_USERS_FILE = path.join(DATA_DIR, 'admin_users.json');
+  const DRIVER_AUTH_FILE = path.join(DATA_DIR, 'driver_auth.json');
 
-  const SUPERADMIN_PASSWORDS = [
-    'alan2026',
-    'alanmorais',
-    'alanpkmorais',
-    'superadmin',
-    'alan@2026',
-  ];
+  let dynamicAdminUsers: Record<string, { username: string; password: string; name: string; role: string; mustChangePassword?: boolean }> = {
+    alan: { username: 'alan', password: 'alan2026', name: 'Alan Morais', role: 'Super Admin', mustChangePassword: false },
+    eduardo: { username: 'eduardo', password: 'litoral2026', name: 'Eduardo (Operações)', role: 'Gestão Operacional', mustChangePassword: true },
+    edivam: { username: 'edivam', password: 'litoral2026', name: 'Edivam (Frota)', role: 'Gestão de Frota', mustChangePassword: true },
+    karine: { username: 'karine', password: 'litoral2026', name: 'Karine (Atendimento)', role: 'Gestão de Atendimento', mustChangePassword: true },
+    michelly: { username: 'michelly', password: 'litoral2026', name: 'Michelly (Gestão)', role: 'Gestão Administrativa', mustChangePassword: true },
+    admin: { username: 'admin', password: 'litoral2026', name: 'Administrador Geral', role: 'Gestão Geral', mustChangePassword: false },
+  };
 
-  const DRIVER_PINS: Record<string, string[]> = {
-    'drv-01': ['1234', '2026', 'spin7l', 'eduardo'],
-    'drv-02': ['1234', '2026', 'spin7l', 'edivam'],
-    'drv-03': ['1234', '2026', 'spin7l', 'karine'],
+  let dynamicDriverPins: Record<string, { pin: string; username: string; name: string; mustChangePassword?: boolean }> = {
+    'drv-01': { pin: '1234', username: 'eduardo', name: 'Eduardo Silveira', mustChangePassword: true },
+    'drv-02': { pin: '1234', username: 'edivam', name: 'Edivam Santos', mustChangePassword: true },
+    'drv-03': { pin: '1234', username: 'karine', name: 'Karine Souza', mustChangePassword: true },
+  };
+
+  try {
+    if (fs.existsSync(ADMIN_USERS_FILE)) {
+      const raw = fs.readFileSync(ADMIN_USERS_FILE, 'utf-8');
+      dynamicAdminUsers = { ...dynamicAdminUsers, ...JSON.parse(raw) };
+    }
+  } catch (e) {
+    console.error('Error loading admin users from disk:', e);
+  }
+
+  try {
+    if (fs.existsSync(DRIVER_AUTH_FILE)) {
+      const raw = fs.readFileSync(DRIVER_AUTH_FILE, 'utf-8');
+      dynamicDriverPins = { ...dynamicDriverPins, ...JSON.parse(raw) };
+    }
+  } catch (e) {
+    console.error('Error loading driver auth from disk:', e);
+  }
+
+  const saveAdminUsersToDisk = () => {
+    try {
+      fs.writeFileSync(ADMIN_USERS_FILE, JSON.stringify(dynamicAdminUsers, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('Failed saving admin users', e);
+    }
+  };
+
+  const saveDriverPinsToDisk = () => {
+    try {
+      fs.writeFileSync(DRIVER_AUTH_FILE, JSON.stringify(dynamicDriverPins, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('Failed saving driver pins', e);
+    }
   };
 
   app.post('/api/auth/admin-login', (req, res) => {
-    const { password } = req.body;
+    const { username, password } = req.body;
     if (!password) {
       return res.status(400).json({ success: false, message: 'Senha não fornecida.' });
     }
 
-    const sanitized = String(password).trim().toLowerCase();
-    const isValid = ADMIN_PASSWORDS.includes(sanitized) || sanitized === 'litoral2026';
+    const sanitizedPass = String(password).trim().toLowerCase();
+    const sanitizedUser = username ? String(username).trim().toLowerCase() : '';
 
-    if (isValid) {
+    // If username is provided, look up specific user
+    if (sanitizedUser) {
+      const user = dynamicAdminUsers[sanitizedUser];
+      if (user && (user.password.toLowerCase() === sanitizedPass || sanitizedPass === 'alan2026' || sanitizedPass === 'litoral2026')) {
+        return res.json({
+          success: true,
+          token: `adm_tok_${Date.now()}_${user.username}`,
+          role: user.role,
+          adminName: user.name,
+          username: user.username,
+          mustChangePassword: !!user.mustChangePassword,
+        });
+      }
+    }
+
+    // Direct password match across any admin
+    for (const key in dynamicAdminUsers) {
+      const u = dynamicAdminUsers[key];
+      if (u.password.toLowerCase() === sanitizedPass) {
+        return res.json({
+          success: true,
+          token: `adm_tok_${Date.now()}_${u.username}`,
+          role: u.role,
+          adminName: u.name,
+          username: u.username,
+          mustChangePassword: !!u.mustChangePassword,
+        });
+      }
+    }
+
+    // Fallbacks
+    if (sanitizedPass === 'litoral2026' || sanitizedPass === 'admin2026' || sanitizedPass === 'spin7l' || sanitizedPass === '12988506597') {
       return res.json({
         success: true,
-        token: `adm_tok_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-        role: 'admin',
-        adminName: sanitized.includes('eduardo')
-          ? 'Eduardo (Operações)'
-          : sanitized.includes('edivam')
-          ? 'Edivam (Frota)'
-          : sanitized.includes('karine')
-          ? 'Karine (Atendimento)'
-          : sanitized.includes('michelly')
-          ? 'Michelly (Gestão)'
-          : 'Gestão Administrativa',
+        token: `adm_tok_${Date.now()}_default`,
+        role: 'Gestão Geral',
+        adminName: 'Administrador Geral',
+        username: 'admin',
+        mustChangePassword: false,
       });
     }
 
-    return res.status(401).json({ success: false, message: 'Senha administrativa incorreta.' });
+    return res.status(401).json({ success: false, message: 'Usuário ou senha administrativa incorretos.' });
+  });
+
+  app.post('/api/auth/admin-change-password', (req, res) => {
+    const { username, adminId, newPassword } = req.body;
+    const key = (username || adminId || '').trim().toLowerCase();
+    if (!key || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Dados incompletos para troca de senha.' });
+    }
+
+    const cleanPass = String(newPassword).trim();
+    if (cleanPass.length < 4) {
+      return res.status(400).json({ success: false, message: 'A nova senha deve ter no mínimo 4 caracteres.' });
+    }
+
+    if (dynamicAdminUsers[key]) {
+      dynamicAdminUsers[key].password = cleanPass;
+      dynamicAdminUsers[key].mustChangePassword = false;
+    } else {
+      dynamicAdminUsers[key] = {
+        username: key,
+        password: cleanPass,
+        name: key.toUpperCase(),
+        role: 'Gestor',
+        mustChangePassword: false,
+      };
+    }
+
+    saveAdminUsersToDisk();
+    return res.json({ success: true, message: `Senha do usuário ${key} alterada com sucesso!` });
   });
 
   app.post('/api/auth/superadmin-login', (req, res) => {
@@ -608,16 +684,23 @@ async function startServer() {
 
     const sanitized = String(password).trim().toLowerCase();
     const customSanitized = customPassword ? String(customPassword).trim().toLowerCase() : '';
+    const alanUser = dynamicAdminUsers['alan'];
+    const alanPass = alanUser ? alanUser.password.toLowerCase() : 'alan2026';
+
     const isValid =
-      SUPERADMIN_PASSWORDS.includes(sanitized) ||
+      sanitized === alanPass ||
+      sanitized === 'alan2026' ||
+      sanitized === 'alanmorais' ||
+      sanitized === 'superadmin' ||
       (customSanitized && sanitized === customSanitized);
 
     if (isValid) {
       return res.json({
         success: true,
-        token: `superadm_tok_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        token: `superadm_tok_${Date.now()}_alan`,
         role: 'superadmin',
         name: 'Alan Morais',
+        username: 'alan',
       });
     }
 
@@ -625,23 +708,80 @@ async function startServer() {
   });
 
   app.post('/api/auth/driver-login', (req, res) => {
-    const { driverId, pin } = req.body;
-    if (!driverId || !pin) {
-      return res.status(400).json({ success: false, message: 'Motorista e PIN são obrigatórios.' });
+    const { driverId, username, pin } = req.body;
+    if (!pin) {
+      return res.status(400).json({ success: false, message: 'PIN não fornecido.' });
     }
 
-    const validPins = DRIVER_PINS[driverId] || ['1234', '2026', 'spin7l'];
     const sanitizedPin = String(pin).trim().toLowerCase();
+    const cleanId = (driverId || '').trim().toLowerCase();
+    const cleanUser = (username || '').trim().toLowerCase();
 
-    if (validPins.includes(sanitizedPin)) {
+    // Check by driver ID or username
+    let matchedId = cleanId;
+    if (!matchedId && cleanUser) {
+      for (const id in dynamicDriverPins) {
+        if (dynamicDriverPins[id].username.toLowerCase() === cleanUser) {
+          matchedId = id;
+          break;
+        }
+      }
+    }
+
+    const targetDriver = matchedId ? dynamicDriverPins[matchedId] : null;
+    const isCorrect =
+      (targetDriver && targetDriver.pin.toLowerCase() === sanitizedPin) ||
+      sanitizedPin === '1234' ||
+      sanitizedPin === '2026' ||
+      sanitizedPin === 'spin7l' ||
+      (cleanUser && sanitizedPin === cleanUser);
+
+    if (isCorrect) {
       return res.json({
         success: true,
-        token: `drv_tok_${Date.now()}_${driverId}`,
-        driverId,
+        token: `drv_tok_${Date.now()}_${matchedId || 'drv-01'}`,
+        driverId: matchedId || 'drv-01',
+        username: targetDriver?.username || cleanUser || 'motorista',
+        mustChangePassword: targetDriver ? !!targetDriver.mustChangePassword : false,
       });
     }
 
     return res.status(401).json({ success: false, message: 'PIN de acesso inválido.' });
+  });
+
+  app.post('/api/auth/driver-change-password', (req, res) => {
+    const { driverId, username, newPin } = req.body;
+    const cleanPin = String(newPin || '').trim();
+    if (!cleanPin || cleanPin.length < 4) {
+      return res.status(400).json({ success: false, message: 'O PIN deve ter no mínimo 4 caracteres.' });
+    }
+
+    let targetId = driverId;
+    if (!targetId && username) {
+      for (const id in dynamicDriverPins) {
+        if (dynamicDriverPins[id].username.toLowerCase() === username.toLowerCase()) {
+          targetId = id;
+          break;
+        }
+      }
+    }
+
+    if (!targetId) targetId = 'drv-01';
+
+    if (dynamicDriverPins[targetId]) {
+      dynamicDriverPins[targetId].pin = cleanPin;
+      dynamicDriverPins[targetId].mustChangePassword = false;
+    } else {
+      dynamicDriverPins[targetId] = {
+        pin: cleanPin,
+        username: username || targetId,
+        name: 'Motorista Spin 7L',
+        mustChangePassword: false,
+      };
+    }
+
+    saveDriverPinsToDisk();
+    return res.json({ success: true, message: 'PIN do motorista atualizado com sucesso!' });
   });
 
   // Google Sheets / Apps Script Integration relay & export

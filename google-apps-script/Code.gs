@@ -33,6 +33,7 @@
 // Constantes das Abas
 var SHEET_RESERVAS = 'Reservas';
 var SHEET_MOTORISTAS = 'Motoristas';
+var SHEET_USUARIOS_ADMIN = 'Usuarios_Admin';
 var SHEET_DASHBOARD = 'Dashboard';
 var SHEET_CONFIG = 'Configuracoes';
 var SHEET_SAC = 'Mensagens_SAC';
@@ -44,13 +45,26 @@ function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('🚕 Litoral em Movimento')
     .addItem('⚙️ 1. Criar / Formatar Todas as Abas e Cabeçalhos', 'setupAllSheets')
-    .addItem('📊 2. Atualizar Fórmulas do Dashboard', 'setupDashboardSheet')
+    .addItem('👥 2. Configurar Aba de Usuários & Motoristas', 'setupUserSheets')
+    .addItem('📊 3. Atualizar Fórmulas do Dashboard', 'setupDashboardSheet')
     .addSeparator()
-    .addItem('🧪 3. Inserir Reserva de Teste', 'insertSampleReservation')
-    .addItem('🧹 4. Limpar Dados de Teste', 'clearSampleData')
+    .addItem('🧪 4. Inserir Reserva de Teste', 'insertSampleReservation')
+    .addItem('🧹 5. Limpar Dados de Teste', 'clearSampleData')
     .addSeparator()
-    .addItem('ℹ️ 5. Instruções da API Web App', 'showApiInstructions')
+    .addItem('ℹ️ 6. Instruções da API Web App', 'showApiInstructions')
     .addToUi();
+}
+
+/**
+ * Configura apenas as abas de usuários e motoristas
+ */
+function setupUserSheets() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  setupMotoristasSheet(ss);
+  setupUsuariosAdminSheet(ss);
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast('Abas Motoristas e Usuarios_Admin configuradas com sucesso!', '👥 Usuários & Senhas', 5);
+  } catch (e) {}
 }
 
 /**
@@ -61,6 +75,7 @@ function setupAllSheets() {
   
   var sheetReservas = setupReservasSheet(ss);
   var sheetMotoristas = setupMotoristasSheet(ss);
+  var sheetUsuariosAdmin = setupUsuariosAdminSheet(ss);
   var sheetConfig = setupConfigSheet(ss);
   var sheetSac = setupSacSheet(ss);
   var sheetDashboard = setupDashboardSheet(ss);
@@ -70,7 +85,7 @@ function setupAllSheets() {
   
   try {
     SpreadsheetApp.getActiveSpreadsheet().toast(
-      'Todas as 5 abas (Reservas, Motoristas, Mensagens_SAC, Dashboard, Configurações) foram configuradas!',
+      'Todas as 6 abas (Reservas, Motoristas, Usuarios_Admin, Mensagens_SAC, Dashboard, Configurações) foram configuradas!',
       '✅ Litoral em Movimento',
       5
     );
@@ -80,8 +95,8 @@ function setupAllSheets() {
 
   return {
     status: 'success',
-    message: 'Todas as 5 abas e cabeçalhos foram criados e formatados com sucesso!',
-    sheets: [SHEET_RESERVAS, SHEET_MOTORISTAS, SHEET_SAC, SHEET_DASHBOARD, SHEET_CONFIG]
+    message: 'Todas as 6 abas e cabeçalhos foram criados e formatados com sucesso!',
+    sheets: [SHEET_RESERVAS, SHEET_MOTORISTAS, SHEET_USUARIOS_ADMIN, SHEET_SAC, SHEET_DASHBOARD, SHEET_CONFIG]
   };
 }
 
@@ -263,7 +278,7 @@ function setupReservasSheet(ss) {
 }
 
 /**
- * 2. Configuração da Aba de Motoristas
+ * 2. Configuração da Aba de Motoristas (Com Usuários Curtos e PINs)
  */
 function setupMotoristasSheet(ss) {
   if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -272,6 +287,9 @@ function setupMotoristasSheet(ss) {
   var headers = [
     'ID Motorista',
     'Nome do Motorista',
+    'Usuário (Login Curto)',
+    'PIN / Senha de Acesso',
+    'Trocar Senha 1º Acesso?',
     'Telefone (WhatsApp)',
     'E-mail',
     'Veículo Oficial',
@@ -295,31 +313,184 @@ function setupMotoristasSheet(ss) {
   sheet.setRowHeight(1, 35);
   sheet.setFrozenRows(1);
 
+  // Validação: Trocar Senha 1º Acesso (Sim / Não)
+  var ruleSimNao = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Sim', 'Não'], true)
+    .build();
+  sheet.getRange('E2:E').setDataValidation(ruleSimNao);
+
+  // Validação: Status Atual
+  var ruleStatus = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Disponível', 'Em Viagem', 'Descanso'], true)
+    .build();
+  sheet.getRange('J2:J').setDataValidation(ruleStatus);
+
   // Inserir motoristas padrão caso a tabela esteja vazia
   if (sheet.getLastRow() <= 1) {
     sheet.appendRow([
       'drv-01',
-      'Carlos Silva',
-      '(12) 98877-6655',
-      'carlos.motorista@litoralemmovimento.com.br',
+      'Eduardo Silveira',
+      'eduardo',
+      '1234',
+      'Sim',
+      '(12) 98850-6597',
+      'eduardo.motorista@litoralemmovimento.com.br',
       'Chevrolet Spin Premier 7L • 2024 (Ar-Cond. Duplo, USB)',
       'SP-LIT7A24',
       'Disponível',
       4.98,
       342,
-      '12988776655'
+      '12988506597'
     ]);
     sheet.appendRow([
       'drv-02',
-      'Marcos Oliveira',
-      '(11) 97654-3210',
-      'marcos.motorista@litoralemmovimento.com.br',
+      'Edivam Santos',
+      'edivam',
+      '1234',
+      'Sim',
+      '(12) 98850-6597',
+      'edivam.motorista@litoralemmovimento.com.br',
       'Chevrolet Spin LTZ 7L • 2024 (Bancos em Couro, Wi-Fi)',
       'SP-MOV7B88',
       'Disponível',
-      4.95,
-      289,
-      '11976543210'
+      4.97,
+      310,
+      '12988506597'
+    ]);
+    sheet.appendRow([
+      'drv-03',
+      'Karine Souza',
+      'karine',
+      '1234',
+      'Sim',
+      '(12) 98850-6597',
+      'karine.motorista@litoralemmovimento.com.br',
+      'Chevrolet Spin Premier 7L • 2024',
+      'SP-LIT7C50',
+      'Disponível',
+      4.99,
+      275,
+      '12988506597'
+    ]);
+  }
+
+  for (var col = 1; col <= headers.length; col++) {
+    sheet.autoResizeColumn(col);
+  }
+
+  return sheet;
+}
+
+/**
+ * 2.1 Configuração da Aba de Administradores & Usuários do Painel
+ */
+function setupUsuariosAdminSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_USUARIOS_ADMIN) || ss.insertSheet(SHEET_USUARIOS_ADMIN);
+
+  var headers = [
+    'ID Usuário',
+    'Usuário (Login Curto)',
+    'Nome Completo',
+    'Cargo / Função',
+    'Senha de Acesso',
+    'Trocar Senha 1º Acesso?',
+    'E-mail',
+    'Telefone (WhatsApp)',
+    'Status'
+  ];
+
+  var headerRange = sheet.getRange(1, 1, 1, headers.length);
+  headerRange.setValues([headers]);
+  headerRange
+    .setBackground('#0F172A')
+    .setFontColor('#F8FAFC')
+    .setFontWeight('bold')
+    .setFontSize(10)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+
+  sheet.setRowHeight(1, 35);
+  sheet.setFrozenRows(1);
+
+  // Validação: Trocar Senha (Sim / Não)
+  var ruleSimNao = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Sim', 'Não'], true)
+    .build();
+  sheet.getRange('F2:F').setDataValidation(ruleSimNao);
+
+  // Validação: Status (Ativo / Inativo)
+  var ruleStatus = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Ativo', 'Inativo'], true)
+    .build();
+  sheet.getRange('I2:I').setDataValidation(ruleStatus);
+
+  if (sheet.getLastRow() <= 1) {
+    sheet.appendRow([
+      'adm-05',
+      'alan',
+      'Alan Morais',
+      'Super Admin',
+      'alan2026',
+      'Não',
+      'alanpkmorais@gmail.com',
+      '(12) 98850-6597',
+      'Ativo'
+    ]);
+    sheet.appendRow([
+      'adm-01',
+      'eduardo',
+      'Eduardo Silveira',
+      'Gestão Operacional',
+      'litoral2026',
+      'Sim',
+      'eduardo@litoralemmovimento.com.br',
+      '(12) 98850-6597',
+      'Ativo'
+    ]);
+    sheet.appendRow([
+      'adm-02',
+      'edivam',
+      'Edivam Santos',
+      'Gestão de Frota',
+      'litoral2026',
+      'Sim',
+      'edivam@litoralemmovimento.com.br',
+      '(12) 98850-6597',
+      'Ativo'
+    ]);
+    sheet.appendRow([
+      'adm-03',
+      'karine',
+      'Karine Souza',
+      'Gestão de Atendimento',
+      'litoral2026',
+      'Sim',
+      'karine@litoralemmovimento.com.br',
+      '(12) 98850-6597',
+      'Ativo'
+    ]);
+    sheet.appendRow([
+      'adm-04',
+      'michelly',
+      'Michelly Santos',
+      'Gestão Administrativa',
+      'litoral2026',
+      'Sim',
+      'michelly@litoralemmovimento.com.br',
+      '(12) 98850-6597',
+      'Ativo'
+    ]);
+    sheet.appendRow([
+      'adm-06',
+      'admin',
+      'Administrador Geral',
+      'Gestão Geral',
+      'litoral2026',
+      'Não',
+      'contato@litoralemmovimento.com.br',
+      '(12) 98850-6597',
+      'Ativo'
     ]);
   }
 
@@ -548,26 +719,72 @@ function doGet(e) {
     return createJsonResponse(configs);
   }
 
-  // Endpoint: Retornar Motoristas
+  // Endpoint: Retornar Motoristas (Com Usuários Curtos e PINs)
   if (action === 'getDrivers') {
     var sheetDrv = ss.getSheetByName(SHEET_MOTORISTAS) || setupMotoristasSheet(ss);
     var drvData = sheetDrv.getDataRange().getValues();
     var drivers = [];
+    var isNewSchema = drvData.length > 0 && String(drvData[0][2] || '').toLowerCase().indexOf('usuário') !== -1;
+
     for (var d = 1; d < drvData.length; d++) {
       if (!drvData[d][0]) continue;
-      drivers.push({
-        id: String(drvData[d][0]),
-        name: String(drvData[d][1]),
-        phone: String(drvData[d][2]),
-        email: String(drvData[d][3] || ''),
-        vehicleModel: String(drvData[d][4]),
-        plate: String(drvData[d][5]),
-        status: String(drvData[d][6]),
-        rating: Number(drvData[d][7]) || 5.0,
-        totalTrips: Number(drvData[d][8]) || 0
-      });
+      if (isNewSchema) {
+        drivers.push({
+          id: String(drvData[d][0]),
+          name: String(drvData[d][1]),
+          username: String(drvData[d][2] || drvData[d][1].toString().split(' ')[0].toLowerCase()),
+          pin: String(drvData[d][3] || '1234'),
+          mustChangePassword: String(drvData[d][4] || '').toLowerCase() === 'sim',
+          phone: String(drvData[d][5]),
+          email: String(drvData[d][6] || ''),
+          vehicleModel: String(drvData[d][7]),
+          plate: String(drvData[d][8]),
+          status: String(drvData[d][9]),
+          rating: Number(drvData[d][10]) || 5.0,
+          totalTrips: Number(drvData[d][11]) || 0,
+          pixKey: String(drvData[d][12] || '')
+        });
+      } else {
+        drivers.push({
+          id: String(drvData[d][0]),
+          name: String(drvData[d][1]),
+          username: String(drvData[d][1]).split(' ')[0].toLowerCase(),
+          pin: '1234',
+          mustChangePassword: false,
+          phone: String(drvData[d][2]),
+          email: String(drvData[d][3] || ''),
+          vehicleModel: String(drvData[d][4]),
+          plate: String(drvData[d][5]),
+          status: String(drvData[d][6]),
+          rating: Number(drvData[d][7]) || 5.0,
+          totalTrips: Number(drvData[d][8]) || 0,
+          pixKey: String(drvData[d][9] || '')
+        });
+      }
     }
     return createJsonResponse(drivers);
+  }
+
+  // Endpoint: Retornar Usuários Administradores
+  if (action === 'getAdmins' || action === 'getUsers') {
+    var sheetAdm = ss.getSheetByName(SHEET_USUARIOS_ADMIN) || setupUsuariosAdminSheet(ss);
+    var admData = sheetAdm.getDataRange().getValues();
+    var admins = [];
+    for (var a = 1; a < admData.length; a++) {
+      if (!admData[a][0] && !admData[a][1]) continue;
+      admins.push({
+        id: String(admData[a][0] || ('adm-' + a)),
+        username: String(admData[a][1] || '').trim().toLowerCase(),
+        name: String(admData[a][2] || ''),
+        role: String(admData[a][3] || 'Administrador'),
+        password: String(admData[a][4] || 'litoral2026'),
+        mustChangePassword: String(admData[a][5] || '').toLowerCase() === 'sim',
+        email: String(admData[a][6] || ''),
+        phone: String(admData[a][7] || ''),
+        status: String(admData[a][8] || 'Ativo')
+      });
+    }
+    return createJsonResponse(admins);
   }
 
   // Endpoint: Retornar Mensagens do SAC
@@ -823,10 +1040,19 @@ function doPost(e) {
           var drv = payload.drivers[dIdx];
           var drvId = String(drv.id);
           var drvRow = [
-            drvId, drv.name || '', drv.phone || '', drv.email || '',
-            drv.vehicleModel || 'Chevrolet Spin Premier 7L', drv.plate || '',
-            drv.status || 'Disponível', Number(drv.rating) || 5.0,
-            Number(drv.totalTrips) || 0, drv.pixKey || ''
+            drvId,
+            drv.name || '',
+            drv.username || drv.name.toString().split(' ')[0].toLowerCase(),
+            drv.pin || '1234',
+            drv.mustChangePassword === true ? 'Sim' : 'Não',
+            drv.phone || '',
+            drv.email || '',
+            drv.vehicleModel || 'Chevrolet Spin Premier 7L',
+            drv.plate || '',
+            drv.status || 'Disponível',
+            Number(drv.rating) || 5.0,
+            Number(drv.totalTrips) || 0,
+            drv.pixKey || ''
           ];
 
           if (existingDrvIds[drvId]) {
@@ -835,6 +1061,40 @@ function doPost(e) {
             sheetDrv.appendRow(drvRow);
           }
           syncDrvCount++;
+        }
+      }
+
+      // 4.2.1 Sincronizar Administradores
+      var syncAdmCount = 0;
+      if (Array.isArray(payload.admins)) {
+        var sheetAdm = ss.getSheetByName(SHEET_USUARIOS_ADMIN) || setupUsuariosAdminSheet(ss);
+        var admData = sheetAdm.getDataRange().getValues();
+        var existingAdmIds = {};
+        for (var ea = 1; ea < admData.length; ea++) {
+          if (admData[ea][0]) existingAdmIds[String(admData[ea][0])] = ea + 1;
+        }
+
+        for (var aIdx = 0; aIdx < payload.admins.length; aIdx++) {
+          var adm = payload.admins[aIdx];
+          var admId = String(adm.id || ('adm-' + (aIdx + 1)));
+          var admRow = [
+            admId,
+            adm.username || '',
+            adm.name || '',
+            adm.role || 'Administrador',
+            adm.password || 'litoral2026',
+            adm.mustChangePassword === true ? 'Sim' : 'Não',
+            adm.email || '',
+            adm.phone || '',
+            adm.status || 'Ativo'
+          ];
+
+          if (existingAdmIds[admId]) {
+            sheetAdm.getRange(existingAdmIds[admId], 1, 1, admRow.length).setValues([admRow]);
+          } else {
+            sheetAdm.appendRow(admRow);
+          }
+          syncAdmCount++;
         }
       }
 
@@ -952,7 +1212,77 @@ function doPost(e) {
       });
     }
 
-    // 7. Executar Setup Geral
+    // 7. Atualizar Senha / PIN do Motorista (e desativar Troca Obrigatória de 1º Acesso)
+    if (action === 'updateDriverPassword') {
+      var sheetDrvPw = ss.getSheetByName(SHEET_MOTORISTAS) || setupMotoristasSheet(ss);
+      var drvRows = sheetDrvPw.getDataRange().getValues();
+      var targetDrvId = String(payload.driverId || '').trim().toLowerCase();
+      var targetUsername = String(payload.username || '').trim().toLowerCase();
+      var newPin = String(payload.pin || payload.password || '').trim();
+      var mustChange = payload.mustChangePassword === true ? 'Sim' : 'Não';
+      var drvUpdated = false;
+
+      for (var dr = 1; dr < drvRows.length; dr++) {
+        var rowDrvId = String(drvRows[dr][0] || '').trim().toLowerCase();
+        var rowDrvUser = String(drvRows[dr][2] || '').trim().toLowerCase();
+        if ((targetDrvId && rowDrvId === targetDrvId) || (targetUsername && rowDrvUser === targetUsername)) {
+          sheetDrvPw.getRange(dr + 1, 4).setValue(newPin); // Col D: PIN
+          sheetDrvPw.getRange(dr + 1, 5).setValue(mustChange); // Col E: Trocar Senha 1º Acesso
+          drvUpdated = true;
+          break;
+        }
+      }
+
+      return createJsonResponse({
+        status: drvUpdated ? 'success' : 'not_found',
+        message: drvUpdated
+          ? 'PIN do motorista atualizado na planilha e flag de 1º acesso desativada!'
+          : 'Motorista não encontrado na planilha.'
+      });
+    }
+
+    // 8. Atualizar Senha de Usuário Administrador (e desativar Troca Obrigatória de 1º Acesso)
+    if (action === 'updateAdminPassword') {
+      var sheetAdmPw = ss.getSheetByName(SHEET_USUARIOS_ADMIN) || setupUsuariosAdminSheet(ss);
+      var admRows = sheetAdmPw.getDataRange().getValues();
+      var targetAdmId = String(payload.adminId || '').trim().toLowerCase();
+      var targetAdmUser = String(payload.username || '').trim().toLowerCase();
+      var newPass = String(payload.password || '').trim();
+      var mustChangeAdm = payload.mustChangePassword === true ? 'Sim' : 'Não';
+      var admUpdated = false;
+
+      for (var ar = 1; ar < admRows.length; ar++) {
+        var rowAdmId = String(admRows[ar][0] || '').trim().toLowerCase();
+        var rowAdmUser = String(admRows[ar][1] || '').trim().toLowerCase();
+        if ((targetAdmId && rowAdmId === targetAdmId) || (targetAdmUser && rowAdmUser === targetAdmUser)) {
+          sheetAdmPw.getRange(ar + 1, 5).setValue(newPass); // Col E: Senha
+          sheetAdmPw.getRange(ar + 1, 6).setValue(mustChangeAdm); // Col F: Trocar Senha 1º Acesso
+          admUpdated = true;
+
+          // Se for Alan Morais ou Super Admin, atualiza também a chave na aba de configurações
+          if (rowAdmUser === 'alan' || targetAdmUser === 'alan') {
+            var sheetCfg = ss.getSheetByName(SHEET_CONFIG) || setupConfigSheet(ss);
+            var cfgData = sheetCfg.getDataRange().getValues();
+            for (var cp = 1; cp < cfgData.length; cp++) {
+              if (String(cfgData[cp][0]).trim() === 'SENHA_SUPERADMIN_ALAN') {
+                sheetCfg.getRange(cp + 1, 2).setValue(newPass);
+                break;
+              }
+            }
+          }
+          break;
+        }
+      }
+
+      return createJsonResponse({
+        status: admUpdated ? 'success' : 'not_found',
+        message: admUpdated
+          ? 'Senha do administrador atualizada na planilha e flag de 1º acesso desativada!'
+          : 'Usuário administrador não encontrado na planilha.'
+      });
+    }
+
+    // 9. Executar Setup Geral
     if (action === 'setup') {
       var resSetup = setupAllSheets();
       return createJsonResponse(resSetup);
