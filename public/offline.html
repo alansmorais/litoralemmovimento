@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Litoral em Movimento • Modo Offline</title>
+    <link rel="icon" type="image/jpeg" href="/images/icon-logo.jpg" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: #020617;
+        color: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        text-align: center;
+        box-sizing: border-box;
+      }
+      .card {
+        max-width: 440px;
+        margin: 20px;
+        padding: 32px 24px;
+        background: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      }
+      .logo {
+        width: 80px;
+        height: 80px;
+        border-radius: 16px;
+        margin-bottom: 20px;
+        object-fit: cover;
+      }
+      h1 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: #fbbf24;
+      }
+      p {
+        font-size: 15px;
+        line-height: 1.5;
+        color: #94a3b8;
+        margin-bottom: 24px;
+      }
+      .btn {
+        display: inline-block;
+        background: #f59e0b;
+        color: #0f172a;
+        font-weight: 600;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        font-size: 15px;
+      }
+      .btn:hover {
+        background: #d97706;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img src="/images/icon-logo.jpg" alt="Litoral em Movimento" class="logo" />
+      <h1>Você está sem conexão</h1>
+      <p>O Litoral em Movimento armazena seus dados no dispositivo. Assim que a conexão com a internet retornar, suas reservas e rotas serão sincronizadas automaticamente.</p>
+      <button class="btn" onclick="window.location.reload()">Tentar reconectar</button>
+    </div>
+  </body>
+</html>

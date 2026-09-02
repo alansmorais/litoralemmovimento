@@ -79,15 +79,22 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Explicitly serve Service Worker and Manifest with proper PWA headers
+  // Explicitly serve Service Worker, Offline fallback and Manifest with proper PWA headers
   app.get('/sw.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Service-Worker-Allowed', '/');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(process.cwd(), 'public', 'sw.js'));
+  });
+
+  app.get('/offline.html', (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.sendFile(path.join(process.cwd(), 'public', 'offline.html'));
   });
 
   app.get('/manifest.json', (req, res) => {
     res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(process.cwd(), 'public', 'manifest.json'));
   });
 
