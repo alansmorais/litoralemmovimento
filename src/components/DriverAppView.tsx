@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StorageService } from '../services/storageService';
 import { Reservation, Driver, TripStatus, GPSDeviation } from '../types';
 import { DRIVERS, PRICING_RULES, COMPANY_CONTACT } from '../data/mockData';
@@ -36,6 +36,8 @@ import {
   Check,
   Download,
   Share2,
+  BellRing,
+  Wifi,
 } from 'lucide-react';
 
 interface DriverAppViewProps {
@@ -88,6 +90,12 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
   // Schedule Filter
   const [scheduleFilter, setScheduleFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
+  // Real-time Multi-Device Synchronization state
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>(new Date().toLocaleTimeString('pt-BR'));
+  const [newAssignedTripNotice, setNewAssignedTripNotice] = useState<Reservation | null>(null);
+  const previousAssignedIdsRef = useRef<Set<string>>(new Set());
+
   const loadData = () => {
     const allReservations = StorageService.getReservations();
     setReservations(allReservations);
@@ -97,8 +105,56 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
     setSelectedDriver(current);
   };
 
+  const performSync = async () => {
+    setIsSyncing(true);
+    try {
+      const { reservations: updatedRes } = await StorageService.syncWithServer();
+      loadData();
+      setLastSyncTime(new Date().toLocaleTimeString('pt-BR'));
+
+      // Check if there are newly assigned trips for this driver
+      const currentAssigned = updatedRes.filter(
+        (r) => r.assignedDriverId === selectedDriver.id && r.status !== 'Concluído' && r.status !== 'Cancelado'
+      );
+      const previousIds = previousAssignedIdsRef.current;
+
+      // If an assigned trip was NOT in previousIds and previousIds had at least 1 trip, trigger alert
+      const newlyAssigned = currentAssigned.find((r) => !previousIds.has(r.id));
+      if (newlyAssigned && previousIds.size > 0) {
+        setNewAssignedTripNotice(newlyAssigned);
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          try {
+            navigator.vibrate([200, 100, 200, 100, 300]);
+          } catch {}
+        }
+      }
+
+      previousAssignedIdsRef.current = new Set(currentAssigned.map((r) => r.id));
+    } catch (e) {
+      console.warn('Sync error in DriverAppView:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    performSync();
+
+    // Fast polling (3.5 seconds) for real-time dispatch from Admin or other devices
+    const pollTimer = setInterval(() => {
+      performSync();
+    }, 3500);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        performSync();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
     const handleUpdate = () => loadData();
     window.addEventListener('reservations_updated', handleUpdate);
     window.addEventListener('drivers_updated', handleUpdate);
@@ -117,6 +173,9 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     return () => {
+      clearInterval(pollTimer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
       window.removeEventListener('reservations_updated', handleUpdate);
       window.removeEventListener('drivers_updated', handleUpdate);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -145,14 +204,32 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
     }
   };
 
-  // Filter trips for this driver
+  // Filter trips specifically assigned to this driver
+  const assignedToMeTrips = reservations.filter(
+    (r) => r.assignedDriverId === selectedDriver.id && r.status !== 'Concluído' && r.status !== 'Cancelado'
+  );
+
+  // Trips open for pickup/driver assignment
+  const openAvailableTrips = reservations.filter(
+    (r) => !r.assignedDriverId && r.status !== 'Concluído' && r.status !== 'Cancelado'
+  );
+
+  // All relevant trips for driver cockpit
   const myTrips = reservations.filter(
     (r) => r.assignedDriverId === selectedDriver.id || (!r.assignedDriverId && r.status !== 'Concluído' && r.status !== 'Cancelado')
   );
 
-  const activeTrip = myTrips.find(
-    (r) => r.status === 'Em andamento' || r.status === 'A caminho' || r.status === 'Confirmado'
-  ) || myTrips[0];
+  // Active trip: prioritize trips explicitly assigned to this driver
+  const activeTrip =
+    assignedToMeTrips.find((r) => r.status === 'Em andamento' || r.status === 'A caminho' || r.status === 'Confirmado') ||
+    assignedToMeTrips[0] ||
+    openAvailableTrips[0];
+
+  const handleAcceptAvailableTrip = async (tripId: string) => {
+    await StorageService.assignDriver(tripId, selectedDriver.id);
+    await performSync();
+    setActiveTab('active');
+  };
 
   const handleUpdateStatus = (tripId: string, newStatus: TripStatus) => {
     StorageService.updateReservationStatus(tripId, newStatus);
@@ -333,6 +410,67 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
 
       {/* 2. MAIN COCKPIT BODY */}
       <main className="max-w-lg mx-auto w-full px-4 py-3 flex-1 space-y-4">
+        {/* Real-time Multi-Device Sync Status Bar */}
+        <div className="bg-slate-900/90 border border-slate-800 px-3.5 py-2 rounded-2xl flex items-center justify-between gap-2 shadow-sm text-xs">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span className="text-[11px] font-semibold text-slate-300">
+              Sincronizado em tempo real <span className="text-slate-400 font-mono text-[10px]">({lastSyncTime})</span>
+            </span>
+          </div>
+
+          <button
+            onClick={performSync}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 px-2.5 py-1 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            title="Forçar sincronização com a central agora"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-400' : ''}`} />
+            <span>{isSyncing ? 'Atualizando...' : 'Sincronizar'}</span>
+          </button>
+        </div>
+
+        {/* New Assigned Trip Alert Notification Banner (Cross-Device Real-Time Notification) */}
+        {newAssignedTripNotice && (
+          <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 p-3.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 animate-pulse border-2 border-amber-300">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-slate-950 text-amber-400 flex items-center justify-center flex-shrink-0">
+                <BellRing className="w-5 h-5 animate-bounce" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase bg-slate-950 text-amber-300 px-1.5 py-0.5 rounded">Novo Pedido</span>
+                  <p className="font-black text-xs">Motorista Atribuído!</p>
+                </div>
+                <p className="text-[11px] font-bold text-slate-900 mt-0.5">
+                  {newAssignedTripNotice.code} • {newAssignedTripNotice.customerName.split(' ')[0]} ({newAssignedTripNotice.origin} ➔ {newAssignedTripNotice.destination})
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  setActiveTab('active');
+                  setNewAssignedTripNotice(null);
+                }}
+                className="bg-slate-950 hover:bg-slate-900 text-amber-300 text-xs px-3 py-1.5 rounded-xl font-black shadow transition-transform active:scale-95 cursor-pointer"
+              >
+                Ver Viagem
+              </button>
+              <button
+                onClick={() => setNewAssignedTripNotice(null)}
+                className="text-slate-950/70 hover:text-slate-950 p-1 text-sm font-bold cursor-pointer"
+                title="Dispensar aviso"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Navigation Tabs (Cockpit Modules) */}
         <nav aria-label="Navegação do Motorista" className="grid grid-cols-5 gap-1 bg-slate-900/90 p-1 rounded-2xl border border-slate-800 text-[11px] font-bold shadow-md">
           <button
@@ -479,6 +617,33 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
                     {activeTrip.status}
                   </span>
                 </div>
+
+                {/* Driver Assignment Status & Claim Action */}
+                {activeTrip.assignedDriverId ? (
+                  <div className="bg-emerald-950/60 border border-emerald-500/40 px-3.5 py-2.5 rounded-2xl flex items-center justify-between text-xs">
+                    <span className="text-emerald-300 font-bold flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span>Motorista Atribuído: <strong>{activeTrip.assignedDriverName || selectedDriver.name}</strong></span>
+                    </span>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md font-black uppercase tracking-tight">
+                      {activeTrip.assignedDriverId === selectedDriver.id ? 'Sua Corrida' : 'Designado'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="bg-amber-400/15 border border-amber-400/40 p-3 rounded-2xl flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-black text-amber-300">Aguardando Atribuição de Motorista</p>
+                      <p className="text-[11px] text-slate-300">Corrida aberta. Você pode assumir o atendimento agora.</p>
+                    </div>
+                    <button
+                      onClick={() => handleAcceptAvailableTrip(activeTrip.id)}
+                      className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow transition-colors cursor-pointer flex-shrink-0"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Assumir Corrida</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Passenger Information Card */}
                 <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 space-y-3">

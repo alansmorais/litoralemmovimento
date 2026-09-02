@@ -104,6 +104,9 @@ export default function App() {
       }
     };
 
+    // Initial synchronization with central server backend
+    StorageService.syncWithServer().catch((e) => console.warn('Boot sync with server:', e));
+
     handleLocationChange();
     window.addEventListener('hashchange', handleLocationChange);
     window.addEventListener('popstate', handleLocationChange);

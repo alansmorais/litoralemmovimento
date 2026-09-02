@@ -154,11 +154,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   useEffect(() => {
     loadData();
+    StorageService.syncWithServer().then(() => loadData()).catch(() => {});
+
+    // Periodic synchronization (every 4s) so updates from drivers on their devices reflect instantly in Admin
+    const syncInterval = setInterval(() => {
+      StorageService.syncWithServer().then(() => loadData()).catch(() => {});
+    }, 4000);
+
     const handleUpdate = () => loadData();
     window.addEventListener('reservations_updated', handleUpdate);
+    window.addEventListener('drivers_updated', handleUpdate);
     window.addEventListener('contact_messages_updated', handleUpdate);
     return () => {
+      clearInterval(syncInterval);
       window.removeEventListener('reservations_updated', handleUpdate);
+      window.removeEventListener('drivers_updated', handleUpdate);
       window.removeEventListener('contact_messages_updated', handleUpdate);
     };
   }, []);
@@ -265,8 +275,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     loadData();
   };
 
-  const handleDriverAssign = (reservationId: string, driverId: string) => {
-    StorageService.assignDriver(reservationId, driverId);
+  const handleDriverAssign = async (reservationId: string, driverId: string) => {
+    await StorageService.assignDriver(reservationId, driverId);
     loadData();
   };
 

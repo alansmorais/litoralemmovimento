@@ -306,6 +306,95 @@ export class StorageService {
     }
   }
 
+  /**
+   * Real-time multi-device synchronization between client devices and central server.
+   * Ensures driver app on any phone/device instantly receives trip assignments from Admin.
+   */
+  public static async syncWithServer(): Promise<{ reservations: Reservation[]; drivers: Driver[] }> {
+    let updatedReservations = this.getReservations();
+    let updatedDrivers = this.getDrivers();
+
+    try {
+      const [resResponse, driversResponse] = await Promise.all([
+        fetch('/api/reservations', {
+          headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+        }).catch(() => null),
+        fetch('/api/drivers', {
+          headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+        }).catch(() => null),
+      ]);
+
+      if (resResponse && resResponse.ok) {
+        const resJson = await resResponse.json();
+        if (resJson && resJson.success && Array.isArray(resJson.data)) {
+          const serverList: Reservation[] = resJson.data;
+          const localList = this.getReservations();
+
+          // Check if local has reservations not yet on the server, sync them up
+          const serverIds = new Set(serverList.map((r) => r.id));
+          const unsyncedLocals = localList.filter((r) => !serverIds.has(r.id));
+          if (unsyncedLocals.length > 0 && localList.length > 0) {
+            try {
+              const syncRes = await fetch('/api/reservations/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reservations: localList }),
+              });
+              if (syncRes.ok) {
+                const syncJson = await syncRes.json();
+                if (syncJson && syncJson.success && Array.isArray(syncJson.data)) {
+                  serverList.length = 0;
+                  serverList.push(...syncJson.data);
+                }
+              }
+            } catch (err) {
+              console.warn('Could not sync local reservations to server:', err);
+            }
+          }
+
+          // Merge: server has authoritative status and assigned driver
+          const mergedMap = new Map<string, Reservation>();
+          for (const item of localList) {
+            mergedMap.set(item.id, item);
+          }
+          for (const sItem of serverList) {
+            const local = mergedMap.get(sItem.id);
+            mergedMap.set(sItem.id, local ? { ...local, ...sItem } : sItem);
+          }
+
+          const mergedReservations = Array.from(mergedMap.values());
+          mergedReservations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+          const currentSaved = localStorage.getItem(RESERVATIONS_STORAGE_KEY) || '[]';
+          const newSaved = JSON.stringify(mergedReservations);
+          if (currentSaved !== newSaved) {
+            localStorage.setItem(RESERVATIONS_STORAGE_KEY, newSaved);
+            window.dispatchEvent(new CustomEvent('reservations_updated', { detail: mergedReservations }));
+          }
+          updatedReservations = mergedReservations;
+        }
+      }
+
+      if (driversResponse && driversResponse.ok) {
+        const dJson = await driversResponse.json();
+        if (dJson && dJson.success && Array.isArray(dJson.data)) {
+          const serverDriversList: Driver[] = dJson.data;
+          const currentDriversSaved = localStorage.getItem(DRIVERS_STORAGE_KEY) || '[]';
+          const newDriversSaved = JSON.stringify(serverDriversList);
+          if (currentDriversSaved !== newDriversSaved) {
+            localStorage.setItem(DRIVERS_STORAGE_KEY, newDriversSaved);
+            window.dispatchEvent(new CustomEvent('drivers_updated', { detail: serverDriversList }));
+          }
+          updatedDrivers = serverDriversList;
+        }
+      }
+    } catch (err) {
+      console.warn('Sync with server backend offline or delayed:', err);
+    }
+
+    return { reservations: updatedReservations, drivers: updatedDrivers };
+  }
+
   public static getReservations(): Reservation[] {
     try {
       const data = localStorage.getItem(RESERVATIONS_STORAGE_KEY);
@@ -364,7 +453,14 @@ export class StorageService {
     list[idx].activeStatus = activeStatus;
     this.saveDrivers(list);
 
-    // Sync to backend if needed
+    // Sync to backend server
+    fetch(`/api/drivers/${driverId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activeStatus }),
+    }).catch(() => {});
+
+    // Sync to Google Sheets
     this.syncToGoogleSheets('updateDriverStatus', {
       driverId,
       activeStatus,
@@ -384,6 +480,13 @@ export class StorageService {
       address,
     };
     this.saveDrivers(list);
+
+    fetch(`/api/drivers/${driverId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentLocation: list[idx].currentLocation }),
+    }).catch(() => {});
+
     return list[idx];
   }
 
@@ -437,6 +540,16 @@ export class StorageService {
     list[idx].remainingAmount = 0;
     this.saveReservations(list);
 
+    fetch(`/api/reservations/${reservationId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paymentStatus: 'Pago (PIX)',
+        depositPaid: true,
+        remainingAmount: 0,
+      }),
+    }).catch(() => {});
+
     this.syncToGoogleSheets('confirmBoardingPayment', {
       id: list[idx].id,
       code: list[idx].code,
@@ -467,6 +580,13 @@ export class StorageService {
     const updated = [newReservation, ...list];
     this.saveReservations(updated);
 
+    // Synchronize to backend server immediately
+    fetch('/api/reservations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newReservation),
+    }).catch((e) => console.warn('Could not sync new reservation to backend server:', e));
+
     // Asynchronously synchronize with Google Sheets if configured
     this.syncToGoogleSheets('createReservation', { reservation: newReservation });
 
@@ -490,6 +610,17 @@ export class StorageService {
 
     this.saveReservations(list);
 
+    fetch(`/api/reservations/${list[index].id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        depositPaid: true,
+        paymentMethod: method,
+        paymentStatus: 'Sinal 50% Pago (Confirmado)',
+        status: list[index].status,
+      }),
+    }).catch(() => {});
+
     // Asynchronously synchronize with Google Sheets
     this.syncToGoogleSheets('confirmDeposit', {
       id: list[index].id,
@@ -508,6 +639,13 @@ export class StorageService {
     list[index].status = status;
     this.saveReservations(list);
 
+    // Sync to server backend
+    fetch(`/api/reservations/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    }).catch((e) => console.warn('Could not sync status to backend:', e));
+
     this.syncToGoogleSheets('updateStatus', {
       id: list[index].id,
       code: list[index].code,
@@ -517,7 +655,7 @@ export class StorageService {
     return list[index];
   }
 
-  public static assignDriver(reservationId: string, driverId: string): Reservation | null {
+  public static async assignDriver(reservationId: string, driverId: string): Promise<Reservation | null> {
     const list = this.getReservations();
     const drivers = this.getDrivers();
     const reservationIndex = list.findIndex((r) => r.id === reservationId);
@@ -542,6 +680,25 @@ export class StorageService {
     }
 
     this.saveReservations(list);
+
+    // CRITICAL FOR CROSS-DEVICE DRIVER DISPATCH:
+    // Notify server immediately so driver device receives the assignment in real time!
+    try {
+      await fetch(`/api/reservations/${reservationId}/assign-driver`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverId: driver ? driver.id : null,
+          driverName: driver ? driver.name : null,
+          driverPhone: driver ? driver.phone : null,
+          driverVehicle: driver ? driver.vehicleModel : null,
+          driverPlate: driver ? driver.plate : null,
+          status: list[reservationIndex].status,
+        }),
+      });
+    } catch (apiErr) {
+      console.warn('Real-time server sync for driver assignment delayed:', apiErr);
+    }
 
     this.syncToGoogleSheets('updateStatus', {
       id: list[reservationIndex].id,
