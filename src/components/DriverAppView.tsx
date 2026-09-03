@@ -87,9 +87,10 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
     const activeLoggedId = StorageService.getLoggedDriverId();
     const current =
       (activeLoggedId ? StorageService.getDriverById(activeLoggedId) : null) ||
-      StorageService.getDriverById(selectedDriver.id) ||
-      updatedDrivers[0];
-    setSelectedDriver(current);
+      (selectedDriver?.id ? StorageService.getDriverById(selectedDriver.id) : null) ||
+      updatedDrivers[0] ||
+      DRIVERS[0];
+    if (current) setSelectedDriver(current);
   };
 
   const handleSelectDriver = (driver: Driver) => {

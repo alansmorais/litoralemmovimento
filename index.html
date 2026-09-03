@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Litoral em Movimento • Transfer São Paulo ⇌ Litoral Norte</title>
-    <meta name="description" content="Serviço de transfer e shuttle executivo entre São Paulo e o Litoral Norte: São Sebastião, Ilhabela e Caraguatatuba. Conforto, segurança e pontualidade em Chevrolet Spin de 7 lugares." />
+    <title>Litoral em Movimento</title>
+    <meta name="description" content="Serviço de transfer e viagens executivas São Paulo ⇌ Litoral Norte (São Sebastião, Ilhabela, Caraguatatuba) com painel administrativo e visão do motorista." />
     <!-- Browser Favicon & Touch Icons -->
     <link rel="icon" type="image/jpeg" href="/images/icon-logo.jpg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -20,8 +20,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Litoral Mov" />
     <meta name="application-name" content="Litoral em Movimento" />
-    <meta property="og:title" content="Litoral em Movimento • Transfer São Paulo ⇌ Litoral Norte" />
-    <meta property="og:description" content="Transfer executivo e shuttle exclusivo em Chevrolet Spin Premier 7L entre São Paulo e o Litoral Norte." />
+    <meta property="og:title" content="Litoral em Movimento" />
+    <meta property="og:description" content="Serviço de transfer e viagens executivas São Paulo ⇌ Litoral Norte (São Sebastião, Ilhabela, Caraguatatuba) com painel administrativo e visão do motorista." />
     <meta property="og:image" content="/images/logo.jpg" />
     
     <!-- Google Fonts -->
@@ -29,24 +29,90 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
 
-    <!-- PWA Service Worker Registration -->
+    <!-- Anti-White Screen & Service Worker Cleanup in Dev/Preview -->
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then(function(reg) {
-              console.log('PWA Service Worker registered:', reg.scope);
-            })
-            .catch(function(err) {
-              console.warn('PWA Service Worker registration error:', err);
-            });
-        });
-      }
+      (function() {
+        var isDevOrIframe = window.self !== window.top ||
+          window.location.hostname.includes('run.app') ||
+          window.location.hostname === 'localhost' ||
+          window.location.hostname === '127.0.0.1';
+
+        // Unregister rogue service workers and purge stale caches that trap browsers in white screens
+        if ('serviceWorker' in navigator && isDevOrIframe) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (var i = 0; i < registrations.length; i++) {
+              registrations[i].unregister();
+            }
+          }).catch(function() {});
+          if (window.caches) {
+            caches.keys().then(function(names) {
+              for (var i = 0; i < names.length; i++) {
+                caches.delete(names[i]);
+              }
+            }).catch(function() {});
+          }
+        }
+      })();
     </script>
+    <style>
+      /* Fallback initial loader to prevent raw white page before React mounts */
+      #initial-loader {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #020617;
+        color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        text-align: center;
+        padding: 1.5rem;
+      }
+      .loader-spin {
+        width: 44px;
+        height: 44px;
+        border: 3px solid rgba(245, 158, 11, 0.2);
+        border-top-color: #f59e0b;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 1.25rem;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      #loader-retry {
+        display: none;
+        margin-top: 1.5rem;
+      }
+    </style>
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased selection:bg-amber-200 selection:text-slate-900">
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-loader">
+        <div class="loader-spin"></div>
+        <div style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.02em;">
+          Litoral em Movimento
+        </div>
+        <div style="font-size: 0.875rem; color: #94a3b8; margin-top: 0.35rem;">
+          Transfer Executivo SP ⇌ Litoral Norte
+        </div>
+        <div id="loader-retry">
+          <button
+            onclick="window.location.reload()"
+            style="background-color: #f59e0b; color: #020617; font-weight: 700; border: none; padding: 0.6rem 1.25rem; border-radius: 0.75rem; cursor: pointer; font-size: 0.875rem;"
+          >
+            Recarregar Aplicativo
+          </button>
+        </div>
+      </div>
+    </div>
+    <script>
+      // If React takes more than 4 seconds to mount (e.g. during server wake-up), show the reload button
+      setTimeout(function() {
+        var retry = document.getElementById('loader-retry');
+        if (retry) retry.style.display = 'block';
+      }, 4000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

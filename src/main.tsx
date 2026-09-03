@@ -4,18 +4,21 @@ import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
-// Register Service Worker for PWA compliance and offline support
+// In development, preview domains, or iframe containers: ensure no rogue service workers cause white screens
 if ('serviceWorker' in navigator && typeof window !== 'undefined') {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((reg) => {
-        console.log('PWA Service Worker registered with scope:', reg.scope);
-      })
-      .catch((err) => {
-        console.warn('PWA Service Worker registration skipped/failed:', err);
-      });
-  });
+  const isDevOrIframe =
+    window.self !== window.top ||
+    window.location.hostname.includes('run.app') ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
+
+  if (isDevOrIframe) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      for (const reg of regs) {
+        reg.unregister();
+      }
+    }).catch(() => {});
+  }
 }
 
 createRoot(document.getElementById('root')!).render(
@@ -25,5 +28,6 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 );
+
 
 
