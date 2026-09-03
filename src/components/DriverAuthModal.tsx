@@ -244,23 +244,14 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="relative flex-shrink-0">
-                            <img
-                              src={d.photoUrl}
-                              alt={d.name}
-                              className={`w-10 h-10 rounded-full object-cover border-2 ${
-                                isSelected ? 'border-sky-400' : 'border-slate-700'
-                              }`}
-                            />
-                            <span
-                              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-slate-900 ${
-                                d.activeStatus === 'Disponível'
-                                  ? 'bg-emerald-500'
-                                  : d.activeStatus === 'Em Viagem'
-                                  ? 'bg-sky-400'
-                                  : 'bg-amber-500'
-                              }`}
-                            />
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-mono font-bold text-xs border shrink-0 transition-colors ${
+                              isSelected
+                                ? 'bg-amber-400 text-slate-950 border-amber-300'
+                                : 'bg-slate-900 text-slate-200 border-slate-700'
+                            }`}
+                          >
+                            {d.name ? d.name.substring(0, 2).toUpperCase() : 'MT'}
                           </div>
                           <div className="min-w-0">
                             <p className="font-bold text-xs text-white truncate flex items-center gap-1.5">

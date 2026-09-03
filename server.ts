@@ -127,103 +127,26 @@ const INITIAL_SERVER_DRIVERS: ServerDriver[] = [
   },
 ];
 
-const INITIAL_SERVER_RESERVATIONS: ServerReservation[] = [
-  {
-    id: 'res-101',
-    code: 'LM-8921',
-    customerName: 'Dra. Fernanda Albuquerque',
-    customerPhone: '(11) 99123-4567',
-    customerEmail: 'fernanda.albuquerque@clinica.med.br',
-    origin: 'São Paulo',
-    originDetails: 'Aeroporto de Congonhas (CGH) - Desembarque',
-    destination: 'São Sebastião',
-    destinationDetails: 'Maresias (Condomínio Barramares)',
-    pickupAddress: 'Av. Washington Luís, s/n - Congonhas, São Paulo - SP',
-    dropoffAddress: 'Av. Francisco Loup, 1140 - Maresias, São Sebastião - SP',
-    date: new Date().toISOString().split('T')[0],
-    time: '08:30',
-    passengers: 4,
-    luggageCount: 4,
-    tripType: 'Individual',
-    status: 'Confirmado',
-    totalPrice: 700,
-    depositAmount: 350,
-    remainingAmount: 350,
-    depositPaid: true,
-    paymentStatus: 'Sinal 50% Pago (Confirmado)',
-    assignedDriverId: 'drv-01',
-    assignedDriverName: 'Eduardo',
-    driverPhone: '(12) 98850-6597',
-    driverVehicle: 'Chevrolet Spin Premier 7L • 2024 (Ar-Cond. Duplo, 6 Pass. + Mot.)',
-    driverPlate: 'SP-LIT7A24',
-    flightNumber: 'G3-1492 (Chegada 07:55)',
-    notes: 'Cliente solicitou ar-condicionado duplo e água mineral.',
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-  },
-  {
-    id: 'res-102',
-    code: 'LM-8922',
-    customerName: 'Eduardo Guimarães & Família',
-    customerPhone: '(11) 98234-5678',
-    customerEmail: 'eduardo.guimaraes@techcorp.com.br',
-    origin: 'São Paulo',
-    originDetails: 'Aeroporto Internacional de Guarulhos (GRU) - Terminal 2',
-    destination: 'Ilhabela',
-    destinationDetails: 'Balsa de São Sebastião / Praia do Curral',
-    pickupAddress: 'Aeroporto Internacional de Guarulhos, Terminal 2',
-    dropoffAddress: 'Av. José Pacheco do Nascimento, 8000 - Praia do Curral, Ilhabela - SP',
-    date: new Date().toISOString().split('T')[0],
-    time: '13:00',
-    passengers: 5,
-    luggageCount: 5,
-    tripType: 'Individual',
-    status: 'Confirmado',
-    totalPrice: 700,
-    depositAmount: 350,
-    remainingAmount: 350,
-    depositPaid: true,
-    paymentStatus: 'Sinal 50% Pago (Confirmado)',
-    assignedDriverId: 'drv-02',
-    assignedDriverName: 'Edivam Santos',
-    driverPhone: '(12) 98850-6597',
-    driverVehicle: 'Chevrolet Spin Premier 7L • 2024 (Ar-Cond. Duplo, 6 Pass. + Mot.)',
-    driverPlate: 'SP-MOV7B88',
-    flightNumber: 'LA-3021 (Chegada 12:15)',
-    notes: 'Família com 2 crianças e malas grandes no bagageiro estendido.',
-    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-  },
-  {
-    id: 'res-103',
-    code: 'LM-8923',
-    customerName: 'Lucas Ferreira Mendes',
-    customerPhone: '(11) 97112-9844',
-    customerEmail: 'lucas.mendes@consultoria.com.br',
-    origin: 'São Paulo',
-    originDetails: 'Metrô Portuguesa-Tietê',
-    destination: 'Caraguatatuba',
-    destinationDetails: 'Praia Martin de Sá',
-    pickupAddress: 'Rua Marechal Odylio Denys, Terminal Tietê, São Paulo - SP',
-    dropoffAddress: 'Av. Dr. Aldino Schiavi, 500 - Martin de Sá, Caraguatatuba - SP',
-    date: new Date().toISOString().split('T')[0],
-    time: '16:30',
-    passengers: 1,
-    luggageCount: 1,
-    tripType: 'Compartilhado',
-    status: 'Confirmado',
-    totalPrice: 80,
-    depositAmount: 40,
-    remainingAmount: 40,
-    depositPaid: true,
-    paymentStatus: 'Sinal 50% Pago (Confirmado)',
-    assignedDriverId: 'drv-03',
-    assignedDriverName: 'Karine Souza',
-    driverPhone: '(12) 98850-6597',
-    driverVehicle: 'Chevrolet Spin Premier 7L • 2024 (Ar-Cond. Duplo, 6 Pass. + Mot.)',
-    driverPlate: 'SP-LIT7C50',
-    notes: 'Transfer compartilhado pontual.',
-    createdAt: new Date(Date.now() - 3600000 * 6).toISOString(),
-  },
-];
+const INITIAL_SERVER_RESERVATIONS: ServerReservation[] = [];
+
+// Helper to identify and purge any mock/fake reservations
+function isFakeReservation(r: any): boolean {
+  if (!r) return false;
+  const id = String(r.id || '');
+  const code = String(r.code || '').toUpperCase();
+  const name = String(r.customerName || '').toLowerCase();
+  if (id === 'res-101' || id === 'res-102' || id === 'res-103') return true;
+  if (code === 'LM-8921' || code === 'LM-8922' || code === 'LM-8923' || code === 'LM-8925') return true;
+  if (
+    name.includes('fernanda albuquerque') ||
+    name.includes('eduardo guimarães') ||
+    name.includes('eduardo guimaraes') ||
+    name.includes('lucas ferreira mendes')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 // File-based persistence directory and helpers
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -243,17 +166,20 @@ function loadReservationsFromDisk(): ServerReservation[] {
     if (fs.existsSync(RESERVATIONS_FILE)) {
       const raw = fs.readFileSync(RESERVATIONS_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) {
+        return parsed.filter(r => !isFakeReservation(r));
+      }
     }
   } catch (err) {
     console.error('Error reading reservations from disk:', err);
   }
-  return [...INITIAL_SERVER_RESERVATIONS];
+  return [];
 }
 
 function saveReservationsToDisk(list: ServerReservation[]) {
   try {
-    fs.writeFileSync(RESERVATIONS_FILE, JSON.stringify(list, null, 2), 'utf-8');
+    const cleanList = list.filter(r => !isFakeReservation(r));
+    fs.writeFileSync(RESERVATIONS_FILE, JSON.stringify(cleanList, null, 2), 'utf-8');
   } catch (err) {
     console.error('Error saving reservations to disk:', err);
   }
@@ -280,7 +206,8 @@ function saveDriversToDisk(list: ServerDriver[]) {
   }
 }
 
-let serverReservations: ServerReservation[] = loadReservationsFromDisk();
+let serverReservations: ServerReservation[] = loadReservationsFromDisk().filter(r => !isFakeReservation(r));
+saveReservationsToDisk(serverReservations);
 let serverDrivers: ServerDriver[] = loadDriversFromDisk();
 
 async function startServer() {
@@ -449,11 +376,42 @@ async function startServer() {
     });
   });
 
+  // Delete reservation
+  app.delete('/api/reservations/:id', (req, res) => {
+    const { id } = req.params;
+    const initialCount = serverReservations.length;
+    serverReservations = serverReservations.filter(r => r.id !== id);
+    saveReservationsToDisk(serverReservations);
+
+    res.json({
+      success: true,
+      message: 'Reserva removida com sucesso do servidor.',
+      deleted: initialCount !== serverReservations.length,
+      count: serverReservations.length,
+    });
+  });
+
+  // Purge all fake / demo reservations
+  app.post('/api/reservations/purge-fake', (req, res) => {
+    const initialCount = serverReservations.length;
+    serverReservations = serverReservations.filter(r => !isFakeReservation(r));
+    saveReservationsToDisk(serverReservations);
+
+    res.json({
+      success: true,
+      message: 'Todos os registros de teste/demonstração foram eliminados.',
+      removedCount: initialCount - serverReservations.length,
+      count: serverReservations.length,
+      data: serverReservations,
+    });
+  });
+
   // Sync endpoint: client uploads its reservations to merge with server
   app.post('/api/reservations/sync', (req, res) => {
     const clientReservations = req.body.reservations;
     if (Array.isArray(clientReservations)) {
-      for (const item of clientReservations) {
+      const cleanIncoming = clientReservations.filter(r => !isFakeReservation(r));
+      for (const item of cleanIncoming) {
         const existingIdx = serverReservations.findIndex(r => r.id === item.id);
         if (existingIdx === -1) {
           serverReservations.push(item);
@@ -473,6 +431,7 @@ async function startServer() {
           };
         }
       }
+      serverReservations = serverReservations.filter(r => !isFakeReservation(r));
       saveReservationsToDisk(serverReservations);
     }
 

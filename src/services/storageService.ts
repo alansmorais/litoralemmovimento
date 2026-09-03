@@ -38,6 +38,25 @@ const INITIAL_CONTACT_MESSAGES: ContactMessage[] = [
   },
 ];
 
+export const isFakeReservation = (r: any): boolean => {
+  if (!r) return false;
+  const id = String(r.id || '');
+  const code = String(r.code || '').toUpperCase();
+  const name = String(r.customerName || '').toLowerCase();
+
+  if (id === 'res-101' || id === 'res-102' || id === 'res-103') return true;
+  if (code === 'LM-8921' || code === 'LM-8922' || code === 'LM-8923' || code === 'LM-8925') return true;
+  if (
+    name.includes('fernanda albuquerque') ||
+    name.includes('eduardo guimarães') ||
+    name.includes('eduardo guimaraes') ||
+    name.includes('lucas ferreira mendes')
+  ) {
+    return true;
+  }
+  return false;
+};
+
 export class StorageService {
   public static getSuperAdminPassword(): string {
     try {
@@ -333,10 +352,10 @@ export class StorageService {
       if (resResponse && resResponse.ok) {
         const resJson = await resResponse.json();
         if (resJson && resJson.success && Array.isArray(resJson.data)) {
-          const serverList: Reservation[] = resJson.data;
-          const localList = this.getReservations();
+          const serverList: Reservation[] = (resJson.data as Reservation[]).filter((r) => !isFakeReservation(r));
+          const localList = this.getReservations().filter((r) => !isFakeReservation(r));
 
-          // Check if local has reservations not yet on the server, sync them up
+          // Check if local has real reservations not yet on the server, sync them up
           const serverIds = new Set(serverList.map((r) => r.id));
           const unsyncedLocals = localList.filter((r) => !serverIds.has(r.id));
           if (unsyncedLocals.length > 0 && localList.length > 0) {
@@ -350,7 +369,7 @@ export class StorageService {
                 const syncJson = await syncRes.json();
                 if (syncJson && syncJson.success && Array.isArray(syncJson.data)) {
                   serverList.length = 0;
-                  serverList.push(...syncJson.data);
+                  serverList.push(...(syncJson.data as Reservation[]).filter((r) => !isFakeReservation(r)));
                 }
               }
             } catch (err) {
@@ -361,14 +380,16 @@ export class StorageService {
           // Merge: server has authoritative status and assigned driver
           const mergedMap = new Map<string, Reservation>();
           for (const item of localList) {
-            mergedMap.set(item.id, item);
+            if (!isFakeReservation(item)) mergedMap.set(item.id, item);
           }
           for (const sItem of serverList) {
-            const local = mergedMap.get(sItem.id);
-            mergedMap.set(sItem.id, local ? { ...local, ...sItem } : sItem);
+            if (!isFakeReservation(sItem)) {
+              const local = mergedMap.get(sItem.id);
+              mergedMap.set(sItem.id, local ? { ...local, ...sItem } : sItem);
+            }
           }
 
-          const mergedReservations = Array.from(mergedMap.values());
+          const mergedReservations = Array.from(mergedMap.values()).filter((r) => !isFakeReservation(r));
           mergedReservations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
           const currentSaved = localStorage.getItem(RESERVATIONS_STORAGE_KEY) || '[]';
@@ -408,7 +429,16 @@ export class StorageService {
         localStorage.setItem(RESERVATIONS_STORAGE_KEY, JSON.stringify(INITIAL_RESERVATIONS));
         return INITIAL_RESERVATIONS;
       }
-      return JSON.parse(data);
+      const parsed: Reservation[] = JSON.parse(data);
+      if (Array.isArray(parsed)) {
+        const clean = parsed.filter((r) => !isFakeReservation(r));
+        if (clean.length !== parsed.length) {
+          localStorage.setItem(RESERVATIONS_STORAGE_KEY, JSON.stringify(clean));
+          window.dispatchEvent(new CustomEvent('reservations_updated', { detail: clean }));
+        }
+        return clean;
+      }
+      return INITIAL_RESERVATIONS;
     } catch (e) {
       console.error('Failed to read reservations from storage', e);
       return INITIAL_RESERVATIONS;
@@ -417,10 +447,55 @@ export class StorageService {
 
   public static saveReservations(reservations: Reservation[]): void {
     try {
-      localStorage.setItem(RESERVATIONS_STORAGE_KEY, JSON.stringify(reservations));
-      window.dispatchEvent(new CustomEvent('reservations_updated', { detail: reservations }));
+      const clean = reservations.filter((r) => !isFakeReservation(r));
+      localStorage.setItem(RESERVATIONS_STORAGE_KEY, JSON.stringify(clean));
+      window.dispatchEvent(new CustomEvent('reservations_updated', { detail: clean }));
     } catch (e) {
       console.error('Failed to save reservations to storage', e);
+    }
+  }
+
+  public static async deleteReservation(id: string): Promise<boolean> {
+    try {
+      const list = this.getReservations().filter((r) => r.id !== id);
+      this.saveReservations(list);
+
+      try {
+        await fetch(`/api/reservations/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } catch (err) {
+        console.warn('Failed to delete reservation on server:', err);
+      }
+
+      return true;
+    } catch (e) {
+      console.error('Failed to delete reservation', e);
+      return false;
+    }
+  }
+
+  public static async purgeFakeReservations(): Promise<number> {
+    try {
+      const current = this.getReservations();
+      const clean = current.filter((r) => !isFakeReservation(r));
+      const removedCount = current.length - clean.length;
+      this.saveReservations(clean);
+
+      try {
+        await fetch('/api/reservations/purge-fake', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } catch (err) {
+        console.warn('Failed to purge fake reservations on server:', err);
+      }
+
+      return removedCount;
+    } catch (e) {
+      console.error('Failed to purge fake reservations', e);
+      return 0;
     }
   }
 

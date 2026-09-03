@@ -71,11 +71,6 @@ export const TrackRideModal: React.FC<TrackRideModalProps> = ({ isOpen, onClose,
     performSearch(query);
   };
 
-  const loadSample = (sampleCode: string) => {
-    setQuery(sampleCode);
-    performSearch(sampleCode);
-  };
-
   // Get timeline step index (0 to 4)
   const getStepIndex = (status?: string) => {
     switch (status) {
@@ -129,41 +124,15 @@ export const TrackRideModal: React.FC<TrackRideModalProps> = ({ isOpen, onClose,
             Rastrear Minha Viagem
           </h3>
           <p className="text-xs text-slate-600 mt-1">
-            Acompanhe o status do transfer, motorista escalado e estimativa de trajeto em tempo real.
+            Acompanhe o status do seu transfer, motorista escalado e estimativa de trajeto em tempo real.
           </p>
-
-          {/* Quick Demo Test Buttons */}
-          <div className="mt-3 flex flex-wrap justify-center items-center gap-1.5 text-xs">
-            <span className="text-[11px] text-slate-500 font-semibold">Testar demonstração:</span>
-            <button
-              type="button"
-              onClick={() => loadSample('LM-8921')}
-              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-800 hover:text-amber-900 font-bold border border-slate-200 text-[11px] transition-colors cursor-pointer"
-            >
-              LM-8921 (Em Rota)
-            </button>
-            <button
-              type="button"
-              onClick={() => loadSample('LM-8922')}
-              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-sky-100 text-slate-800 hover:text-sky-900 font-bold border border-slate-200 text-[11px] transition-colors cursor-pointer"
-            >
-              LM-8922 (Confirmado)
-            </button>
-            <button
-              type="button"
-              onClick={() => loadSample('LM-8925')}
-              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-800 hover:text-emerald-900 font-bold border border-slate-200 text-[11px] transition-colors cursor-pointer"
-            >
-              LM-8925 (Concluído)
-            </button>
-          </div>
         </div>
 
         {/* Search Input Form */}
         <form onSubmit={handleSearch} className="flex gap-2 mb-6">
           <input
             type="text"
-            placeholder="Digite o código (Ex: LM-8921) ou WhatsApp"
+            placeholder="Digite o código da reserva (ex: LM-1234) ou seu WhatsApp"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-300 focus:border-slate-900 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-all"

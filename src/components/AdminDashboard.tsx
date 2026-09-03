@@ -461,6 +461,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     loadData();
   };
 
+  const handleDeleteReservation = async (id: string, code: string) => {
+    if (window.confirm(`Tem certeza que deseja excluir a reserva ${code}? Esta ação removerá o registro permanentemente do sistema.`)) {
+      await StorageService.deleteReservation(id);
+      loadData();
+    }
+  };
+
   const handleSaveNotes = () => {
     if (!selectedReservation) return;
     StorageService.updateNotes(selectedReservation.id, internalNoteDraft);
@@ -1327,8 +1334,20 @@ function createJsonResponse(data) {
                   <tbody className="divide-y divide-slate-100 text-xs">
                     {filteredReservations.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-12 text-center text-slate-500">
-                          Nenhuma reserva encontrada para os filtros selecionados.
+                        <td colSpan={8} className="py-14 text-center text-slate-500">
+                          {reservations.length === 0 ? (
+                            <div className="py-8 flex flex-col items-center justify-center">
+                              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3 border border-slate-200">
+                                <Calendar className="w-6 h-6" />
+                              </div>
+                              <p className="font-bold text-slate-800 text-sm">Nenhuma reserva cadastrada no sistema</p>
+                              <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                                O sistema está 100% limpo, aguardando novos agendamentos e registros reais.
+                              </p>
+                            </div>
+                          ) : (
+                            'Nenhuma reserva encontrada para os filtros selecionados.'
+                          )}
                         </td>
                       </tr>
                     ) : (
@@ -1514,6 +1533,15 @@ function createJsonResponse(data) {
                               >
                                 <Send className="w-3.5 h-3.5" />
                               </a>
+
+                              {/* Excluir reserva */}
+                              <button
+                                onClick={() => handleDeleteReservation(res.id, res.code)}
+                                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-600 hover:text-white text-red-600 border border-red-200 cursor-pointer transition-colors"
+                                title="Excluir reserva permanentemente"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </td>
                         </tr>
