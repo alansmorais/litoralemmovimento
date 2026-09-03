@@ -544,13 +544,13 @@ async function startServer() {
   const ADMIN_USERS_FILE = path.join(DATA_DIR, 'admin_users.json');
   const DRIVER_AUTH_FILE = path.join(DATA_DIR, 'driver_auth.json');
 
-  let dynamicAdminUsers: Record<string, { username: string; password: string; name: string; role: string; mustChangePassword?: boolean }> = {
-    alan: { username: 'alan', password: 'alan2026', name: 'Alan Morais', role: 'Super Admin', mustChangePassword: false },
-    eduardo: { username: 'eduardo', password: 'litoral2026', name: 'Eduardo (Operações)', role: 'Gestão Operacional', mustChangePassword: true },
-    edivam: { username: 'edivam', password: 'litoral2026', name: 'Edivam (Frota)', role: 'Gestão de Frota', mustChangePassword: true },
-    karine: { username: 'karine', password: 'litoral2026', name: 'Karine (Atendimento)', role: 'Gestão de Atendimento', mustChangePassword: true },
-    michelly: { username: 'michelly', password: 'litoral2026', name: 'Michelly (Gestão)', role: 'Gestão Administrativa', mustChangePassword: true },
-    admin: { username: 'admin', password: 'litoral2026', name: 'Administrador Geral', role: 'Gestão Geral', mustChangePassword: false },
+  let dynamicAdminUsers: Record<string, { username: string; password: string; name: string; role: string; email?: string; status?: 'Ativo' | 'Inativo'; mustChangePassword?: boolean }> = {
+    alan: { username: 'alan', password: 'alan2026', name: 'Alan Morais', role: 'Super Admin', email: 'alanpkmorais@gmail.com', status: 'Ativo', mustChangePassword: false },
+    eduardo: { username: 'eduardo', password: 'litoral2026', name: 'Eduardo (Operações)', role: 'Gestão Operacional', email: 'eduardo@litoralemmovimento.com.br', status: 'Ativo', mustChangePassword: true },
+    edivam: { username: 'edivam', password: 'litoral2026', name: 'Edivam (Frota)', role: 'Gestão de Frota', email: 'edivam@litoralemmovimento.com.br', status: 'Ativo', mustChangePassword: true },
+    karine: { username: 'karine', password: 'litoral2026', name: 'Karine (Atendimento)', role: 'Gestão de Atendimento', email: 'karine@litoralemmovimento.com.br', status: 'Ativo', mustChangePassword: true },
+    michelly: { username: 'michelly', password: 'litoral2026', name: 'Michelly (Gestão)', role: 'Gestão Administrativa', email: 'michelly@litoralemmovimento.com.br', status: 'Ativo', mustChangePassword: true },
+    admin: { username: 'admin', password: 'litoral2026', name: 'Administrador Geral', role: 'Gestão Geral', email: 'contato@litoralemmovimento.com.br', status: 'Ativo', mustChangePassword: false },
   };
 
   let dynamicDriverPins: Record<string, { pin: string; username: string; name: string; mustChangePassword?: boolean }> = {
@@ -606,12 +606,20 @@ async function startServer() {
     if (sanitizedUser) {
       const user = dynamicAdminUsers[sanitizedUser];
       if (user && (user.password.toLowerCase() === sanitizedPass || sanitizedPass === 'alan2026' || sanitizedPass === 'litoral2026')) {
+        if (user.status === 'Inativo') {
+          return res.status(403).json({
+            success: false,
+            message: `Acesso bloqueado: O usuário @${user.username} está configurado como 'Não pode usar o sistema'.`,
+          });
+        }
         return res.json({
           success: true,
           token: `adm_tok_${Date.now()}_${user.username}`,
           role: user.role,
           adminName: user.name,
           username: user.username,
+          email: user.email || '',
+          status: user.status || 'Ativo',
           mustChangePassword: !!user.mustChangePassword,
         });
       }
@@ -621,12 +629,20 @@ async function startServer() {
     for (const key in dynamicAdminUsers) {
       const u = dynamicAdminUsers[key];
       if (u.password.toLowerCase() === sanitizedPass) {
+        if (u.status === 'Inativo') {
+          return res.status(403).json({
+            success: false,
+            message: `Acesso bloqueado: O usuário @${u.username} está configurado como 'Não pode usar o sistema'.`,
+          });
+        }
         return res.json({
           success: true,
           token: `adm_tok_${Date.now()}_${u.username}`,
           role: u.role,
           adminName: u.name,
           username: u.username,
+          email: u.email || '',
+          status: u.status || 'Ativo',
           mustChangePassword: !!u.mustChangePassword,
         });
       }
@@ -640,11 +656,49 @@ async function startServer() {
         role: 'Gestão Geral',
         adminName: 'Administrador Geral',
         username: 'admin',
+        email: 'contato@litoralemmovimento.com.br',
+        status: 'Ativo',
         mustChangePassword: false,
       });
     }
 
     return res.status(401).json({ success: false, message: 'Usuário ou senha administrativa incorretos.' });
+  });
+
+  app.post('/api/auth/admin-update', (req, res) => {
+    const { username, adminId, email, status, name, role, password } = req.body;
+    const key = (username || adminId || '').trim().toLowerCase();
+    if (!key) {
+      return res.status(400).json({ success: false, message: 'Usuário não especificado.' });
+    }
+
+    if (!dynamicAdminUsers[key]) {
+      dynamicAdminUsers[key] = {
+        username: key,
+        password: password ? String(password).trim() : 'litoral2026',
+        name: name || key.toUpperCase(),
+        role: role || 'Gestão Geral',
+        email: email || '',
+        status: status || 'Ativo',
+        mustChangePassword: false,
+      };
+    } else {
+      if (email !== undefined) dynamicAdminUsers[key].email = String(email).trim();
+      if (status !== undefined) dynamicAdminUsers[key].status = status;
+      if (name !== undefined && String(name).trim()) dynamicAdminUsers[key].name = String(name).trim();
+      if (role !== undefined && String(role).trim()) dynamicAdminUsers[key].role = String(role).trim();
+      if (password !== undefined && String(password).trim().length >= 4) {
+        dynamicAdminUsers[key].password = String(password).trim();
+        dynamicAdminUsers[key].mustChangePassword = false;
+      }
+    }
+
+    saveAdminUsersToDisk();
+    return res.json({
+      success: true,
+      message: `Administrador @${key} atualizado no servidor.`,
+      user: dynamicAdminUsers[key],
+    });
   });
 
   app.post('/api/auth/admin-change-password', (req, res) => {

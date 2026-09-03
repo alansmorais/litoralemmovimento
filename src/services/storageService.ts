@@ -172,6 +172,7 @@ export class StorageService {
       | 'updateDriverStatus'
       | 'updateDriverPassword'
       | 'updateAdminPassword'
+      | 'updateAdminProfile'
       | 'confirmBoardingPayment',
     payload: any
   ): Promise<{ success: boolean; message?: string }> {
@@ -649,6 +650,81 @@ export class StorageService {
     return {
       success: true,
       message: `Senha do usuário ${list[idx].name} alterada com sucesso e sincronizada!`,
+    };
+  }
+
+  public static async updateAdminProfile(
+    adminIdOrUsername: string,
+    updates: {
+      email?: string;
+      status?: 'Ativo' | 'Inativo';
+      name?: string;
+      role?: string;
+      password?: string;
+    }
+  ): Promise<{ success: boolean; message: string }> {
+    const list = this.getAdmins();
+    const clean = adminIdOrUsername.trim().toLowerCase();
+    const idx = list.findIndex(
+      (a) =>
+        a.id.toLowerCase() === clean ||
+        (a.username && a.username.toLowerCase() === clean)
+    );
+
+    if (idx === -1) {
+      return { success: false, message: 'Usuário administrador não encontrado.' };
+    }
+
+    if (updates.email !== undefined) {
+      list[idx].email = updates.email.trim();
+    }
+    if (updates.status !== undefined) {
+      list[idx].status = updates.status;
+    }
+    if (updates.name !== undefined && updates.name.trim()) {
+      list[idx].name = updates.name.trim();
+    }
+    if (updates.role !== undefined && updates.role.trim()) {
+      list[idx].role = updates.role.trim();
+    }
+    if (updates.password !== undefined && updates.password.trim().length >= 4) {
+      list[idx].password = updates.password.trim();
+      list[idx].mustChangePassword = false;
+      if (list[idx].username === 'alan' || list[idx].role === 'Super Admin') {
+        localStorage.setItem(SUPER_ADMIN_PASSWORD_KEY, updates.password.trim());
+      }
+    }
+
+    this.saveAdmins(list);
+
+    // Sync to backend server
+    fetch('/api/auth/admin-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adminId: list[idx].id,
+        username: list[idx].username,
+        email: list[idx].email,
+        status: list[idx].status,
+        name: list[idx].name,
+        role: list[idx].role,
+        password: list[idx].password,
+      }),
+    }).catch(() => {});
+
+    // Sync to Google Sheets
+    this.syncToGoogleSheets('updateAdminProfile', {
+      adminId: list[idx].id,
+      username: list[idx].username,
+      email: list[idx].email,
+      status: list[idx].status,
+      name: list[idx].name,
+      role: list[idx].role,
+    }).catch(() => {});
+
+    return {
+      success: true,
+      message: `Administrador ${list[idx].name} atualizado com sucesso!`,
     };
   }
 

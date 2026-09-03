@@ -42,6 +42,9 @@ import {
   Settings,
   ShieldAlert,
   UserCheck,
+  UserX,
+  UserPlus,
+  Shield,
   KeyRound,
   MessageSquare,
   Headphones,
@@ -73,7 +76,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
-  const [activeAdmin, setActiveAdmin] = useState<AdminAccount>(ADMIN_ACCOUNTS[0]);
+  const [admins, setAdmins] = useState<AdminAccount[]>(() => StorageService.getAdmins());
+  const [activeAdmin, setActiveAdmin] = useState<AdminAccount>(() => {
+    const currentAdmins = StorageService.getAdmins();
+    const sessionName = sessionStorage.getItem('litoral_admin_name');
+    if (sessionName) {
+      const found = currentAdmins.find(
+        (a) =>
+          a.name.toLowerCase() === sessionName.toLowerCase() ||
+          a.username.toLowerCase() === sessionName.toLowerCase()
+      );
+      if (found) return found;
+    }
+    return currentAdmins[0] || ADMIN_ACCOUNTS[0];
+  });
+
+  // Admin Management Modal states
+  const [editingAdmin, setEditingAdmin] = useState<AdminAccount | null>(null);
+  const [isEditingAdminModalOpen, setIsEditingAdminModalOpen] = useState<boolean>(false);
+  const [editAdminEmail, setEditAdminEmail] = useState<string>('');
+  const [editAdminName, setEditAdminName] = useState<string>('');
+  const [editAdminRole, setEditAdminRole] = useState<string>('');
+  const [editAdminStatus, setEditAdminStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
+  const [editAdminPassword, setEditAdminPassword] = useState<string>('');
+  const [isSavingAdmin, setIsSavingAdmin] = useState<boolean>(false);
+  const [adminFeedback, setAdminFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // New Admin Modal states
+  const [isNewAdminModalOpen, setIsNewAdminModalOpen] = useState<boolean>(false);
+  const [newAdminUsername, setNewAdminUsername] = useState<string>('');
+  const [newAdminName, setNewAdminName] = useState<string>('');
+  const [newAdminEmail, setNewAdminEmail] = useState<string>('');
+  const [newAdminRole, setNewAdminRole] = useState<string>('Gestão Geral');
+  const [newAdminPassword, setNewAdminPassword] = useState<string>('litoral2026');
+  const [newAdminStatus, setNewAdminStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState<boolean>(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [destinationFilter, setDestinationFilter] = useState<string>('all');
@@ -150,6 +188,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setReservations(StorageService.getReservations());
     setDrivers(StorageService.getDrivers());
     setContactMessages(StorageService.getContactMessages());
+    setAdmins(StorageService.getAdmins());
   };
 
   useEffect(() => {
@@ -162,16 +201,158 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }, 4000);
 
     const handleUpdate = () => loadData();
+    const handleAdminsUpdate = (e: any) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setAdmins(e.detail);
+      } else {
+        setAdmins(StorageService.getAdmins());
+      }
+    };
+
     window.addEventListener('reservations_updated', handleUpdate);
     window.addEventListener('drivers_updated', handleUpdate);
     window.addEventListener('contact_messages_updated', handleUpdate);
+    window.addEventListener('admins_updated', handleAdminsUpdate);
+
     return () => {
       clearInterval(syncInterval);
       window.removeEventListener('reservations_updated', handleUpdate);
       window.removeEventListener('drivers_updated', handleUpdate);
       window.removeEventListener('contact_messages_updated', handleUpdate);
+      window.removeEventListener('admins_updated', handleAdminsUpdate);
     };
   }, []);
+
+  const handleToggleAdminStatus = async (adminId: string, newStatus: 'Ativo' | 'Inativo') => {
+    const target = admins.find((a) => a.id === adminId);
+    if (!target) return;
+
+    if (target.username === 'alan' && newStatus === 'Inativo') {
+      alert('O Super Admin principal (Alan Morais) não pode ser desativado.');
+      return;
+    }
+
+    const updated = admins.map((a) => (a.id === adminId ? { ...a, status: newStatus } : a));
+    setAdmins(updated);
+    StorageService.saveAdmins(updated);
+
+    if (activeAdmin.id === adminId) {
+      setActiveAdmin({ ...activeAdmin, status: newStatus });
+    }
+
+    setAdminFeedback({
+      text: `Permissão atualizada: ${target.name} agora está configurado como "${
+        newStatus === 'Ativo' ? 'Pode usar o sistema' : 'Não pode usar o sistema (Bloqueado)'
+      }".`,
+      type: 'success',
+    });
+    setTimeout(() => setAdminFeedback(null), 5000);
+
+    await StorageService.updateAdminProfile(adminId, { status: newStatus });
+  };
+
+  const handleOpenEditAdmin = (admin: AdminAccount) => {
+    setEditingAdmin(admin);
+    setEditAdminName(admin.name);
+    setEditAdminEmail(admin.email || '');
+    setEditAdminRole(admin.role);
+    setEditAdminStatus(admin.status || 'Ativo');
+    setEditAdminPassword('');
+    setIsEditingAdminModalOpen(true);
+  };
+
+  const handleSaveEditAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAdmin) return;
+
+    setIsSavingAdmin(true);
+    const updates: { email: string; status: 'Ativo' | 'Inativo'; name: string; role: string; password?: string } = {
+      name: editAdminName.trim() || editingAdmin.name,
+      email: editAdminEmail.trim(),
+      status: editAdminStatus,
+      role: editAdminRole.trim() || editingAdmin.role,
+    };
+
+    if (editAdminPassword.trim().length >= 4) {
+      updates.password = editAdminPassword.trim();
+    }
+
+    const res = await StorageService.updateAdminProfile(editingAdmin.id, updates);
+    setIsSavingAdmin(false);
+
+    if (res.success) {
+      const updatedList = admins.map((a) =>
+        a.id === editingAdmin.id
+          ? {
+              ...a,
+              ...updates,
+              ...(updates.password ? { password: updates.password, mustChangePassword: false } : {}),
+            }
+          : a
+      );
+      setAdmins(updatedList);
+      if (activeAdmin.id === editingAdmin.id) {
+        setActiveAdmin({ ...activeAdmin, ...updates });
+      }
+      setIsEditingAdminModalOpen(false);
+      setAdminFeedback({ text: `Dados de ${updates.name} salvos com sucesso!`, type: 'success' });
+      setTimeout(() => setAdminFeedback(null), 5000);
+    } else {
+      setAdminFeedback({ text: res.message, type: 'error' });
+    }
+  };
+
+  const handleCreateNewAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanUser = newAdminUsername.trim().toLowerCase();
+    const cleanName = newAdminName.trim();
+    const cleanEmail = newAdminEmail.trim();
+
+    if (!cleanUser || !cleanName) {
+      alert('Por favor, informe o usuário curto e o nome completo.');
+      return;
+    }
+
+    if (admins.some((a) => a.username.toLowerCase() === cleanUser)) {
+      alert(`O usuário curto @${cleanUser} já está em uso.`);
+      return;
+    }
+
+    setIsCreatingAdmin(true);
+
+    const newAdminObj: AdminAccount = {
+      id: `adm-${Date.now().toString().slice(-4)}`,
+      username: cleanUser,
+      name: cleanName,
+      email: cleanEmail,
+      role: newAdminRole,
+      password: newAdminPassword.trim() || 'litoral2026',
+      status: newAdminStatus,
+      mustChangePassword: true,
+    };
+
+    const updated = [...admins, newAdminObj];
+    setAdmins(updated);
+    StorageService.saveAdmins(updated);
+
+    // Sync to backend and Google Sheets
+    await StorageService.updateAdminProfile(newAdminObj.id, {
+      name: newAdminObj.name,
+      email: newAdminObj.email,
+      status: newAdminObj.status,
+      role: newAdminObj.role,
+      password: newAdminObj.password,
+    });
+
+    setIsCreatingAdmin(false);
+    setIsNewAdminModalOpen(false);
+    setNewAdminUsername('');
+    setNewAdminName('');
+    setNewAdminEmail('');
+    setNewAdminPassword('litoral2026');
+    setAdminFeedback({ text: `Novo administrador @${cleanUser} criado com sucesso!`, type: 'success' });
+    setTimeout(() => setAdminFeedback(null), 5000);
+  };
 
   const handleUpdateMessageStatus = (id: string, newStatus: MessageStatus) => {
     StorageService.updateContactMessageStatus(id, newStatus, `${activeAdmin.name} (${activeAdmin.role})`);
@@ -824,27 +1005,27 @@ function createJsonResponse(data) {
           <div className="flex items-center flex-wrap gap-3">
             {/* Account dropdown */}
             <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-xl text-xs">
-              <img
-                src={activeAdmin.avatarUrl}
-                alt={activeAdmin.name}
-                className="w-6 h-6 rounded-full object-cover border border-amber-400"
-              />
+              <div className="w-6 h-6 rounded-md bg-amber-400/20 text-amber-300 font-mono font-bold text-[10px] flex items-center justify-center border border-amber-400/40 shrink-0">
+                {activeAdmin.name ? activeAdmin.name.substring(0, 2).toUpperCase() : 'AD'}
+              </div>
               <div>
                 <span className="font-bold text-white block leading-tight">{activeAdmin.name}</span>
-                <span className="text-[10px] text-emerald-400 font-semibold">Online</span>
+                <span className="text-[10px] text-emerald-400 font-semibold">
+                  {activeAdmin.status === 'Inativo' ? '• Bloqueado' : '• Online'}
+                </span>
               </div>
               <select
                 value={activeAdmin.id}
                 onChange={(e) => {
-                  const selected = ADMIN_ACCOUNTS.find((a) => a.id === e.target.value);
+                  const selected = admins.find((a) => a.id === e.target.value);
                   if (selected) setActiveAdmin(selected);
                 }}
-                className="bg-transparent text-slate-200 outline-none ml-1 cursor-pointer"
+                className="bg-transparent text-slate-200 outline-none ml-1 cursor-pointer text-xs"
                 title="Selecionar usuário da gestão"
               >
-                {ADMIN_ACCOUNTS.map((acc) => (
+                {admins.map((acc) => (
                   <option key={acc.id} value={acc.id} className="bg-slate-900 text-white">
-                    {acc.name}
+                    {acc.name} {acc.status === 'Inativo' ? '(Bloqueado)' : ''}
                   </option>
                 ))}
               </select>
@@ -1053,7 +1234,7 @@ function createJsonResponse(data) {
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              👥 Equipe de Gestão ({ADMIN_ACCOUNTS.length})
+              👥 Equipe de Gestão ({admins.length})
             </button>
           </div>
 
@@ -1950,87 +2131,213 @@ function createJsonResponse(data) {
                   Administradores & Gestores do Sistema
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Profissionais com credencial de acesso ao painel para controle de reservas, frota, financeiro e atendimento.
+                  Gerenciamento de credenciais, alteração de e-mails oficiais e controle de permissão de uso do sistema (Pode ou Não Pode usar o sistema).
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-600">Usuário Ativo:</span>
+              <div className="flex items-center flex-wrap gap-2.5">
                 <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs">
-                  <img
-                    src={activeAdmin.avatarUrl}
-                    alt={activeAdmin.name}
-                    className="w-5 h-5 rounded-full object-cover border border-amber-400"
-                  />
+                  <div className="w-5 h-5 rounded-md bg-amber-400/20 text-amber-300 font-mono font-bold text-[9px] flex items-center justify-center border border-amber-400/50">
+                    {activeAdmin.name ? activeAdmin.name.substring(0, 2).toUpperCase() : 'AD'}
+                  </div>
                   <span className="font-bold">{activeAdmin.name}</span>
                   <span className="text-[10px] text-emerald-400 font-semibold">• Online</span>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsNewAdminModalOpen(true)}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Novo Administrador</span>
+                </button>
               </div>
             </div>
 
+            {/* Feedback alert */}
+            {adminFeedback && (
+              <div
+                className={`p-4 rounded-2xl flex items-center gap-3 text-xs font-semibold animate-in fade-in ${
+                  adminFeedback.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                    : 'bg-red-50 text-red-900 border border-red-200'
+                }`}
+              >
+                {adminFeedback.type === 'success' ? (
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                )}
+                <span>{adminFeedback.text}</span>
+              </div>
+            )}
+
             {/* Team Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {ADMIN_ACCOUNTS.map((admin) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {admins.map((admin) => {
                 const isActive = activeAdmin.id === admin.id;
+                const canUseSystem = admin.status !== 'Inativo';
+
                 return (
                   <div
                     key={admin.id}
-                    className={`bg-white rounded-2xl p-5 border transition-all shadow-xs flex flex-col justify-between ${
-                      isActive ? 'border-amber-400 ring-2 ring-amber-400/20 bg-amber-50/10' : 'border-slate-200 hover:border-slate-300'
+                    className={`bg-white rounded-2xl p-5 border transition-all shadow-xs flex flex-col justify-between gap-4 ${
+                      isActive
+                        ? 'border-amber-400 ring-2 ring-amber-400/20 bg-amber-50/10'
+                        : !canUseSystem
+                          ? 'border-red-200 bg-red-50/20 opacity-90'
+                          : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
+                    <div className="space-y-4">
+                      {/* Top info: Monogram & Identity (NO PICTURE) */}
+                      <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={admin.avatarUrl}
-                            alt={admin.name}
-                            className="w-12 h-12 rounded-2xl object-cover border-2 border-slate-200 shadow-xs"
-                          />
+                          <div
+                            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-mono font-bold text-sm border shadow-xs ${
+                              !canUseSystem
+                                ? 'bg-slate-100 text-slate-400 border-slate-200'
+                                : isActive
+                                  ? 'bg-amber-400 text-slate-950 border-amber-400'
+                                  : 'bg-slate-950 text-white border-slate-800'
+                            }`}
+                          >
+                            {admin.name ? admin.name.substring(0, 2).toUpperCase() : 'AD'}
+                          </div>
                           <div>
-                            <h4 className="font-bold text-lg text-slate-900 flex items-center gap-1.5">
+                            <h4 className="font-bold text-base text-slate-900 flex items-center gap-1.5 leading-tight">
                               <span>{admin.name}</span>
                               {isActive && (
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Sessão Ativa" />
                               )}
                             </h4>
-                            <span className="text-xs text-slate-500 font-medium">
-                              {admin.email}
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-xs font-mono text-slate-500 font-semibold">
+                                @{admin.username}
+                              </span>
+                              <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-medium">
+                                {admin.role}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
                         {isActive && (
-                          <span className="text-[10px] bg-slate-900 text-white font-bold px-2 py-0.5 rounded-full">
-                            Sessão Ativa
+                          <span className="text-[10px] bg-slate-900 text-amber-300 font-bold px-2 py-0.5 rounded-full shrink-0">
+                            Você
                           </span>
                         )}
                       </div>
 
-                      <div className="space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      {/* E-mail configuration (Option to change email) */}
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-400">Status de Acesso:</span>
-                          <span className="text-emerald-700 font-bold flex items-center gap-1">
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Autorizado</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-slate-400" />
+                            <span>E-mail do Administrador</span>
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditAdmin(admin)}
+                            className="text-[11px] text-amber-700 hover:text-amber-800 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                          >
+                            <Edit className="w-3 h-3" />
+                            <span>Alterar E-mail</span>
+                          </button>
+                        </div>
+                        <div className="text-xs text-slate-800 font-medium truncate" title={admin.email || 'Não configurado'}>
+                          {admin.email || <span className="text-slate-400 italic">Sem e-mail cadastrado</span>}
+                        </div>
+                      </div>
+
+                      {/* System Access Permission (Pode ou Não Pode Usar o Sistema) */}
+                      <div
+                        className={`p-3 rounded-xl border transition-all ${
+                          canUseSystem
+                            ? 'bg-emerald-50/70 border-emerald-200'
+                            : 'bg-red-50/70 border-red-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                              Uso do Sistema
+                            </span>
+                            <span
+                              className={`text-xs font-bold flex items-center gap-1.5 mt-0.5 ${
+                                canUseSystem ? 'text-emerald-800' : 'text-red-800'
+                              }`}
+                            >
+                              {canUseSystem ? (
+                                <>
+                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  <span>Pode usar o sistema</span>
+                                </>
+                              ) : (
+                                <>
+                                  <UserX className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                                  <span>Não pode usar o sistema</span>
+                                </>
+                              )}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleToggleAdminStatus(admin.id, canUseSystem ? 'Inativo' : 'Ativo')
+                            }
+                            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer border shadow-xs ${
+                              canUseSystem
+                                ? 'bg-white hover:bg-red-50 text-red-700 border-red-200 hover:border-red-300'
+                                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600'
+                            }`}
+                            title={
+                              canUseSystem
+                                ? 'Bloquear acesso deste usuário no sistema'
+                                : 'Liberar acesso para este usuário usar o sistema'
+                            }
+                          >
+                            {canUseSystem ? 'Bloquear Acesso' : 'Liberar Uso'}
+                          </button>
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-4 mt-3 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-400 font-mono">{admin.id}</span>
+                    {/* Footer Actions */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                       <button
                         type="button"
-                        onClick={() => setActiveAdmin(admin)}
-                        disabled={isActive}
+                        onClick={() => handleOpenEditAdmin(admin)}
+                        className="text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>Editar</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (canUseSystem) {
+                            setActiveAdmin(admin);
+                          }
+                        }}
+                        disabled={isActive || !canUseSystem}
                         className={`text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer ${
                           isActive
-                            ? 'bg-emerald-100 text-emerald-800 cursor-default'
-                            : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
+                            ? 'bg-amber-100 text-amber-900 cursor-default'
+                            : !canUseSystem
+                              ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                              : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
                         }`}
+                        title={!canUseSystem ? 'Usuário bloqueado para usar o sistema' : undefined}
                       >
-                        {isActive ? '✓ Selecionado' : 'Acessar como ' + admin.name}
+                        {isActive
+                          ? '✓ Selecionado'
+                          : !canUseSystem
+                            ? 'Acesso Bloqueado'
+                            : 'Acessar como ' + admin.name.split(' ')[0]}
                       </button>
                     </div>
                   </div>
@@ -2043,10 +2350,10 @@ function createJsonResponse(data) {
               <KeyRound className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <strong className="text-white font-bold block mb-1">
-                  Diretrizes de Segurança e Acesso da Equipe:
+                  Diretrizes de Segurança e Acesso da Gestão:
                 </strong>
                 <p className="text-slate-400 leading-relaxed">
-                  Os administradores <strong>Eduardo, Edivam, Claudinei e Karine</strong> possuem acesso liberado para gerenciar todas as solicitações de transfer, acompanhar os sinais de 50%, despachar motoristas nas vans Spin 7L e Sedã 4L, e emitir vouchers oficiais para os passageiros.
+                  Todos os administradores com permissão <strong>"Pode usar o sistema"</strong> possuem acesso para despachar rotas de transfer Spin 7L e Sedã 4L, confirmar reservas e gerenciar passageiros. Ao definir como <strong>"Não pode usar o sistema"</strong>, o login deste usuário é imediatamente bloqueado no painel e no servidor. Alterações de e-mail e permissão sincronizam em tempo real com a planilha do Google Sheets.
                 </p>
               </div>
             </div>
@@ -2404,6 +2711,341 @@ function doPost(e) { ... }`}</pre>
                 Salvar Anotação
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* EDIT ADMIN MODAL */}
+      {isEditingAdminModalOpen && editingAdmin && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 border border-slate-200 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 my-8">
+            <div className="border-b border-slate-100 pb-3 flex items-start justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full">
+                  Gestão de Credencial
+                </span>
+                <h3 className="font-serif-display font-extrabold text-xl text-slate-900 mt-1">
+                  Editar Administrador
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Atualize o e-mail, permissão de uso do sistema e dados de acesso de @{editingAdmin.username}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingAdminModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditAdmin} className="space-y-4">
+              {/* Nome */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Nome Completo:
+                </label>
+                <input
+                  type="text"
+                  value={editAdminName}
+                  onChange={(e) => setEditAdminName(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-amber-400 focus:bg-white transition-colors"
+                />
+              </div>
+
+              {/* Usuário curto (readonly) */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Usuário de Login (Google Sheets):
+                </label>
+                <div className="px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-600 font-mono">
+                  @{editingAdmin.username}
+                </div>
+              </div>
+
+              {/* E-mail (Explicit user request) */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    E-mail Oficial:
+                  </label>
+                  <span className="text-[10px] text-amber-700 font-semibold">
+                    Notificações e Recuperação
+                  </span>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="email"
+                    value={editAdminEmail}
+                    onChange={(e) => setEditAdminEmail(e.target.value)}
+                    placeholder="ex: admin@litoralemmovimento.com.br"
+                    required
+                    className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-amber-400 focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Permissão no sistema (Pode ou não pode usar o sistema) */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Permissão de Uso do Sistema:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditAdminStatus('Ativo')}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
+                      editAdminStatus === 'Ativo'
+                        ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <CheckCircle
+                      className={`w-4 h-4 mt-0.5 shrink-0 ${
+                        editAdminStatus === 'Ativo' ? 'text-emerald-600' : 'text-slate-400'
+                      }`}
+                    />
+                    <div>
+                      <span className="block text-xs font-bold text-slate-900">
+                        Pode usar o sistema
+                      </span>
+                      <span className="block text-[11px] text-slate-500">
+                        Acesso liberado ao painel e reservas
+                      </span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditAdminStatus('Inativo')}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex items-start gap-2.5 ${
+                      editAdminStatus === 'Inativo'
+                        ? 'bg-red-50 border-red-500 ring-2 ring-red-500/20'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <UserX
+                      className={`w-4 h-4 mt-0.5 shrink-0 ${
+                        editAdminStatus === 'Inativo' ? 'text-red-600' : 'text-slate-400'
+                      }`}
+                    />
+                    <div>
+                      <span className="block text-xs font-bold text-slate-900">
+                        Não pode usar
+                      </span>
+                      <span className="block text-[11px] text-slate-500">
+                        Bloqueia login e operações
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Cargo */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Cargo / Função:
+                </label>
+                <input
+                  type="text"
+                  value={editAdminRole}
+                  onChange={(e) => setEditAdminRole(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-amber-400 focus:bg-white transition-colors"
+                />
+              </div>
+
+              {/* Nova Senha (Opcional) */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Nova Senha de Acesso (Opcional):
+                </label>
+                <input
+                  type="text"
+                  value={editAdminPassword}
+                  onChange={(e) => setEditAdminPassword(e.target.value)}
+                  placeholder="Deixe em branco para manter a senha atual"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-amber-400 focus:bg-white transition-colors font-mono"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Mínimo de 4 dígitos. Se informada, sincronizará com a aba Usuarios_Admin da planilha.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingAdminModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingAdmin}
+                  className="px-5 py-2.5 text-xs font-bold bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  {isSavingAdmin ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* NEW ADMIN MODAL */}
+      {isNewAdminModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 border border-slate-200 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 my-8">
+            <div className="border-b border-slate-100 pb-3 flex items-start justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full">
+                  Novo Membro
+                </span>
+                <h3 className="font-serif-display font-extrabold text-xl text-slate-900 mt-1">
+                  Cadastrar Administrador
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Crie um novo acesso administrativo sem foto com permissão de login no sistema.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewAdminModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewAdmin} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Usuário Curto:
+                  </label>
+                  <input
+                    type="text"
+                    value={newAdminUsername}
+                    onChange={(e) => setNewAdminUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
+                    placeholder="ex: carlos"
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-mono outline-none focus:border-amber-400 focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Nome Completo:
+                  </label>
+                  <input
+                    type="text"
+                    value={newAdminName}
+                    onChange={(e) => setNewAdminName(e.target.value)}
+                    placeholder="ex: Carlos Mendes"
+                    required
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-amber-400 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  E-mail Oficial:
+                </label>
+                <input
+                  type="email"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  placeholder="ex: carlos@litoralemmovimento.com.br"
+                  required
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-amber-400 focus:bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Cargo / Função:
+                  </label>
+                  <input
+                    type="text"
+                    value={newAdminRole}
+                    onChange={(e) => setNewAdminRole(e.target.value)}
+                    placeholder="ex: Gestão Operacional"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 outline-none focus:border-amber-400 focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Senha Inicial:
+                  </label>
+                  <input
+                    type="text"
+                    value={newAdminPassword}
+                    onChange={(e) => setNewAdminPassword(e.target.value)}
+                    placeholder="litoral2026"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-mono outline-none focus:border-amber-400 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Permissão Inicial:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewAdminStatus('Ativo')}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex items-center gap-2 ${
+                      newAdminStatus === 'Ativo'
+                        ? 'bg-emerald-50 border-emerald-500 font-bold text-emerald-900'
+                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs">Pode usar o sistema</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewAdminStatus('Inativo')}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex items-center gap-2 ${
+                      newAdminStatus === 'Inativo'
+                        ? 'bg-red-50 border-red-500 font-bold text-red-900'
+                        : 'bg-slate-50 border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <UserX className="w-4 h-4 text-red-600" />
+                    <span className="text-xs">Não pode usar</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsNewAdminModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingAdmin}
+                  className="px-5 py-2.5 text-xs font-bold bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  {isCreatingAdmin ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                  <span>Criar Administrador</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

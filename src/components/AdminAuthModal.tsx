@@ -89,6 +89,12 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
       admins.find((a) => a.username.toLowerCase() === cleanUser || a.id.toLowerCase() === cleanUser) ||
       admins.find((a) => a.username === selectedUsername);
 
+    if (targetAdmin && targetAdmin.status === 'Inativo') {
+      setIsLoading(false);
+      setError(`Acesso bloqueado: O usuário @${targetAdmin.username} está desativado e não tem permissão para usar o sistema.`);
+      return;
+    }
+
     try {
       // 1. Try Backend Authentication
       const res = await fetch('/api/auth/admin-login', {
@@ -108,8 +114,16 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
           name: data.adminName || cleanUser,
           role: 'Administrador',
           password: sanitizedPass,
+          email: data.email || targetAdmin?.email || '',
+          status: data.status || 'Ativo',
           mustChangePassword: data.mustChangePassword === true,
         };
+
+        if (userObj.status === 'Inativo') {
+          setIsLoading(false);
+          setError(`Acesso bloqueado: O usuário @${userObj.username} está configurado como 'Não pode usar o sistema'.`);
+          return;
+        }
 
         if (data.token) {
           sessionStorage.setItem('litoral_admin_token', data.token);
@@ -130,6 +144,13 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
         setPassword('');
         onSuccess();
         return;
+      } else {
+        const errData = await res.json().catch(() => null);
+        if (errData && errData.message && (res.status === 403 || errData.message.includes('bloqueado') || errData.message.includes('não pode usar'))) {
+          setIsLoading(false);
+          setError(errData.message);
+          return;
+        }
       }
     } catch {
       // Offline / standalone fallback
@@ -258,21 +279,35 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
               <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
                 {admins.map((adm) => {
                   const isSelected = adm.username.toLowerCase() === usernameInput.trim().toLowerCase();
+                  const isInactive = adm.status === 'Inativo';
                   return (
                     <button
                       key={adm.id}
                       type="button"
-                      onClick={() => handleSelectAdmin(adm)}
+                      onClick={() => {
+                        handleSelectAdmin(adm);
+                        if (isInactive) {
+                          setError(`O usuário @${adm.username} está bloqueado no sistema e não tem permissão de acesso.`);
+                        }
+                      }}
                       className={`px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer border ${
                         isSelected
-                          ? 'bg-amber-400 text-slate-950 font-bold border-amber-400 shadow-sm'
-                          : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+                          ? isInactive
+                            ? 'bg-red-500 text-white font-bold border-red-500 shadow-sm'
+                            : 'bg-amber-400 text-slate-950 font-bold border-amber-400 shadow-sm'
+                          : isInactive
+                            ? 'bg-slate-950/70 border-red-900/50 text-red-400 hover:border-red-700 opacity-80'
+                            : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
                       }`}
                     >
                       <User className="w-3 h-3" />
                       <span>{adm.username}</span>
-                      {adm.mustChangePassword && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      {isInactive ? (
+                        <span className="text-[10px] text-red-400 font-bold">• Bloqueado</span>
+                      ) : (
+                        adm.mustChangePassword && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        )
                       )}
                     </button>
                   );

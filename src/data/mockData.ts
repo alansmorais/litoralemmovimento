@@ -181,7 +181,6 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     email: 'alanpkmorais@gmail.com',
     role: 'Super Admin',
     phone: '(12) 98850-6597',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
     status: 'Ativo',
   },
   {
@@ -193,7 +192,6 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     email: 'eduardo@litoralemmovimento.com.br',
     role: 'Gestão Operacional',
     phone: '(12) 98850-6597',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
     status: 'Ativo',
   },
   {
@@ -205,7 +203,6 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     email: 'edivam@litoralemmovimento.com.br',
     role: 'Gestão de Frota',
     phone: '(12) 98850-6597',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
     status: 'Ativo',
   },
   {
@@ -217,7 +214,6 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     email: 'karine@litoralemmovimento.com.br',
     role: 'Gestão de Atendimento',
     phone: '(12) 98850-6597',
-    avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80',
     status: 'Ativo',
   },
   {
@@ -229,7 +225,6 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     email: 'michelly@litoralemmovimento.com.br',
     role: 'Gestão Administrativa',
     phone: '(12) 98850-6597',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
     status: 'Ativo',
   },
   {
@@ -241,7 +236,6 @@ export const ADMIN_ACCOUNTS: AdminAccount[] = [
     email: 'contato@litoralemmovimento.com.br',
     role: 'Gestão Geral',
     phone: '(12) 98850-6597',
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
     status: 'Ativo',
   },
 ];
