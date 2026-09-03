@@ -49,6 +49,9 @@ import {
   MessageSquare,
   Headphones,
   CheckCheck,
+  Zap,
+  ShieldCheck,
+  Layers,
 } from 'lucide-react';
 import { SuperAdminAuthModal } from './SuperAdminAuthModal';
 import {
@@ -66,7 +69,7 @@ import {
 
 interface AdminDashboardProps {
   onBackToSite: () => void;
-  onOpenDriverView: () => void;
+  onOpenDriverView?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -168,6 +171,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [lastGasSyncTime, setLastGasSyncTime] = useState<string | null>(() => {
     const ts = StorageService.getLastSyncTimestamp();
     return ts ? new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
+  });
+
+  // Super User Diagnostic & Self-Healing Sheet Structure state
+  const [sheetsStructure, setSheetsStructure] = useState<{
+    checked: boolean;
+    allOk: boolean;
+    missingSheets: string[];
+    headersMissing: string[];
+    sheets: Record<string, any>;
+    lastCheckTime?: string;
+  } | null>(null);
+  const [isCheckingStructure, setIsCheckingStructure] = useState(false);
+  const [isRepairingSheets, setIsRepairingSheets] = useState(false);
+  const [repairSuccessMessage, setRepairSuccessMessage] = useState<string | null>(null);
+  const [isSuperUserOverrideAll, setIsSuperUserOverrideAll] = useState(false);
+
+  // Reservation Super User Override Modal state
+  const [selectedResForOverride, setSelectedResForOverride] = useState<Reservation | null>(null);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideForm, setOverrideForm] = useState<{
+    status: TripStatus;
+    paymentStatus: any;
+    totalPrice: number;
+    depositAmount: number;
+    depositPaid: boolean;
+    assignedDriverId: string;
+    driverVehicle: string;
+    driverPlate: string;
+    driverPhone: string;
+    internalAdminNotes: string;
+    overrideReason: string;
+  }>({
+    status: 'Confirmado',
+    paymentStatus: 'Sinal 50% Pago (Confirmado)',
+    totalPrice: 0,
+    depositAmount: 0,
+    depositPaid: true,
+    assignedDriverId: '',
+    driverVehicle: 'Chevrolet Spin 7L (2025/2026)',
+    driverPlate: 'BRA-2026',
+    driverPhone: '(12) 99742-8859',
+    internalAdminNotes: '',
+    overrideReason: 'Ajuste operacional de contingência pelo Super Admin',
   });
 
   const handleUpdateSuperAdminPassword = async () => {
@@ -543,6 +589,81 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setSyncStatus('Comando de setup enviado para o Google Apps Script.');
     }
     setTimeout(() => setSyncStatus(null), 6000);
+  };
+
+  const handleCheckSheetsStructure = async () => {
+    setIsCheckingStructure(true);
+    setRepairSuccessMessage(null);
+    try {
+      const res = await StorageService.checkGoogleSheetsStructure(gasUrl);
+      setSheetsStructure({
+        checked: true,
+        allOk: res.allOk,
+        missingSheets: res.missingSheets || [],
+        headersMissing: res.headersMissing || [],
+        sheets: res.sheets || {},
+        lastCheckTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      });
+      if (res.allOk) {
+        setRepairSuccessMessage('Todas as abas e cabeçalhos foram verificados e estão íntegros!');
+      }
+    } catch (e: any) {
+      alert('Erro ao verificar estrutura das abas: ' + e.message);
+    } finally {
+      setIsCheckingStructure(false);
+    }
+  };
+
+  const handleRepairSheetsStructure = async () => {
+    if (!gasUrl) {
+      alert('Por favor, informe e salve a URL do Google Apps Script primeiro.');
+      return;
+    }
+    setIsRepairingSheets(true);
+    setRepairSuccessMessage(null);
+    try {
+      const res = await StorageService.repairGoogleSheetsHeadersAndTabs(gasUrl);
+      if (res.success) {
+        setRepairSuccessMessage(res.message || 'Todas as abas e cabeçalhos foram reparados/criados com sucesso!');
+        await handleCheckSheetsStructure();
+      } else {
+        alert('Falha ao auto-criar abas: ' + res.message);
+      }
+    } catch (err: any) {
+      alert('Erro ao reparar abas: ' + err.message);
+    } finally {
+      setIsRepairingSheets(false);
+    }
+  };
+
+  const handleSaveSuperUserOverride = () => {
+    if (!selectedResForOverride) return;
+    const targetDriver = drivers.find((d) => d.id === overrideForm.assignedDriverId);
+    const updated = StorageService.overrideReservation(
+      selectedResForOverride.id,
+      {
+        status: overrideForm.status,
+        paymentStatus: overrideForm.paymentStatus,
+        totalPrice: Number(overrideForm.totalPrice),
+        depositAmount: Number(overrideForm.depositAmount),
+        depositPaid: overrideForm.depositPaid,
+        assignedDriverId: overrideForm.assignedDriverId,
+        assignedDriverName: targetDriver?.name || selectedResForOverride.assignedDriverName || '',
+        driverVehicle: overrideForm.driverVehicle,
+        driverPlate: overrideForm.driverPlate,
+        driverPhone: overrideForm.driverPhone,
+        internalAdminNotes: `${overrideForm.internalAdminNotes ? overrideForm.internalAdminNotes + ' | ' : ''}Motivo SU: ${overrideForm.overrideReason}`,
+      },
+      activeAdmin.name
+    );
+
+    if (updated) {
+      loadData();
+      setShowOverrideModal(false);
+      setSelectedResForOverride(null);
+      setSyncStatus(`Reserva #${selectedResForOverride.code} sobrescrita com sucesso pelo Super User!`);
+      setTimeout(() => setSyncStatus(null), 4000);
+    }
   };
 
   const handleCopyGasCode = () => {
@@ -1038,22 +1159,21 @@ function createJsonResponse(data) {
               </select>
             </div>
 
-            {/* Quick Driver App Launch with Super User Test Mode */}
-            <button
-              onClick={() => {
-                StorageService.setSuperUserTesting(true);
-                if (!StorageService.getLoggedDriverId()) {
-                  StorageService.setLoggedDriverId('drv-01');
-                }
-                onOpenDriverView();
-              }}
-              className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-              title="Acessar como Super User para testar a visão e escala de qualquer motorista"
-            >
-              <Car className="w-3.5 h-3.5" />
-              <span>Testar App do Motorista</span>
-              <span className="bg-amber-400 text-slate-950 text-[9px] px-1.5 py-0.2 rounded font-black">SUPER USER</span>
-            </button>
+            {/* Super User Diagnostic & Self-Healing Sheets Tool */}
+            {isAlanMorais && (
+              <button
+                onClick={() => {
+                  setShowDevModal(true);
+                  handleCheckSheetsStructure();
+                }}
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                title="Diagnóstico Super User: Checar e auto-criar abas e cabeçalhos no Google Sheets"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-950" />
+                <span>Super User • Abas & Override</span>
+                <span className="bg-slate-950 text-amber-300 text-[9px] px-1.5 py-0.2 rounded font-black">SU</span>
+              </button>
+            )}
 
             {/* Salvar TUDO no Banco de Dados em Nuvem Button */}
             <button
@@ -1546,6 +1666,33 @@ function createJsonResponse(data) {
                           {/* Actions */}
                           <td className="py-3.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">
+                              {/* Super User Override Button */}
+                              {isAlanMorais && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedResForOverride(res);
+                                    setOverrideForm({
+                                      status: res.status,
+                                      paymentStatus: res.paymentStatus,
+                                      totalPrice: res.totalPrice,
+                                      depositAmount: res.depositAmount || Number((res.totalPrice * 0.5).toFixed(2)),
+                                      depositPaid: !!res.depositPaid,
+                                      assignedDriverId: res.assignedDriverId || '',
+                                      driverVehicle: res.driverVehicle || 'Chevrolet Spin 7L (2025/2026)',
+                                      driverPlate: res.driverPlate || 'SP-LIT7A24',
+                                      driverPhone: res.driverPhone || '(12) 98877-6655',
+                                      internalAdminNotes: res.internalAdminNotes || '',
+                                      overrideReason: 'Ajuste operacional direto pelo Super Admin',
+                                    });
+                                    setShowOverrideModal(true);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-500 hover:text-slate-950 text-amber-800 border border-amber-300 cursor-pointer transition-colors"
+                                  title="⚡ Super User Override Total: Modificar qualquer campo com privilégio total"
+                                >
+                                  <Zap className="w-3.5 h-3.5 fill-amber-400" />
+                                </button>
+                              )}
+
                               {/* Internal notes button */}
                               <button
                                 onClick={() => {
@@ -2547,6 +2694,118 @@ function createJsonResponse(data) {
               </div>
             </div>
 
+            {/* Super User: Self-Healing & Diagnostic for Sheets Tabs & Headers */}
+            <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl border border-amber-500/40 space-y-4 shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold shadow-xs">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-sm text-white">
+                        Diagnóstico & Auto-Criação de Abas e Cabeçalhos (Sheets)
+                      </h4>
+                      <span className="text-[10px] bg-amber-400/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-400/40">
+                        Super User Exclusivo
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                      Verifica e auto-cria abas ou cabeçalhos faltantes diretamente no Google Sheets sem mexer em código
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleCheckSheetsStructure}
+                    disabled={isCheckingStructure || !gasUrl}
+                    className="bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-700"
+                    title="Verifica se todas as abas e cabeçalhos estão presentes na planilha"
+                  >
+                    {isCheckingStructure ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5 text-sky-400" />}
+                    <span>{isCheckingStructure ? 'Verificando...' : 'Verificar Abas'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRepairSheetsStructure}
+                    disabled={isRepairingSheets || !gasUrl}
+                    className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                    title="Cria ou restaura automaticamente todas as abas e cabeçalhos faltantes no Google Sheets"
+                  >
+                    {isRepairingSheets ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+                    <span>{isRepairingSheets ? 'Criando/Reparando...' : 'Auto-Criar / Reparar Abas'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Display of Expected Sheets */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1">
+                {[
+                  { name: 'Reservas', desc: '27 colunas, fórmulas, cores' },
+                  { name: 'Motoristas', desc: 'Frota Spin 7L e repasse PIX' },
+                  { name: 'Usuarios_Admin', desc: 'Acessos e senhas de equipe' },
+                  { name: 'Mensagens_SAC', desc: 'Contatos e dúvidas do site' },
+                  { name: 'Dashboard', desc: 'Métricas e faturamento' },
+                  { name: 'Configuracoes', desc: 'WhatsApp, PIX, Senha Master' },
+                ].map((sh) => {
+                  const sheetInfo = sheetsStructure?.sheets?.[sh.name];
+                  const isMissing = sheetsStructure?.missingSheets?.includes(sh.name);
+                  const isOk = sheetsStructure?.checked && !isMissing && sheetInfo?.exists !== false;
+                  return (
+                    <div
+                      key={sh.name}
+                      className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between ${
+                        isOk
+                          ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                          : isMissing
+                          ? 'bg-red-950/40 border-red-500/40 text-red-200'
+                          : 'bg-slate-950 border-slate-800 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-white text-[11px] truncate">{sh.name}</span>
+                        {isOk && <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                        {isMissing && <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+                        {!sheetsStructure?.checked && <span className="text-[9px] text-slate-500">Padrão</span>}
+                      </div>
+                      <span className="text-[10px] text-slate-400 leading-tight line-clamp-2">{sh.desc}</span>
+                      {sheetInfo?.headerCount && (
+                        <span className="text-[9px] text-emerald-400 mt-1 font-mono">✓ {sheetInfo.headerCount} colunas</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {repairSuccessMessage && (
+                <div className="p-3 rounded-xl text-xs flex items-center gap-2 bg-emerald-950/60 border border-emerald-500/50 text-emerald-300">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{repairSuccessMessage}</span>
+                </div>
+              )}
+
+              {sheetsStructure?.missingSheets && sheetsStructure.missingSheets.length > 0 && (
+                <div className="p-3 rounded-xl text-xs flex items-center justify-between gap-2 bg-amber-950/60 border border-amber-500/50 text-amber-300">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>
+                      Abas faltantes na planilha: <strong>{sheetsStructure.missingSheets.join(', ')}</strong>.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRepairSheetsStructure}
+                    className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs cursor-pointer shrink-0"
+                  >
+                    Criar Agora
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Connection Configuration Box */}
             <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl border border-slate-800 space-y-4">
               <div className="flex items-center justify-between">
@@ -3122,6 +3381,237 @@ function doPost(e) { ... }`}</pre>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* SUPER USER OVERRIDE MODAL */}
+      {showOverrideModal && selectedResForOverride && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 border border-amber-300 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 my-8">
+            <div className="border-b border-amber-100 pb-3 flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full">
+                    ⚡ Super User Override
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-600">
+                    Voucher: #{selectedResForOverride.code}
+                  </span>
+                </div>
+                <h3 className="font-serif-display font-extrabold text-xl text-slate-900 mt-1">
+                  Sobrescrita Forçada da Reserva
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Cliente: <strong>{selectedResForOverride.customerName}</strong> ({selectedResForOverride.customerPhone}) • {selectedResForOverride.origin} → {selectedResForOverride.destination}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOverrideModal(false);
+                  setSelectedResForOverride(null);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Status Section */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <div className="space-y-1">
+                  <label className="block font-bold text-slate-700">Status Operacional:</label>
+                  <select
+                    value={overrideForm.status}
+                    onChange={(e) => setOverrideForm({ ...overrideForm, status: e.target.value as TripStatus })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold outline-none cursor-pointer"
+                  >
+                    <option value="Pendente">⏳ Pendente</option>
+                    <option value="Confirmado">✅ Confirmado</option>
+                    <option value="A caminho">🚗 A caminho</option>
+                    <option value="Em andamento">🛣️ Em andamento</option>
+                    <option value="Concluído">🏁 Concluído</option>
+                    <option value="Cancelado">❌ Cancelado</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block font-bold text-slate-700">Status do Pagamento:</label>
+                  <select
+                    value={overrideForm.paymentStatus}
+                    onChange={(e) => setOverrideForm({ ...overrideForm, paymentStatus: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold outline-none cursor-pointer"
+                  >
+                    <option value="Pendente">Pendente</option>
+                    <option value="Sinal 50% Pago (Confirmado)">Sinal 50% Pago (Confirmado)</option>
+                    <option value="Pago Total">Pago Total (100%)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Financial Section */}
+              <div className="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200 space-y-2.5">
+                <span className="font-bold text-slate-900 block text-xs">Valores Financeiros (R$):</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="block font-medium text-slate-600 text-[11px]">Valor Total (R$):</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={overrideForm.totalPrice}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setOverrideForm({
+                          ...overrideForm,
+                          totalPrice: val,
+                          depositAmount: Number((val * 0.5).toFixed(2)),
+                        });
+                      }}
+                      className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold outline-none font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block font-medium text-slate-600 text-[11px]">Sinal 50% (R$):</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={overrideForm.depositAmount}
+                      onChange={(e) => setOverrideForm({ ...overrideForm, depositAmount: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold outline-none font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block font-medium text-slate-600 text-[11px]">Sinal 50% Pago?:</label>
+                    <div className="flex gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setOverrideForm({ ...overrideForm, depositPaid: true })}
+                        className={`flex-1 py-1.5 rounded-xl font-bold cursor-pointer transition-colors text-center ${
+                          overrideForm.depositPaid ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-700'
+                        }`}
+                      >
+                        ✓ Sim
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOverrideForm({ ...overrideForm, depositPaid: false })}
+                        className={`flex-1 py-1.5 rounded-xl font-bold cursor-pointer transition-colors text-center ${
+                          !overrideForm.depositPaid ? 'bg-amber-600 text-white' : 'bg-white border border-slate-200 text-slate-700'
+                        }`}
+                      >
+                        ✕ Não
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Driver and Vehicle Assignment */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5">
+                <span className="font-bold text-slate-900 block text-xs">Alocação de Motorista e Veículo:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block font-medium text-slate-600 text-[11px]">Motorista Oficial:</label>
+                    <select
+                      value={overrideForm.assignedDriverId}
+                      onChange={(e) => {
+                        const drv = drivers.find((d) => d.id === e.target.value);
+                        setOverrideForm({
+                          ...overrideForm,
+                          assignedDriverId: e.target.value,
+                          driverVehicle: drv?.vehicleModel || overrideForm.driverVehicle,
+                          driverPlate: drv?.plate || overrideForm.driverPlate,
+                          driverPhone: drv?.phone || overrideForm.driverPhone,
+                        });
+                      }}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none cursor-pointer"
+                    >
+                      <option value="">Sem Motorista</option>
+                      {drivers.map((drv) => (
+                        <option key={drv.id} value={drv.id}>
+                          {drv.name} ({drv.phone})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block font-medium text-slate-600 text-[11px]">Veículo & Modelo:</label>
+                    <input
+                      type="text"
+                      value={overrideForm.driverVehicle}
+                      onChange={(e) => setOverrideForm({ ...overrideForm, driverVehicle: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block font-medium text-slate-600 text-[11px]">Placa do Veículo:</label>
+                    <input
+                      type="text"
+                      value={overrideForm.driverPlate}
+                      onChange={(e) => setOverrideForm({ ...overrideForm, driverPlate: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block font-medium text-slate-600 text-[11px]">WhatsApp do Motorista:</label>
+                    <input
+                      type="text"
+                      value={overrideForm.driverPhone}
+                      onChange={(e) => setOverrideForm({ ...overrideForm, driverPhone: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Audit & Notes */}
+              <div className="space-y-1.5">
+                <label className="block font-bold text-slate-700">Justificativa do Override (Auditoria):</label>
+                <input
+                  type="text"
+                  value={overrideForm.overrideReason}
+                  onChange={(e) => setOverrideForm({ ...overrideForm, overrideReason: e.target.value })}
+                  placeholder="Ex: Correção de horário a pedido do cliente via WhatsApp"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block font-bold text-slate-700">Observações Internas:</label>
+                <textarea
+                  rows={2}
+                  value={overrideForm.internalAdminNotes}
+                  onChange={(e) => setOverrideForm({ ...overrideForm, internalAdminNotes: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none focus:border-amber-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOverrideModal(false);
+                  setSelectedResForOverride(null);
+                }}
+                className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSuperUserOverride}
+                className="px-5 py-2.5 text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5 fill-slate-950" />
+                <span>Aplicar Sobrescrita Forçada (SU)</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

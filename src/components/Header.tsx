@@ -3,12 +3,11 @@ import { BRAND_IMAGES, COMPANY_CONTACT } from '../data/mockData';
 import { Calendar, Phone, MapPin, Menu, X, Search, Sparkles, Car, Clock, Lock } from 'lucide-react';
 
 interface HeaderProps {
-  currentView: 'landing' | 'admin' | 'driver' | 'tracking';
-  setCurrentView: (view: 'landing' | 'admin' | 'driver' | 'tracking') => void;
+  currentView: 'landing' | 'admin';
+  setCurrentView: (view: 'landing' | 'admin') => void;
   onOpenTrackModal: () => void;
   onOpenAIModal: () => void;
   onOpenAdmin: () => void;
-  onOpenDriver: () => void;
   onScrollToBooking: () => void;
   onOpenContactModal?: () => void;
 }
@@ -19,7 +18,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTrackModal,
   onOpenAIModal,
   onOpenAdmin,
-  onOpenDriver,
   onScrollToBooking,
   onOpenContactModal,
 }) => {
@@ -52,16 +50,6 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 sm:gap-4 flex-shrink-0">
-            <button
-              onClick={onOpenDriver}
-              id="header-driver-portal-btn"
-              className="inline-flex items-center gap-1.5 text-[11px] bg-sky-950/90 hover:bg-sky-900 text-sky-300 hover:text-sky-200 px-2.5 py-0.5 rounded-full border border-sky-600/50 transition-colors cursor-pointer font-semibold shadow-xs"
-              title="Acesso direto ao App do Motorista"
-            >
-              <Car className="w-3 h-3 text-sky-400" />
-              <span>App Motorista</span>
-            </button>
-
             <button
               onClick={onOpenAdmin}
               id="header-admin-portal-btn"
@@ -321,17 +309,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>Central de Atendimento & Dúvidas (Fale Conosco)</span>
                 </button>
               )}
-
-              <button
-                onClick={() => {
-                  onOpenDriver();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full flex items-center gap-2 text-left py-2.5 px-3 rounded-xl bg-sky-950/80 text-sky-300 border border-sky-600/40 hover:border-sky-400 font-semibold text-xs transition-colors cursor-pointer"
-              >
-                <Car className="w-4 h-4 text-sky-400" />
-                <span>Aplicativo do Motorista (Cockpit Veicular)</span>
-              </button>
 
               <button
                 onClick={() => {

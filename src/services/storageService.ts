@@ -141,6 +141,10 @@ export class StorageService {
     }
   }
 
+  public static getGasUrl(): string {
+    return this.getGoogleScriptUrl();
+  }
+
   public static setGoogleScriptUrl(url: string): void {
     try {
       localStorage.setItem(GOOGLE_SCRIPT_STORAGE_KEY, url.trim());
@@ -192,7 +196,9 @@ export class StorageService {
       | 'updateDriverPassword'
       | 'updateAdminPassword'
       | 'updateAdminProfile'
-      | 'confirmBoardingPayment',
+      | 'confirmBoardingPayment'
+      | 'overrideReservation'
+      | 'updateReservation',
     payload: any
   ): Promise<{ success: boolean; message?: string }> {
     const scriptUrl = this.getGoogleScriptUrl();
@@ -997,20 +1003,157 @@ export class StorageService {
     }
   }
 
-  public static getPreferredView(): 'landing' | 'admin' | 'driver' | null {
+  public static getPreferredView(): 'landing' | 'admin' | null {
     try {
-      return (localStorage.getItem('litoral_preferred_view') as any) || null;
+      const v = localStorage.getItem('litoral_preferred_view');
+      if (v === 'admin' || v === 'landing') return v;
+      return null;
     } catch {
       return null;
     }
   }
 
-  public static setPreferredView(view: 'landing' | 'admin' | 'driver'): void {
+  public static setPreferredView(view: 'landing' | 'admin'): void {
     try {
       localStorage.setItem('litoral_preferred_view', view);
     } catch (e) {
       console.error('Failed to set preferred view', e);
     }
+  }
+
+  /**
+   * Super User: Verificar integridade de todas as abas e cabeçalhos no Google Sheets
+   */
+  public static async checkGoogleSheetsStructure(customGasUrl?: string): Promise<{
+    success: boolean;
+    allOk: boolean;
+    message: string;
+    missingSheets?: string[];
+    headersMissing?: string[];
+    sheets?: Record<string, any>;
+  }> {
+    const url = customGasUrl || this.getGasUrl();
+    if (!url) {
+      return { success: false, allOk: false, message: 'URL do Google Apps Script não configurada.' };
+    }
+
+    try {
+      const targetUrl = url.includes('?') ? `${url}&action=checkStructure` : `${url}?action=checkStructure`;
+      const res = await fetch(targetUrl, { method: 'GET' });
+      const data = await res.json();
+
+      return {
+        success: true,
+        allOk: !!data.allOk,
+        message: data.allOk
+          ? 'Todas as 6 abas e cabeçalhos foram verificados com sucesso no Google Sheets!'
+          : `Atenção: Existem abas ou cabeçalhos pendentes na planilha.`,
+        missingSheets: data.missingSheets || [],
+        headersMissing: data.headersMissing || [],
+        sheets: data.sheets || {},
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        allOk: false,
+        message: `Falha na verificação da estrutura: ${err.message || 'Erro de rede ou URL'}.`,
+      };
+    }
+  }
+
+  /**
+   * Super User: Criar / Reparar Abas e Cabeçalhos Faltantes no Google Sheets
+   */
+  public static async repairGoogleSheetsHeadersAndTabs(
+    customGasUrl?: string,
+    sheetName?: string
+  ): Promise<{ success: boolean; message: string; repairedSheets?: string[] }> {
+    const url = customGasUrl || this.getGasUrl();
+    if (!url) {
+      return { success: false, message: 'URL do Google Apps Script não configurada.' };
+    }
+
+    try {
+      const paramSheet = sheetName ? `&sheetName=${encodeURIComponent(sheetName)}` : '';
+      const targetUrl = url.includes('?')
+        ? `${url}&action=repairHeaders${paramSheet}`
+        : `${url}?action=repairHeaders${paramSheet}`;
+
+      const res = await fetch(targetUrl, { method: 'GET' });
+      const data = await res.json();
+
+      return {
+        success: data.status === 'success' || !!data.repairedSheets,
+        message: data.message || 'Abas e cabeçalhos configurados na planilha!',
+        repairedSheets: data.repairedSheets || [],
+      };
+    } catch (err: any) {
+      // Fallback via POST if GET blocked
+      try {
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'repairHeaders', sheetName }),
+        });
+        return {
+          success: true,
+          message: 'Solicitação de reparo de abas e cabeçalhos enviada ao Google Sheets!',
+        };
+      } catch (postErr: any) {
+        return {
+          success: false,
+          message: `Erro ao reparar abas: ${postErr.message || err.message}`,
+        };
+      }
+    }
+  }
+
+  /**
+   * Super User: Sobrescrever Reserva com Permissão Total (Force Override)
+   */
+  public static overrideReservation(
+    reservationId: string,
+    overrides: Partial<Reservation>,
+    superUserName: string = 'Alan Morais (Super User)'
+  ): Reservation | null {
+    const list = this.getReservations();
+    const idx = list.findIndex((r) => r.id === reservationId);
+    if (idx === -1) return null;
+
+    const auditTimestamp = new Date().toLocaleString('pt-BR');
+    const overrideNote = `[SU OVERRIDE por ${superUserName} em ${auditTimestamp}]`;
+    const updatedNotes = overrides.internalAdminNotes
+      ? `${overrides.internalAdminNotes} | ${overrideNote}`
+      : list[idx].internalAdminNotes
+      ? `${list[idx].internalAdminNotes} | ${overrideNote}`
+      : overrideNote;
+
+    list[idx] = {
+      ...list[idx],
+      ...overrides,
+      internalAdminNotes: updatedNotes,
+    };
+
+    // Re-verify remaining balance if prices changed
+    if (overrides.totalPrice !== undefined || overrides.depositAmount !== undefined) {
+      const t = overrides.totalPrice ?? list[idx].totalPrice;
+      const d = overrides.depositAmount ?? list[idx].depositAmount;
+      list[idx].remainingAmount = Number((t - d).toFixed(2));
+    }
+
+    this.saveReservations(list);
+
+    // Sync to Node.js backend
+    fetch(`/api/reservations/${reservationId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(list[idx]),
+    }).catch(() => {});
+
+    // Sync to Google Sheets
+    this.syncToGoogleSheets('updateReservation', list[idx]);
+
+    return list[idx];
   }
 
   public static confirmBoardingPayment(reservationId: string, paymentMethod: 'PIX' | 'Cartão' | 'Dinheiro' = 'PIX'): Reservation | null {

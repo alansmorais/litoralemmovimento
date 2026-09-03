@@ -702,6 +702,89 @@ function doGet(e) {
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+  // Endpoint: Verificar Integridade das Abas e Cabeçalhos (Diagnóstico Super User)
+  if (action === 'checkStructure' || action === 'verifySheets') {
+    var expectedSheets = [SHEET_RESERVAS, SHEET_MOTORISTAS, SHEET_USUARIOS_ADMIN, SHEET_SAC, SHEET_DASHBOARD, SHEET_CONFIG];
+    var results = {};
+    var missing = [];
+    var headersMissing = [];
+
+    for (var sIdx = 0; sIdx < expectedSheets.length; sIdx++) {
+      var sName = expectedSheets[sIdx];
+      var s = ss.getSheetByName(sName);
+      if (!s) {
+        results[sName] = { exists: false, headersOk: false, rowCount: 0, lastCol: 0 };
+        missing.push(sName);
+      } else {
+        var lastCol = s.getLastColumn();
+        var rowCount = s.getLastRow();
+        var hasHeaders = lastCol > 0 && rowCount >= 1;
+        var firstRow = hasHeaders ? s.getRange(1, 1, 1, Math.min(lastCol, 30)).getValues()[0] : [];
+        var headersOk = firstRow.length > 0 && String(firstRow[0]).trim() !== '';
+
+        if (!headersOk) {
+          headersMissing.push(sName);
+        }
+
+        results[sName] = {
+          exists: true,
+          headersOk: headersOk,
+          rowCount: rowCount,
+          lastCol: lastCol,
+          headersCount: firstRow.length,
+          sampleHeaders: firstRow.slice(0, 5)
+        };
+      }
+    }
+
+    return createJsonResponse({
+      status: 'ok',
+      allOk: missing.length === 0 && headersMissing.length === 0,
+      missingSheets: missing,
+      headersMissing: headersMissing,
+      sheets: results,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Endpoint: Reparar Cabeçalhos e Criar Abas Faltantes (Auto-Repair Super User)
+  if (action === 'repairHeaders' || action === 'createMissingTabs') {
+    var repaired = [];
+    var targetSheet = (e && e.parameter && e.parameter.sheetName) ? e.parameter.sheetName : null;
+
+    if (!targetSheet || targetSheet === SHEET_RESERVAS) {
+      setupReservasSheet(ss);
+      repaired.push(SHEET_RESERVAS);
+    }
+    if (!targetSheet || targetSheet === SHEET_MOTORISTAS) {
+      setupMotoristasSheet(ss);
+      repaired.push(SHEET_MOTORISTAS);
+    }
+    if (!targetSheet || targetSheet === SHEET_USUARIOS_ADMIN) {
+      setupUsuariosAdminSheet(ss);
+      repaired.push(SHEET_USUARIOS_ADMIN);
+    }
+    if (!targetSheet || targetSheet === SHEET_SAC) {
+      setupSacSheet(ss);
+      repaired.push(SHEET_SAC);
+    }
+    if (!targetSheet || targetSheet === SHEET_DASHBOARD) {
+      setupDashboardSheet(ss);
+      repaired.push(SHEET_DASHBOARD);
+    }
+    if (!targetSheet || targetSheet === SHEET_CONFIG) {
+      setupConfigSheet(ss);
+      repaired.push(SHEET_CONFIG);
+    }
+
+    return createJsonResponse({
+      status: 'success',
+      message: 'Abas e cabeçalhos reparados/criados com sucesso!',
+      repairedSheets: repaired,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   // Endpoint: Retornar Configurações (com proteção de senhas)
   if (action === 'getConfig') {
     var sheetConf = ss.getSheetByName(SHEET_CONFIG) || setupConfigSheet(ss);
@@ -876,6 +959,16 @@ function doPost(e) {
     }
 
     var action = payload.action || 'createReservation';
+
+    // Super User: Reparar Abas e Cabeçalhos Faltantes
+    if (action === 'repairHeaders' || action === 'createMissingTabs') {
+      var setupRes = setupAllSheets();
+      return createJsonResponse({
+        status: 'success',
+        message: 'Todas as abas e cabeçalhos foram verificados e reparados pelo Super User.',
+        details: setupRes
+      });
+    }
 
     // 1. Criar Nova Reserva
     if (action === 'createReservation') {

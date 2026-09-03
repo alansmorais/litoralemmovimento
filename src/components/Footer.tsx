@@ -5,14 +5,12 @@ import { ShieldCheck, Wind, Clock, MapPin, Phone, Mail, Lock, Smartphone } from 
 interface FooterProps {
   onScrollToBooking: () => void;
   onOpenAdmin: () => void;
-  onOpenDriver: () => void;
   onOpenContactModal?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onScrollToBooking,
   onOpenAdmin,
-  onOpenDriver,
   onOpenContactModal,
 }) => {
   return (
@@ -109,14 +107,6 @@ export const Footer: React.FC<FooterProps> = ({
               >
                 <Lock className="w-3.5 h-3.5 text-amber-400" />
                 <span>Painel de Controle Admin</span>
-              </button>
-              <button
-                onClick={onOpenDriver}
-                className="bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white p-2.5 rounded-xl text-left border border-slate-800 hover:border-slate-700 transition-all cursor-pointer flex items-center gap-2 text-xs"
-                id="footer-driver-btn"
-              >
-                <Smartphone className="w-3.5 h-3.5 text-sky-400" />
-                <span>Aplicativo do Motorista</span>
               </button>
             </div>
           </div>

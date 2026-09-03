@@ -14,41 +14,32 @@ import { FinalCTASection } from './components/FinalCTASection';
 import { Footer } from './components/Footer';
 import { FloatingContactButton } from './components/FloatingContactButton';
 import { AdminDashboard } from './components/AdminDashboard';
-import { DriverAppView } from './components/DriverAppView';
 import { TrackRideModal } from './components/TrackRideModal';
 import { AISmartAssistantModal } from './components/AISmartAssistantModal';
 import { ContactSupportModal } from './components/ContactSupportModal';
 import { AdminAuthModal } from './components/AdminAuthModal';
-import { DriverAuthModal } from './components/DriverAuthModal';
 import { Reservation, TripType } from './types';
 import { StorageService } from './services/storageService';
 
-function getInitialView(): 'landing' | 'admin' | 'driver' {
+function getInitialView(): 'landing' | 'admin' {
   try {
-    // 1. Check URL parameters: ?view=driver or ?app=driver or ?mode=driver
+    // 1. Check URL parameters: ?view=admin or ?mode=admin
     const params = new URLSearchParams(window.location.search);
     const viewParam = (params.get('view') || params.get('app') || params.get('mode') || '').toLowerCase();
-    if (viewParam === 'driver' || viewParam === 'motorista' || viewParam === 'pista') return 'driver';
     if (viewParam === 'admin' || viewParam === 'gestao') return 'admin';
     if (viewParam === 'landing' || viewParam === 'cliente' || viewParam === 'site') return 'landing';
 
-    // 2. Check URL Hash: #motorista, #driver, #pista, #admin, #gestao
+    // 2. Check URL Hash: #admin, #gestao
     const hash = window.location.hash.toLowerCase();
-    if (hash === '#driver' || hash === '#motorista' || hash === '#pista') return 'driver';
     if (hash === '#admin' || hash === '#gestao') return 'admin';
 
-    // 3. Check URL Pathname: /motorista, /driver, /admin
+    // 3. Check URL Pathname: /admin
     const path = window.location.pathname.toLowerCase();
-    if (path.includes('/motorista') || path.includes('/driver')) return 'driver';
     if (path.includes('/admin')) return 'admin';
 
-    // 4. Standalone PWA detection or saved preference
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
+    // 4. Saved preference
     const preferred = StorageService.getPreferredView();
-    if (isStandalone && preferred === 'driver') return 'driver';
-    if (preferred === 'driver' && StorageService.getLoggedDriverId()) return 'driver';
+    if (preferred === 'admin') return 'admin';
   } catch (e) {
     // Ignore error in non-browser environments
   }
@@ -56,7 +47,7 @@ function getInitialView(): 'landing' | 'admin' | 'driver' {
 }
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'admin' | 'driver' | 'tracking'>(getInitialView);
+  const [currentView, setCurrentView] = useState<'landing' | 'admin'>(getInitialView);
   const [selectedDestination, setSelectedDestination] = useState<string>('São Sebastião');
   const [preloadRoute, setPreloadRoute] = useState<{
     origin: string;
@@ -69,7 +60,6 @@ export default function App() {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
-  const [isDriverAuthOpen, setIsDriverAuthOpen] = useState(false);
 
   // Sync with URL changes, hashes, and navigation events
   useEffect(() => {
@@ -92,11 +82,9 @@ export default function App() {
         viewParam === 'driver' ||
         viewParam === 'motorista'
       ) {
-        const isAuth = !!StorageService.getLoggedDriverId();
-        setCurrentView('driver');
-        if (!isAuth) {
-          setIsDriverAuthOpen(true);
-        }
+        // Driver app is standalone; redirect cleanly to reservations
+        window.location.hash = 'reservas';
+        setCurrentView('landing');
       } else if (hash === '#rastreio' || hash === '#tracking') {
         setIsTrackModalOpen(true);
       } else if (hash === '#reservas' || hash === '#cliente' || hash === '#publico') {
@@ -116,7 +104,7 @@ export default function App() {
     };
   }, []);
 
-  const handleSelectSystem = (view: 'landing' | 'admin' | 'driver') => {
+  const handleSelectSystem = (view: 'landing' | 'admin') => {
     StorageService.setPreferredView(view);
     if (view === 'landing') {
       window.location.hash = 'reservas';
@@ -130,14 +118,6 @@ export default function App() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setIsAdminAuthOpen(true);
-      }
-    } else if (view === 'driver') {
-      const isAuth = !!StorageService.getLoggedDriverId();
-      window.location.hash = 'motorista';
-      setCurrentView('driver');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (!isAuth) {
-        setIsDriverAuthOpen(true);
       }
     }
   };
@@ -164,10 +144,6 @@ export default function App() {
     handleSelectSystem('admin');
   };
 
-  const handleOpenDriver = () => {
-    handleSelectSystem('driver');
-  };
-
   const handleAdminAuthSuccess = () => {
     setIsAdminAuthOpen(false);
     window.location.hash = 'admin';
@@ -175,35 +151,9 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDriverAuthSuccess = () => {
-    setIsDriverAuthOpen(false);
-    StorageService.setPreferredView('driver');
-    window.location.hash = 'motorista';
-    setCurrentView('driver');
-    window.dispatchEvent(new CustomEvent('driver_auth_changed'));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleLogoutDriver = () => {
-    StorageService.setLoggedDriverId(null);
-    StorageService.setPreferredView('landing');
-    setIsDriverAuthOpen(true);
-  };
-
-  const handleSwitchDriver = () => {
-    setIsDriverAuthOpen(true);
-  };
-
   const handleLogoutAdmin = () => {
     sessionStorage.removeItem('litoral_admin_auth');
     sessionStorage.removeItem('litoral_admin_auth_time');
-    StorageService.setPreferredView('landing');
-    window.location.hash = 'reservas';
-    setCurrentView('landing');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleBackFromDriver = () => {
     StorageService.setPreferredView('landing');
     window.location.hash = 'reservas';
     setCurrentView('landing');
@@ -226,23 +176,22 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between overflow-x-hidden">
-      {/* 1. Header - Visible on customer landing and admin, hidden on dedicated driver mobile cockpit */}
-      {currentView !== 'driver' && (
-        <Header
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          onOpenTrackModal={() => handleOpenTrackModal()}
-          onOpenAIModal={() => setIsAIModalOpen(true)}
-          onOpenAdmin={handleOpenAdmin}
-          onOpenDriver={handleOpenDriver}
-          onScrollToBooking={scrollToBooking}
-          onOpenContactModal={() => setIsContactModalOpen(true)}
-        />
-      )}
+    <div
+      className="w-full min-h-[100dvh] flex flex-col overflow-x-hidden bg-slate-50 text-slate-900 justify-between"
+    >
+      {/* 1. Header */}
+      <Header
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+        onOpenTrackModal={() => handleOpenTrackModal()}
+        onOpenAIModal={() => setIsAIModalOpen(true)}
+        onOpenAdmin={handleOpenAdmin}
+        onScrollToBooking={scrollToBooking}
+        onOpenContactModal={() => setIsContactModalOpen(true)}
+      />
 
       {/* Main Content Area based on active view */}
-      <main className="flex-1">
+      <main className="flex-1 flex flex-col w-full">
         {currentView === 'landing' && (
           <>
             {/* 2. Hero Section */}
@@ -301,7 +250,6 @@ export default function App() {
             <Footer
               onScrollToBooking={scrollToBooking}
               onOpenAdmin={handleOpenAdmin}
-              onOpenDriver={handleOpenDriver}
               onOpenContactModal={() => setIsContactModalOpen(true)}
             />
 
@@ -313,16 +261,6 @@ export default function App() {
         {currentView === 'admin' && (
           <AdminDashboard
             onBackToSite={handleLogoutAdmin}
-            onOpenDriverView={handleOpenDriver}
-          />
-        )}
-
-        {currentView === 'driver' && (
-          <DriverAppView
-            onBackToSite={handleBackFromDriver}
-            onOpenAdmin={handleOpenAdmin}
-            onLogout={handleLogoutDriver}
-            onSwitchDriver={handleSwitchDriver}
           />
         )}
       </main>
@@ -351,17 +289,6 @@ export default function App() {
         isOpen={isAdminAuthOpen}
         onClose={() => setIsAdminAuthOpen(false)}
         onSuccess={handleAdminAuthSuccess}
-      />
-
-      <DriverAuthModal
-        isOpen={isDriverAuthOpen}
-        onClose={() => {
-          setIsDriverAuthOpen(false);
-          if (!StorageService.getLoggedDriverId() && currentView === 'driver') {
-            handleBackFromDriver();
-          }
-        }}
-        onSuccess={handleDriverAuthSuccess}
       />
     </div>
   );

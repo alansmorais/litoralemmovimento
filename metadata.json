@@ -1,6 +1,6 @@
 {
   "name": "Litoral em Movimento",
-  "description": "Serviço de transfer e viagens executivas São Paulo ⇌ Litoral Norte (São Sebastião, Ilhabela, Caraguatatuba) com painel administrativo e visão do motorista.",
-  "requestFramePermissions": ["geolocation"],
+  "description": "Serviço de transfer e viagens executivas São Paulo ⇌ Litoral Norte (São Sebastião, Ilhabela, Caraguatatuba) com agendamento online e painel administrativo para gestão e controle.",
+  "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
