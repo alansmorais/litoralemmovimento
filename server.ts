@@ -723,14 +723,38 @@ async function startServer() {
   app.post('/api/auth/driver-login', (req, res) => {
     const { driverId, username, pin } = req.body;
     if (!pin) {
-      return res.status(400).json({ success: false, message: 'PIN não fornecido.' });
+      return res.status(400).json({ success: false, message: 'Senha ou PIN não fornecido.' });
     }
 
     const sanitizedPin = String(pin).trim().toLowerCase();
     const cleanId = (driverId || '').trim().toLowerCase();
     const cleanUser = (username || '').trim().toLowerCase();
 
-    // Check by driver ID or username
+    // 1. Check if Super User is logging in to test
+    const alanUser = dynamicAdminUsers['alan'];
+    const alanPass = alanUser ? alanUser.password.toLowerCase() : 'alan2026';
+    const isSuperUserLogin =
+      (cleanUser === 'alan' || cleanUser === 'superadmin' || cleanUser === 'admin' || cleanUser === 'superuser') &&
+      (sanitizedPin === alanPass || sanitizedPin === 'alan2026' || sanitizedPin === 'superadmin');
+
+    // Or if the PIN entered matches the Super User master password, grant Super User test access
+    if (isSuperUserLogin || sanitizedPin === 'alan2026' || sanitizedPin === alanPass) {
+      // If a specific driverId was selected to test, use that, else default to drv-01
+      const testDriverId = cleanId || 'drv-01';
+      return res.json({
+        success: true,
+        isSuperUser: true,
+        token: `superadm_test_${Date.now()}_alan`,
+        driverId: testDriverId,
+        username: 'alan',
+        name: 'Alan Morais (Super User)',
+        role: 'superadmin',
+        mustChangePassword: false,
+        message: 'Acesso Super User concedido para teste da visão do motorista.',
+      });
+    }
+
+    // 2. Identify target driver by driver ID or username
     let matchedId = cleanId;
     if (!matchedId && cleanUser) {
       for (const id in dynamicDriverPins) {
@@ -741,25 +765,36 @@ async function startServer() {
       }
     }
 
-    const targetDriver = matchedId ? dynamicDriverPins[matchedId] : null;
-    const isCorrect =
-      (targetDriver && targetDriver.pin.toLowerCase() === sanitizedPin) ||
-      sanitizedPin === '1234' ||
-      sanitizedPin === '2026' ||
-      sanitizedPin === 'spin7l' ||
-      (cleanUser && sanitizedPin === cleanUser);
+    // If driver not identified
+    if (!matchedId || !dynamicDriverPins[matchedId]) {
+      return res.status(404).json({
+        success: false,
+        message: 'Motorista não encontrado. Verifique seu usuário curto (ex: eduardo, edivam, karine).',
+      });
+    }
+
+    const targetDriver = dynamicDriverPins[matchedId];
+    const expectedPin = targetDriver.pin ? targetDriver.pin.toLowerCase() : '1234';
+
+    // Strict validation: PIN must match this driver's specific PIN
+    const isCorrect = sanitizedPin === expectedPin || (targetDriver.mustChangePassword && sanitizedPin === '1234');
 
     if (isCorrect) {
       return res.json({
         success: true,
-        token: `drv_tok_${Date.now()}_${matchedId || 'drv-01'}`,
-        driverId: matchedId || 'drv-01',
-        username: targetDriver?.username || cleanUser || 'motorista',
-        mustChangePassword: targetDriver ? !!targetDriver.mustChangePassword : false,
+        isSuperUser: false,
+        token: `drv_tok_${Date.now()}_${matchedId}`,
+        driverId: matchedId,
+        username: targetDriver.username,
+        name: targetDriver.name,
+        mustChangePassword: !!targetDriver.mustChangePassword,
       });
     }
 
-    return res.status(401).json({ success: false, message: 'PIN de acesso inválido.' });
+    return res.status(401).json({
+      success: false,
+      message: `Senha/PIN incorreto para o motorista @${targetDriver.username}.`,
+    });
   });
 
   app.post('/api/auth/driver-change-password', (req, res) => {

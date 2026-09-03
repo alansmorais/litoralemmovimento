@@ -79,18 +79,26 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
     setError(null);
 
     const sanitizedPin = pin.trim();
+    const cleanUser = usernameInput.trim().toLowerCase();
+
+    // 1. Check if Super User login (Alan Morais)
+    const isSuperUserAttempt = cleanUser === 'alan' || cleanUser === 'superadmin' || cleanUser === 'admin';
+    if (isSuperUserAttempt && (sanitizedPin === 'alan2026' || sanitizedPin === 'superadmin')) {
+      StorageService.setSuperUserTesting(true);
+      StorageService.setLoggedDriverId(selectedDriverId || 'drv-01');
+      setIsLoading(false);
+      onSuccess();
+      return;
+    }
+
+    // Identify target driver
     const targetDriver =
       drivers.find(
         (d) =>
+          (cleanUser && d.username?.toLowerCase() === cleanUser) ||
           d.id === selectedDriverId ||
-          (usernameInput.trim() && d.username?.toLowerCase() === usernameInput.trim().toLowerCase())
+          (cleanUser && d.name.toLowerCase().includes(cleanUser))
       ) || currentSelectedDriver;
-
-    if (!targetDriver) {
-      setIsLoading(false);
-      setError('Motorista não identificado. Selecione um perfil ou digite o usuário curto.');
-      return;
-    }
 
     try {
       // 1. Try backend authentication
@@ -98,37 +106,63 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          driverId: targetDriver.id,
-          username: targetDriver.username,
+          driverId: targetDriver?.id || selectedDriverId,
+          username: cleanUser || targetDriver?.username,
           pin: sanitizedPin,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        const loggedDriver = data.driver || targetDriver;
-        setAuthenticatedDriver(loggedDriver);
-
-        if (loggedDriver.mustChangePassword) {
+        
+        if (data.isSuperUser) {
+          StorageService.setSuperUserTesting(true);
+          StorageService.setLoggedDriverId(data.driverId || selectedDriverId || 'drv-01');
           setIsLoading(false);
-          setStep('change_password');
+          onSuccess();
           return;
         }
 
-        StorageService.setLoggedDriverId(loggedDriver.id);
-        setIsLoading(false);
-        onSuccess();
-        return;
+        const loggedDriver = drivers.find((d) => d.id === data.driverId) || targetDriver;
+        if (loggedDriver) {
+          StorageService.setSuperUserTesting(false);
+          setAuthenticatedDriver(loggedDriver);
+
+          if (data.mustChangePassword || loggedDriver.mustChangePassword) {
+            setIsLoading(false);
+            setStep('change_password');
+            return;
+          }
+
+          StorageService.setLoggedDriverId(loggedDriver.id);
+          setIsLoading(false);
+          onSuccess();
+          return;
+        }
+      } else {
+        const errData = await res.json().catch(() => null);
+        if (errData && errData.message) {
+          setIsLoading(false);
+          setError(errData.message);
+          return;
+        }
       }
     } catch {
       // Backend offline, fallback to local storage
     }
 
     // 2. Local Fallback Verification
-    const expectedPin = targetDriver.pin || '1234';
-    const validFallbackPins = ['1234', '2026', 'spin7l', targetDriver.username?.toLowerCase()];
+    if (!targetDriver) {
+      setIsLoading(false);
+      setError('Motorista não identificado. Digite seu usuário (ex: eduardo, edivam, karine) ou selecione um perfil.');
+      return;
+    }
 
-    if (sanitizedPin === expectedPin || validFallbackPins.includes(sanitizedPin.toLowerCase())) {
+    const expectedPin = targetDriver.pin || '1234';
+    const isPinCorrect = sanitizedPin === expectedPin || (targetDriver.mustChangePassword && sanitizedPin === '1234');
+
+    if (isPinCorrect) {
+      StorageService.setSuperUserTesting(false);
       setAuthenticatedDriver(targetDriver);
 
       if (targetDriver.mustChangePassword) {
@@ -142,7 +176,7 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
       onSuccess();
     } else {
       setIsLoading(false);
-      setError(`PIN incorreto para ${targetDriver.name}. PIN padrão operacional: 1234`);
+      setError(`Senha ou PIN incorreto para o motorista @${targetDriver.username || targetDriver.name}.`);
     }
   };
 
@@ -214,86 +248,115 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
                 <Smartphone className="w-7 h-7" />
               </div>
               <span className="text-[10px] font-bold tracking-widest text-sky-400 uppercase bg-sky-400/10 px-2.5 py-0.5 rounded-full">
-                Área Exclusiva da Frota
+                Portal de Acesso da Frota
               </span>
               <h3 className="font-serif-display font-extrabold text-2xl text-white">
                 Login do Motorista
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Acesso oficial para motoristas da minivan Spin 7L. Selecione seu perfil ou use seu usuário curto.
+                Cada motorista entra com seu login e senha individual. O Super User também pode acessar para testes.
               </p>
             </div>
 
+            {/* Super User Quick Test Banner */}
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-base">👑</span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-amber-300 truncate">Super User (Acesso de Teste)</p>
+                  <p className="text-[10px] text-amber-200/80">Permite testar a visão e escala de qualquer motorista</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsernameInput('alan');
+                  setPin('alan2026');
+                  setError(null);
+                }}
+                className="text-[11px] bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-2.5 py-1 rounded-xl transition-colors shrink-0 cursor-pointer"
+              >
+                Preencher Teste
+              </button>
+            </div>
+
             <form onSubmit={handleLoginSubmit} className="space-y-4">
+              {/* Username Input with quick selector */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-300">
-                  Selecione seu Perfil ou Usuário Curto:
-                </label>
-                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-1">
+                <div className="flex justify-between items-center">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Usuário ou Login:
+                  </label>
+                  <span className="text-[10px] text-slate-400">Clique no seu nome abaixo ou digite</span>
+                </div>
+
+                {/* Quick Chips */}
+                <div className="flex flex-wrap gap-1.5 pb-1">
                   {drivers.map((d) => {
-                    const isSelected = d.id === selectedDriverId;
+                    const isSelected =
+                      d.id === selectedDriverId ||
+                      (usernameInput && d.username?.toLowerCase() === usernameInput.toLowerCase());
                     return (
                       <button
                         key={d.id}
                         type="button"
                         onClick={() => handleDriverSelect(d)}
-                        className={`p-2.5 rounded-2xl border text-left flex items-center justify-between gap-3 transition-all cursor-pointer ${
+                        className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
                           isSelected
-                            ? 'bg-sky-500/15 border-sky-400 ring-1 ring-sky-400 text-white shadow-md'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-950'
+                            ? 'bg-sky-500 text-slate-950 border-sky-400 font-bold shadow-xs'
+                            : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:border-slate-600 hover:text-white'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-mono font-bold text-xs border shrink-0 transition-colors ${
-                              isSelected
-                                ? 'bg-amber-400 text-slate-950 border-amber-300'
-                                : 'bg-slate-900 text-slate-200 border-slate-700'
-                            }`}
-                          >
-                            {d.name ? d.name.substring(0, 2).toUpperCase() : 'MT'}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-bold text-xs text-white truncate flex items-center gap-1.5">
-                              <span>{d.name}</span>
-                              <span className="text-[10px] text-sky-400 font-mono bg-sky-950/70 px-1.5 py-0.2 rounded border border-sky-800">
-                                @{d.username || d.name.split(' ')[0].toLowerCase()}
-                              </span>
-                              {d.mustChangePassword && (
-                                <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded font-medium">
-                                  1º Acesso
-                                </span>
-                              )}
-                            </p>
-                            <p className="text-[10px] text-slate-400 truncate">
-                              Spin 7L • Placa {d.plate}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex-shrink-0">
-                          <div
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                              isSelected ? 'border-sky-400 bg-sky-400' : 'border-slate-600'
-                            }`}
-                          >
-                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
-                          </div>
-                        </div>
+                        <span>{d.name.split(' ')[0]}</span>
+                        <span className="text-[10px] opacity-75">@{d.username}</span>
                       </button>
                     );
                   })}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsernameInput('alan');
+                      setPin('alan2026');
+                      setError(null);
+                    }}
+                    className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors cursor-pointer flex items-center gap-1 ${
+                      usernameInput.toLowerCase() === 'alan'
+                        ? 'bg-amber-400 text-slate-950 border-amber-300 font-bold'
+                        : 'bg-amber-950/40 text-amber-300 border-amber-700/60 hover:bg-amber-900/50'
+                    }`}
+                  >
+                    <span>👑 @alan</span>
+                    <span className="text-[10px] opacity-80">(Super User)</span>
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Smartphone className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Usuário (ex: eduardo, edivam, karine, alan)"
+                    value={usernameInput}
+                    onChange={(e) => {
+                      setUsernameInput(e.target.value);
+                      setError(null);
+                    }}
+                    required
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400 font-medium"
+                  />
                 </div>
               </div>
 
+              {/* Password / PIN Input */}
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
                   <label className="block text-xs font-semibold text-slate-300">
-                    PIN Operacional (4 dígitos):
+                    Senha ou PIN:
                   </label>
-                  {currentSelectedDriver?.mustChangePassword && (
+                  {currentSelectedDriver?.mustChangePassword && usernameInput !== 'alan' && (
                     <span className="text-[10px] text-amber-400 flex items-center gap-1">
-                      <Lock className="w-3 h-3" /> 1º Acesso (Padrão: 1234)
+                      <Lock className="w-3 h-3" /> Padrão Inicial: 1234
                     </span>
                   )}
                 </div>
@@ -303,18 +366,20 @@ export const DriverAuthModal: React.FC<DriverAuthModalProps> = ({
                   </div>
                   <input
                     type={showPin ? 'text' : 'password'}
-                    maxLength={8}
-                    placeholder="PIN operacional (ex: 1234)"
+                    maxLength={20}
+                    placeholder={usernameInput === 'alan' ? 'Senha do Super User (alan2026)' : 'Senha pessoal ou PIN operacional'}
                     value={pin}
-                    onChange={(e) => setPin(e.target.value)}
-                    autoFocus
+                    onChange={(e) => {
+                      setPin(e.target.value);
+                      setError(null);
+                    }}
                     required
-                    className="w-full pl-10 pr-10 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400 tracking-widest font-mono"
+                    className="w-full pl-10 pr-10 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 outline-none focus:border-sky-400 tracking-wider font-mono"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPin(!showPin)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white cursor-pointer"
                   >
                     {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>

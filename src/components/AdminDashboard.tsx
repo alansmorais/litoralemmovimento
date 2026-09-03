@@ -1038,13 +1038,21 @@ function createJsonResponse(data) {
               </select>
             </div>
 
-            {/* Quick Driver App Launch */}
+            {/* Quick Driver App Launch with Super User Test Mode */}
             <button
-              onClick={onOpenDriverView}
+              onClick={() => {
+                StorageService.setSuperUserTesting(true);
+                if (!StorageService.getLoggedDriverId()) {
+                  StorageService.setLoggedDriverId('drv-01');
+                }
+                onOpenDriverView();
+              }}
               className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+              title="Acessar como Super User para testar a visão e escala de qualquer motorista"
             >
               <Car className="w-3.5 h-3.5" />
-              <span>Ver App do Motorista</span>
+              <span>Testar App do Motorista</span>
+              <span className="bg-amber-400 text-slate-950 text-[9px] px-1.5 py-0.2 rounded font-black">SUPER USER</span>
             </button>
 
             {/* Salvar TUDO no Banco de Dados em Nuvem Button */}
@@ -1414,7 +1422,7 @@ function createJsonResponse(data) {
                             </span>
                           </td>
 
-                          {/* Driver Assign */}
+                          {/* Driver Assign with Dynamic Availability & Journey Protection */}
                           <td className="py-3.5 px-4">
                             <select
                               value={res.assignedDriverId || ''}
@@ -1426,11 +1434,51 @@ function createJsonResponse(data) {
                               }`}
                             >
                               <option value="">⚠️ Não Atribuído</option>
-                              {drivers.map((drv) => (
-                                <option key={drv.id} value={drv.id}>
-                                  👤 {drv.name} (Spin {drv.plate.slice(-4)})
-                                </option>
-                              ))}
+                              <optgroup label="✅ Disponíveis nesta Jornada">
+                                {drivers
+                                  .filter((drv) => {
+                                    const avail = StorageService.checkDriverAvailabilityForTrip(
+                                      drv.id,
+                                      res.date,
+                                      res.time,
+                                      res.id,
+                                      reservations
+                                    );
+                                    return avail.isAvailable || res.assignedDriverId === drv.id;
+                                  })
+                                  .map((drv) => (
+                                    <option key={drv.id} value={drv.id}>
+                                      👤 {drv.name} {res.assignedDriverId === drv.id ? '(Atribuído)' : '(Disponível)'} - Spin {drv.plate.slice(-4)}
+                                    </option>
+                                  ))}
+                              </optgroup>
+                              <optgroup label="⛔ Ocupados nesta Jornada (Indisponíveis)">
+                                {drivers
+                                  .filter((drv) => {
+                                    const avail = StorageService.checkDriverAvailabilityForTrip(
+                                      drv.id,
+                                      res.date,
+                                      res.time,
+                                      res.id,
+                                      reservations
+                                    );
+                                    return !avail.isAvailable && res.assignedDriverId !== drv.id;
+                                  })
+                                  .map((drv) => {
+                                    const avail = StorageService.checkDriverAvailabilityForTrip(
+                                      drv.id,
+                                      res.date,
+                                      res.time,
+                                      res.id,
+                                      reservations
+                                    );
+                                    return (
+                                      <option key={drv.id} value={drv.id} disabled className="text-slate-400">
+                                        ❌ {drv.name} ({avail.reason || 'Ocupado na Jornada'})
+                                      </option>
+                                    );
+                                  })}
+                              </optgroup>
                             </select>
                             {res.assignedDriverName && (
                               <span className="block text-[10px] text-slate-500 mt-0.5">

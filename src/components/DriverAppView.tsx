@@ -45,6 +45,7 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
   onSwitchDriver,
 }) => {
   const [drivers, setDrivers] = useState<Driver[]>(StorageService.getDrivers());
+  const [isSuperUser, setIsSuperUser] = useState<boolean>(StorageService.isSuperUserTesting());
   const loggedId = StorageService.getLoggedDriverId() || DRIVERS[0].id;
   const currentDriver = StorageService.getDriverById(loggedId) || DRIVERS[0];
   const [selectedDriver, setSelectedDriver] = useState<Driver>(currentDriver);
@@ -204,19 +205,19 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
     }
   };
 
-  // Filter trips specifically assigned to this driver
+  // Filter trips specifically assigned to this driver (Strict Isolation)
   const assignedToMeTrips = reservations.filter(
     (r) => r.assignedDriverId === selectedDriver.id && r.status !== 'Concluído' && r.status !== 'Cancelado'
   );
 
-  // Trips open for pickup/driver assignment
+  // Trips open for pickup/driver assignment (unassigned only)
   const openAvailableTrips = reservations.filter(
     (r) => !r.assignedDriverId && r.status !== 'Concluído' && r.status !== 'Cancelado'
   );
 
-  // All relevant trips for driver cockpit
+  // All trips strictly belonging to this driver (No other driver's trips are ever shown)
   const myTrips = reservations.filter(
-    (r) => r.assignedDriverId === selectedDriver.id || (!r.assignedDriverId && r.status !== 'Concluído' && r.status !== 'Cancelado')
+    (r) => r.assignedDriverId === selectedDriver.id
   );
 
   // Active trip: prioritize trips in progress, on the way, confirmed
@@ -285,11 +286,16 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
       <header className="bg-slate-900 border-b border-slate-800 px-3.5 py-2.5 sticky top-0 z-40 shadow-md">
         <div className="max-w-md mx-auto flex items-center justify-between gap-2">
           {/* Driver Monogram & Info (No Photo) */}
-          <button
-            type="button"
-            onClick={() => setIsSwitchDriverModalOpen(true)}
-            className="flex items-center gap-2.5 text-left p-1 -m-1 rounded-xl hover:bg-slate-800/80 transition-colors cursor-pointer"
-            title="Clique para alternar de motorista"
+          <div
+            onClick={() => {
+              if (isSuperUser) {
+                setIsSwitchDriverModalOpen(true);
+              }
+            }}
+            className={`flex items-center gap-2.5 text-left p-1 -m-1 rounded-xl transition-colors ${
+              isSuperUser ? 'hover:bg-slate-800/80 cursor-pointer' : ''
+            }`}
+            title={isSuperUser ? 'Super User: Clique para alternar a visão do motorista' : 'Motorista conectado'}
           >
             <div className="relative shrink-0">
               <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 font-mono font-black text-sm flex items-center justify-center border border-amber-300 shadow-xs">
@@ -311,13 +317,18 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
                 <h1 className="font-bold text-sm text-white leading-tight truncate">
                   {selectedDriver.name}
                 </h1>
-                <ArrowLeftRight className="w-3 h-3 text-sky-400 shrink-0 opacity-70" />
+                {isSuperUser && (
+                  <span className="text-[9px] font-black bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded font-mono">
+                    TESTE
+                  </span>
+                )}
+                {isSuperUser && <ArrowLeftRight className="w-3 h-3 text-sky-400 shrink-0 opacity-80" />}
               </div>
               <p className="text-[11px] text-slate-400 truncate">
                 Spin 7L • <span className="font-mono text-slate-300 font-bold">{selectedDriver.plate}</span>
               </p>
             </div>
-          </button>
+          </div>
 
           {/* Quick Actions & Status */}
           <div className="flex items-center gap-1.5 shrink-0">
@@ -333,9 +344,9 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
                   : 'bg-amber-950/90 text-amber-300 border-amber-500/50'
               }`}
             >
-              <option value="Disponível">🟢 Online</option>
-              <option value="Em Viagem">🟣 Em Viagem</option>
-              <option value="Descanso">🟡 Pausa</option>
+              <option value="Disponível">🟢 Disponível</option>
+              <option value="Em Viagem">🟣 Em Viagem (Ocupado)</option>
+              <option value="Descanso">🟡 Pausa/Descanso</option>
             </select>
 
             {/* Emergency / Support button */}
@@ -361,6 +372,43 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
 
       {/* 2. MAIN COCKPIT BODY */}
       <main className="max-w-md mx-auto w-full px-3.5 py-3 flex-1 space-y-3">
+        {/* SUPER USER TESTING BANNER */}
+        {isSuperUser && (
+          <div className="bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 p-3 rounded-2xl flex items-center justify-between gap-3 shadow-md border border-amber-300">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xl">👑</span>
+              <div className="min-w-0">
+                <div className="text-[10px] uppercase font-black tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <span>Modo de Teste Super User</span>
+                  <span className="bg-slate-950 text-amber-300 text-[9px] px-1.5 py-0.2 rounded font-bold">Alan Morais</span>
+                </div>
+                <p className="text-xs font-bold truncate">Testando a visão de: {selectedDriver.name}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsSwitchDriverModalOpen(true)}
+              className="bg-slate-950 hover:bg-slate-900 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <span>Alternar</span>
+            </button>
+          </div>
+        )}
+
+        {/* BUSY ON JOURNEY NOTICE */}
+        {selectedDriver.activeStatus === 'Em Viagem' && (
+          <div className="bg-sky-950/90 border border-sky-500/50 p-3 rounded-2xl text-xs text-sky-200 flex items-start gap-2.5 shadow-sm">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping shrink-0 mt-1" />
+            <div>
+              <p className="font-bold text-sky-100">Status: Em Viagem (Ocupado na Jornada)</p>
+              <p className="text-[11px] text-sky-300/90 leading-relaxed">
+                Você está em jornada de corrida. Conforme a regra operacional, seu perfil não aparece como disponível para novas atribuições durante o horário desta viagem.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Real-time Sync & Notification Alert */}
         <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
           <div className="flex items-center gap-1.5">
@@ -913,11 +961,16 @@ export const DriverAppView: React.FC<DriverAppViewProps> = ({
             </button>
 
             <div className="space-y-1">
-              <h3 className="font-bold text-lg text-white">
-                Trocar de Motorista
-              </h3>
+              <div className="flex items-center gap-2">
+                {isSuperUser && <span className="text-base">👑</span>}
+                <h3 className="font-bold text-lg text-white">
+                  {isSuperUser ? 'Super User: Alternar Visão de Teste' : 'Trocar de Motorista'}
+                </h3>
+              </div>
               <p className="text-xs text-slate-400">
-                Selecione quem está conduzindo o veículo no momento:
+                {isSuperUser
+                  ? 'Como Super User, escolha o perfil de motorista que você deseja testar e visualizar a escala:'
+                  : 'Selecione quem está conduzindo o veículo no momento:'}
               </p>
             </div>
 

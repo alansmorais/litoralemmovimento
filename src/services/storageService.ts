@@ -571,6 +571,111 @@ export class StorageService {
     return list[idx];
   }
 
+  public static normalizeDate(d: string): string {
+    if (!d) return '';
+    const trimmed = d.trim();
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+    return trimmed;
+  }
+
+  public static parseTimeToMinutes(t: string): number {
+    if (!t) return 0;
+    const [h, m] = t.trim().split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  }
+
+  public static checkDriverAvailabilityForTrip(
+    driverId: string,
+    tripDate: string,
+    tripTime: string,
+    excludeTripId?: string,
+    customReservations?: Reservation[]
+  ): { isAvailable: boolean; reason?: string; conflictingTrip?: Reservation } {
+    const list = customReservations || this.getReservations();
+    const drivers = this.getDrivers();
+    const driver = drivers.find((d) => d.id === driverId);
+
+    const normTripDate = this.normalizeDate(tripDate);
+    const tripMins = this.parseTimeToMinutes(tripTime);
+
+    // Transfer journeys between São Paulo and Litoral Norte take ~3h to 3h30.
+    // Journey block is 210 minutes (3.5 hours) to ensure no conflicting overlap.
+    const journeyDurationMinutes = 210;
+
+    for (const r of list) {
+      if (r.id === excludeTripId) continue;
+      if (r.assignedDriverId !== driverId) continue;
+      if (r.status === 'Cancelado' || r.status === 'Concluído') continue;
+
+      const normResDate = this.normalizeDate(r.date);
+      if (normResDate === normTripDate) {
+        const resMins = this.parseTimeToMinutes(r.time);
+        const diff = Math.abs(tripMins - resMins);
+
+        if (diff < journeyDurationMinutes) {
+          const hoursEnd = Math.floor((resMins + journeyDurationMinutes) / 60) % 24;
+          const minsEnd = (resMins + journeyDurationMinutes) % 60;
+          const endTimeFormatted = `${String(hoursEnd).padStart(2, '0')}:${String(minsEnd).padStart(2, '0')}`;
+
+          return {
+            isAvailable: false,
+            reason: `Em jornada das ${r.time} às ${endTimeFormatted} (${r.code})`,
+            conflictingTrip: r,
+          };
+        }
+      }
+    }
+
+    // Check if driver activeStatus is currently 'Em Viagem' or 'Descanso' right now
+    if (driver && driver.activeStatus === 'Em Viagem') {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      if (normTripDate === todayStr) {
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+        if (Math.abs(tripMins - currentMins) < journeyDurationMinutes) {
+          return {
+            isAvailable: false,
+            reason: `Em viagem no momento (Ocupado na estrada)`,
+          };
+        }
+      }
+    }
+
+    if (driver && driver.activeStatus === 'Descanso') {
+      return {
+        isAvailable: false,
+        reason: `Motorista em descanso regulamentar`,
+      };
+    }
+
+    return { isAvailable: true };
+  }
+
+  public static isSuperUserTesting(): boolean {
+    try {
+      return sessionStorage.getItem('litoral_superuser_testing') === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  public static setSuperUserTesting(enabled: boolean): void {
+    try {
+      if (enabled) {
+        sessionStorage.setItem('litoral_superuser_testing', 'true');
+      } else {
+        sessionStorage.removeItem('litoral_superuser_testing');
+      }
+    } catch (e) {
+      console.error('Failed to set super user testing mode', e);
+    }
+  }
+
   public static getDriverByUsernameOrId(query: string): Driver | null {
     if (!query) return null;
     const clean = query.trim().toLowerCase();
@@ -884,6 +989,7 @@ export class StorageService {
         sessionStorage.removeItem('litoral_driver_auth');
         localStorage.removeItem('litoral_driver_auth');
         localStorage.removeItem('litoral_preferred_view');
+        sessionStorage.removeItem('litoral_superuser_testing');
       }
       window.dispatchEvent(new CustomEvent('driver_auth_changed', { detail: driverId }));
     } catch (e) {
