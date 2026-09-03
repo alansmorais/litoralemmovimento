@@ -887,16 +887,24 @@ Responda em tom profissional, caloroso, direto e conciso (em português brasilei
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
+  // Determine if running as production bundle or development server
+  const distPath = path.join(process.cwd(), 'dist');
+  const isBundled = typeof __filename !== 'undefined' && __filename.endsWith('.cjs');
+  const hasDist = fs.existsSync(path.join(distPath, 'index.html'));
+  const isProduction = process.env.NODE_ENV === 'production' || isBundled || (hasDist && process.env.NODE_ENV !== 'development');
+
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    // Serve static files from dist
+    app.use(express.static(distPath, {
+      index: false,
+      maxAge: '1d',
+    }));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
