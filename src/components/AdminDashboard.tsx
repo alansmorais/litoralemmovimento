@@ -1003,6 +1003,38 @@ function doPost(e) {
       return createJsonResponse({ status: 'success', message: 'Sinal de 50% confirmado!' });
     }
 
+    if (action === 'updateStatus' || action === 'assignDriver' || action === 'updateReservation') {
+      var targetId = String(payload.id || payload.code || '');
+      var rows = sheet.getDataRange().getValues();
+      var updatedRow = false;
+      for (var k = 1; k < rows.length; k++) {
+        if (String(rows[k][0]) === targetId || String(rows[k][1]) === targetId) {
+          if (payload.status !== undefined) sheet.getRange(k + 1, 22).setValue(payload.status);
+          if (payload.paymentStatus !== undefined) sheet.getRange(k + 1, 23).setValue(payload.paymentStatus);
+          if (payload.driverName !== undefined) sheet.getRange(k + 1, 25).setValue(payload.driverName || '');
+          if (payload.assignedDriverName !== undefined) sheet.getRange(k + 1, 25).setValue(payload.assignedDriverName || '');
+          if (payload.driverVehicle !== undefined) sheet.getRange(k + 1, 26).setValue(payload.driverVehicle || '');
+          if (payload.notes !== undefined) sheet.getRange(k + 1, 27).setValue(payload.notes || '');
+          if (payload.depositPaid !== undefined) sheet.getRange(k + 1, 20).setValue(payload.depositPaid ? 'Sim' : 'Não');
+          updatedRow = true;
+          break;
+        }
+      }
+      return createJsonResponse({ status: updatedRow ? 'success' : 'not_found', message: 'Reserva e motorista sincronizados com a planilha!' });
+    }
+
+    if (action === 'updateDriverStatus') {
+      var sheetDrv = ss.getSheetByName(SHEET_DRIVERS) || setupDriversSheet(ss);
+      var dRows = sheetDrv.getDataRange().getValues();
+      for (var d = 1; d < dRows.length; d++) {
+        if (String(dRows[d][0]) === String(payload.driverId)) {
+          sheetDrv.getRange(d + 1, 9).setValue(payload.activeStatus || 'Disponível');
+          break;
+        }
+      }
+      return createJsonResponse({ status: 'success', message: 'Status do motorista atualizado na planilha!' });
+    }
+
     if (action === 'updateSuperAdminPassword' || action === 'updateConfig') {
       var sheetConf = ss.getSheetByName(SHEET_CONFIG) || setupConfigSheet(ss);
       var configKey = payload.key || 'SENHA_SUPERADMIN_ALAN';
@@ -1207,6 +1239,18 @@ function createJsonResponse(data) {
               >
                 <Lock className="w-3.5 h-3.5 text-amber-400" />
                 <span className="hidden sm:inline">Conexão API</span>
+              </button>
+            )}
+
+            {/* App do Motorista Direct Button */}
+            {onOpenDriverView && (
+              <button
+                onClick={onOpenDriverView}
+                className="bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 hover:text-amber-200 text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+                title="Abrir o Portal e Aplicativo Operacional do Motorista"
+              >
+                <Car className="w-3.5 h-3.5 text-amber-400" />
+                <span>App do Motorista</span>
               </button>
             )}
 

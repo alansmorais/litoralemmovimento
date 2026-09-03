@@ -8,52 +8,111 @@ const CONTACT_MESSAGES_STORAGE_KEY = 'litoral_em_movimento_contact_messages_v1';
 const GOOGLE_SCRIPT_STORAGE_KEY = 'litoral_em_movimento_gas_url_v1';
 const SUPER_ADMIN_PASSWORD_KEY = 'litoral_superadmin_password_custom_v1';
 
-const INITIAL_CONTACT_MESSAGES: ContactMessage[] = [
-  {
-    id: 'msg-1',
-    ticketCode: 'FAL-1082',
-    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-    name: 'Carolina Mendes',
-    phone: '(11) 99872-4411',
-    email: 'carolina.mendes@gmail.com',
-    subject: 'Cotação para Grupo em São Sebastião',
-    message: 'Olá! Somos um grupo de 6 pessoas e gostaríamos de saber se vocês atendem com Spin 7 lugares para passar o feriado em São Sebastião com 5 malas grandes.',
-    preferredContact: 'WhatsApp',
-    status: 'Pendente',
-  },
-  {
-    id: 'msg-2',
-    ticketCode: 'FAL-1081',
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    name: 'Dr. Rodrigo Albuquerque',
-    phone: '(12) 98114-5566',
-    email: 'rodrigo.albuquerque@advocacia.com.br',
-    subject: 'Transfer Corporativo Frequente',
-    message: 'Preciso de saídas semanais às quintas-feiras saindo do Aeroporto GRU direto para a Balsa de Ilhabela. Gostaria de entender como funciona a emissão de nota fiscal para empresa.',
-    preferredContact: 'E-mail',
-    status: 'Respondida',
-    adminNotes: 'Atendimento respondeu por e-mail com a tabela corporativa e modelo de NF.',
-    answeredAt: new Date(Date.now() - 3600000 * 18).toISOString(),
-    answeredBy: 'Atendimento (Gestão)',
-  },
-];
+export const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzVXHlSLJykQpgwJBs6OEiLZx70lBstHfQNkB7EvvL275foVcxRCSAzxDUKb8gqEoilNA/exec';
+
+const INITIAL_CONTACT_MESSAGES: ContactMessage[] = [];
+
+export function cleanTimeString(timeStr: any): string {
+  if (!timeStr) return '';
+  const str = String(timeStr).trim();
+  if (!str) return '';
+
+  // Standard HH:mm
+  if (/^\d{1,2}:\d{2}$/.test(str)) {
+    const parts = str.split(':');
+    return `${parts[0].padStart(2, '0')}:${parts[1]}`;
+  }
+
+  // If it's a full Date string from Google Sheets (e.g. "Sat Dec 30 1899 13:30:00 GMT+0124")
+  const matchFull = str.match(/(\d{1,2}):(\d{2}):(\d{2})/);
+  if (matchFull) {
+    return `${matchFull[1].padStart(2, '0')}:${matchFull[2]}`;
+  }
+
+  const matchShort = str.match(/(\d{1,2}):(\d{2})/);
+  if (matchShort) {
+    return `${matchShort[1].padStart(2, '0')}:${matchShort[2]}`;
+  }
+
+  return str;
+}
+
+export function cleanDateString(dateStr: any): string {
+  if (!dateStr) return '';
+  const str = String(dateStr).trim();
+  if (!str || str.toLowerCase() === 'hoje') {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  }
+  if (str.includes('/')) {
+    const parts = str.split('/');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+  return str;
+}
 
 export const isFakeReservation = (r: any): boolean => {
   if (!r) return false;
-  const id = String(r.id || '');
+  const id = String(r.id || '').toLowerCase();
   const code = String(r.code || '').toUpperCase();
   const name = String(r.customerName || '').toLowerCase();
+  const email = String(r.customerEmail || '').toLowerCase();
+  const notes = String(r.notes || '').toLowerCase();
 
-  if (id === 'res-101' || id === 'res-102' || id === 'res-103') return true;
-  if (code === 'LM-8921' || code === 'LM-8922' || code === 'LM-8923' || code === 'LM-8925') return true;
+  // Known fake sample IDs
   if (
-    name.includes('fernanda albuquerque') ||
-    name.includes('eduardo guimarães') ||
-    name.includes('eduardo guimaraes') ||
-    name.includes('lucas ferreira mendes')
+    id === 'test-01' ||
+    id === 'res-1001' ||
+    id === 'res-1002' ||
+    id === 'res-1003' ||
+    id === 'res-5194' ||
+    id === 'res-101' ||
+    id === 'res-102' ||
+    id === 'res-103' ||
+    id.startsWith('mock-') ||
+    id.startsWith('fake-')
   ) {
     return true;
   }
+
+  // Known fake sample codes
+  if (
+    code === 'LM-9999' ||
+    code === 'LM-1001' ||
+    code === 'LM-1002' ||
+    code === 'LM-1003' ||
+    code === 'LM-5194' ||
+    code === 'LM-8921' ||
+    code === 'LM-8922' ||
+    code === 'LM-8923' ||
+    code === 'LM-8925'
+  ) {
+    return true;
+  }
+
+  // Known sample / dummy names & emails
+  if (
+    name.includes('mariana rios') ||
+    name.includes('rodrigo albuquerque') ||
+    name.includes('juliana mendes') ||
+    name.includes('marcelo fagundes') ||
+    name.includes('fernanda albuquerque') ||
+    name.includes('eduardo guimarães') ||
+    name.includes('eduardo guimaraes') ||
+    name.includes('lucas ferreira mendes') ||
+    email.includes('mariana.rios@design.com.br') ||
+    email.includes('rodrigo.albuquerque@itau.com.br') ||
+    email.includes('juliana.mendes@med.usp.br') ||
+    email.includes('cliente.5194@litoralemmovimento.com.br') ||
+    notes.includes('voo de miami') ||
+    notes.includes('cliente vip litoral em movimento') ||
+    notes.includes('gol g3-1422')
+  ) {
+    return true;
+  }
+
   return false;
 };
 
@@ -130,14 +189,137 @@ export class StorageService {
     return sanitized === currentCustom || fallbackList.includes(sanitized);
   }
 
+  public static normalizeReservation(r: any): Reservation {
+    const totalPrice = Number(r.totalPrice) || 0;
+    const basePrice = Number(r.basePrice) || totalPrice;
+    const depositAmount = Number(r.depositAmount) || Number((totalPrice * 0.5).toFixed(2));
+    const remainingAmount =
+      r.remainingAmount !== undefined && r.remainingAmount !== null && r.remainingAmount !== ''
+        ? Number(r.remainingAmount)
+        : Math.max(0, Number((totalPrice - depositAmount).toFixed(2)));
+
+    const depositPaid =
+      r.depositPaid === true ||
+      r.depositPaid === 'Sim' ||
+      String(r.paymentStatus || '').toLowerCase().includes('pago') ||
+      String(r.paymentStatus || '').toLowerCase().includes('confirmado');
+
+    const rawTripType = String(r.tripType || '').toLowerCase();
+    const tripType: 'Individual' | 'Compartilhada' = rawTripType.includes('compart') ? 'Compartilhada' : 'Individual';
+
+    let paymentStatus: 'Pendente (Aguardando Sinal 50%)' | 'Sinal 50% Pago (Confirmado)' | 'Pago (PIX)' | 'Pago (Cartão)' | 'No Embarque' =
+      'Pendente (Aguardando Sinal 50%)';
+    if (r.paymentStatus) {
+      const ps = String(r.paymentStatus);
+      if (ps.includes('Sinal 50%')) paymentStatus = 'Sinal 50% Pago (Confirmado)';
+      else if (ps.includes('PIX')) paymentStatus = 'Pago (PIX)';
+      else if (ps.includes('Cartão')) paymentStatus = 'Pago (Cartão)';
+      else if (ps.includes('Embarque')) paymentStatus = 'No Embarque';
+      else if (depositPaid) paymentStatus = 'Sinal 50% Pago (Confirmado)';
+    } else if (depositPaid) {
+      paymentStatus = 'Sinal 50% Pago (Confirmado)';
+    }
+
+    let assignedDriverId = r.assignedDriverId ? String(r.assignedDriverId).trim() : undefined;
+    let assignedDriverName = r.assignedDriverName ? String(r.assignedDriverName).trim() : undefined;
+    let driverPhone = r.driverPhone ? String(r.driverPhone).trim() : undefined;
+    let driverVehicle = r.driverVehicle ? String(r.driverVehicle).trim() : undefined;
+    let driverPlate = r.driverPlate ? String(r.driverPlate).trim() : undefined;
+
+    // Ignore placeholder strings like "Não atribuído", "Sem Motorista", "N/A"
+    const isUnassigned = (val?: string) => {
+      if (!val) return true;
+      const lower = val.toLowerCase().trim();
+      return (
+        lower === 'não atribuído' ||
+        lower === 'nao atribuido' ||
+        lower === 'sem motorista' ||
+        lower === 'não definido' ||
+        lower === 'pendente' ||
+        lower === 'n/a' ||
+        lower === 'none' ||
+        lower === ''
+      );
+    };
+
+    if (isUnassigned(assignedDriverName)) {
+      assignedDriverName = undefined;
+    }
+    if (isUnassigned(assignedDriverId)) {
+      assignedDriverId = undefined;
+    }
+
+    if (assignedDriverName || assignedDriverId) {
+      const allDrivers = typeof window !== 'undefined' ? this.getDrivers() : DRIVERS;
+      const matchedDriver = allDrivers.find(
+        (d) =>
+          (assignedDriverId && d.id === assignedDriverId) ||
+          (assignedDriverName && d.name.toLowerCase() === assignedDriverName.toLowerCase()) ||
+          (assignedDriverName && (assignedDriverName.toLowerCase().includes(d.name.toLowerCase()) || d.name.toLowerCase().includes(assignedDriverName.toLowerCase())))
+      );
+
+      if (matchedDriver) {
+        assignedDriverId = matchedDriver.id;
+        assignedDriverName = matchedDriver.name;
+        driverPhone = driverPhone || matchedDriver.phone;
+        driverVehicle = driverVehicle || matchedDriver.vehicleModel;
+        driverPlate = driverPlate || matchedDriver.plate;
+      }
+    }
+
+    return {
+      id: String(r.id || `res-${Date.now()}`),
+      code: String(r.code || `LM-${Math.floor(1000 + Math.random() * 9000)}`),
+      customerName: String(r.customerName || 'Cliente').trim(),
+      customerPhone: String(r.customerPhone || '').trim(),
+      customerEmail: String(r.customerEmail || '').trim(),
+      origin: String(r.origin || 'São Paulo').trim(),
+      originDetails: r.originDetails ? String(r.originDetails).trim() : undefined,
+      destination: String(r.destination || 'São Sebastião').trim(),
+      destinationDetails: r.destinationDetails ? String(r.destinationDetails).trim() : undefined,
+      pickupAddress: String(r.pickupAddress || r.origin || '').trim(),
+      dropoffAddress: String(r.dropoffAddress || r.destination || '').trim(),
+      flightNumber: r.flightNumber ? String(r.flightNumber).trim() : undefined,
+      date: cleanDateString(r.date),
+      time: cleanTimeString(r.time),
+      passengers: Number(r.passengers) || 1,
+      luggageCount: Number(r.luggageCount) || 1,
+      hasChildSeat: !!r.hasChildSeat,
+      extraStops: Array.isArray(r.extraStops) ? r.extraStops : [],
+      estimatedDistanceKm: Number(r.estimatedDistanceKm) || 185,
+      tripType,
+      vehicleCategory: r.vehicleCategory || 'spin_7',
+      basePrice,
+      totalPrice,
+      depositAmount,
+      remainingAmount,
+      depositPaid,
+      paymentMethod: r.paymentMethod || 'PIX',
+      paymentStatus,
+      status: r.status || 'Pendente',
+      assignedDriverId,
+      assignedDriverName,
+      driverPhone,
+      driverVehicle,
+      driverPlate,
+      notes: r.notes ? String(r.notes).trim() : undefined,
+      internalAdminNotes: r.internalAdminNotes ? String(r.internalAdminNotes).trim() : undefined,
+      gpsDeviation: r.gpsDeviation,
+      createdAt: r.createdAt ? String(r.createdAt) : new Date().toISOString(),
+    };
+  }
+
   public static getGoogleScriptUrl(): string {
     try {
       const saved = localStorage.getItem(GOOGLE_SCRIPT_STORAGE_KEY);
-      if (saved) return saved.trim();
+      if (saved && saved.trim()) return saved.trim();
       const metaEnv = (import.meta as unknown as { env?: { VITE_GOOGLE_APPS_SCRIPT_URL?: string } }).env;
-      return (metaEnv?.VITE_GOOGLE_APPS_SCRIPT_URL || '').trim();
+      if (metaEnv?.VITE_GOOGLE_APPS_SCRIPT_URL && metaEnv.VITE_GOOGLE_APPS_SCRIPT_URL.trim()) {
+        return metaEnv.VITE_GOOGLE_APPS_SCRIPT_URL.trim();
+      }
+      return DEFAULT_GAS_URL;
     } catch {
-      return '';
+      return DEFAULT_GAS_URL;
     }
   }
 
@@ -327,8 +509,11 @@ export class StorageService {
       if (!res.ok) return null;
       const data = await res.json();
       if (Array.isArray(data)) {
-        this.saveReservations(data);
-        return data;
+        const normalized = data
+          .map((item) => this.normalizeReservation(item))
+          .filter((r) => !isFakeReservation(r));
+        this.saveReservations(normalized);
+        return normalized;
       }
       return null;
     } catch (e) {
@@ -437,7 +622,9 @@ export class StorageService {
       }
       const parsed: Reservation[] = JSON.parse(data);
       if (Array.isArray(parsed)) {
-        const clean = parsed.filter((r) => !isFakeReservation(r));
+        const clean = parsed
+          .filter((r) => !isFakeReservation(r))
+          .map((r) => this.normalizeReservation(r));
         if (clean.length !== parsed.length) {
           localStorage.setItem(RESERVATIONS_STORAGE_KEY, JSON.stringify(clean));
           window.dispatchEvent(new CustomEvent('reservations_updated', { detail: clean }));
@@ -453,7 +640,9 @@ export class StorageService {
 
   public static saveReservations(reservations: Reservation[]): void {
     try {
-      const clean = reservations.filter((r) => !isFakeReservation(r));
+      const clean = reservations
+        .filter((r) => !isFakeReservation(r))
+        .map((r) => this.normalizeReservation(r));
       localStorage.setItem(RESERVATIONS_STORAGE_KEY, JSON.stringify(clean));
       window.dispatchEvent(new CustomEvent('reservations_updated', { detail: clean }));
     } catch (e) {

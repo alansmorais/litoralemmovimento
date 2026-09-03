@@ -18,6 +18,7 @@ import { TrackRideModal } from './components/TrackRideModal';
 import { AISmartAssistantModal } from './components/AISmartAssistantModal';
 import { ContactSupportModal } from './components/ContactSupportModal';
 import { AdminAuthModal } from './components/AdminAuthModal';
+import { DriverPortalModal } from './components/DriverPortalModal';
 import { Reservation, TripType } from './types';
 import { StorageService } from './services/storageService';
 
@@ -60,6 +61,7 @@ export default function App() {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
+  const [isDriverPortalOpen, setIsDriverPortalOpen] = useState(false);
 
   // Sync with URL changes, hashes, and navigation events
   useEffect(() => {
@@ -82,9 +84,7 @@ export default function App() {
         viewParam === 'driver' ||
         viewParam === 'motorista'
       ) {
-        // Driver app is standalone; redirect cleanly to reservations
-        window.location.hash = 'reservas';
-        setCurrentView('landing');
+        setIsDriverPortalOpen(true);
       } else if (hash === '#rastreio' || hash === '#tracking') {
         setIsTrackModalOpen(true);
       } else if (hash === '#reservas' || hash === '#cliente' || hash === '#publico') {
@@ -92,8 +92,9 @@ export default function App() {
       }
     };
 
-    // Initial synchronization with central server backend
+    // Initial synchronization with central server backend & Google Sheets
     StorageService.syncWithServer().catch((e) => console.warn('Boot sync with server:', e));
+    StorageService.fetchFromGoogleSheets().catch((e) => console.warn('Boot sync with Google Sheets:', e));
 
     handleLocationChange();
     window.addEventListener('hashchange', handleLocationChange);
@@ -186,6 +187,7 @@ export default function App() {
         onOpenTrackModal={() => handleOpenTrackModal()}
         onOpenAIModal={() => setIsAIModalOpen(true)}
         onOpenAdmin={handleOpenAdmin}
+        onOpenDriverPortal={() => setIsDriverPortalOpen(true)}
         onScrollToBooking={scrollToBooking}
         onOpenContactModal={() => setIsContactModalOpen(true)}
       />
@@ -261,11 +263,18 @@ export default function App() {
         {currentView === 'admin' && (
           <AdminDashboard
             onBackToSite={handleLogoutAdmin}
+            onOpenDriverView={() => setIsDriverPortalOpen(true)}
           />
         )}
       </main>
 
       {/* Modals */}
+      <DriverPortalModal
+        isOpen={isDriverPortalOpen}
+        onClose={() => setIsDriverPortalOpen(false)}
+        onOpenAdmin={handleOpenAdmin}
+      />
+
       <TrackRideModal
         isOpen={isTrackModalOpen}
         initialCode={trackRideCode}

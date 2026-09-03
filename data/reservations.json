@@ -1,1 +1,33 @@
-[]
+[
+  {
+    "id": "res-1788454548382",
+    "code": "LM-7434",
+    "customerName": "Alan TESTE",
+    "customerPhone": "786847620",
+    "customerEmail": "alanpkmoraispl@gmail.com",
+    "origin": "São Paulo",
+    "originDetails": "Estação Metrô Portuguesa-Tietê, São Paulo - SP",
+    "destination": "São Sebastião",
+    "destinationDetails": "Centro / Pousada em São Sebastião",
+    "pickupAddress": "São Paulo",
+    "dropoffAddress": "São Sebastião",
+    "date": "2026-09-10",
+    "time": "11:30",
+    "passengers": 1,
+    "luggageCount": 2,
+    "hasChildSeat": false,
+    "extraStops": [],
+    "estimatedDistanceKm": 185,
+    "tripType": "Compartilhada",
+    "vehicleCategory": "spin_7",
+    "basePrice": 90,
+    "totalPrice": 90,
+    "depositAmount": 45,
+    "remainingAmount": 45,
+    "depositPaid": true,
+    "paymentMethod": "PIX",
+    "paymentStatus": "Sinal 50% Pago (Confirmado)",
+    "status": "Confirmado",
+    "createdAt": "2026-09-03T16:55:48.383Z"
+  }
+]

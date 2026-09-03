@@ -132,19 +132,64 @@ const INITIAL_SERVER_RESERVATIONS: ServerReservation[] = [];
 // Helper to identify and purge any mock/fake reservations
 function isFakeReservation(r: any): boolean {
   if (!r) return false;
-  const id = String(r.id || '');
+  const id = String(r.id || '').toLowerCase();
   const code = String(r.code || '').toUpperCase();
   const name = String(r.customerName || '').toLowerCase();
-  if (id === 'res-101' || id === 'res-102' || id === 'res-103') return true;
-  if (code === 'LM-8921' || code === 'LM-8922' || code === 'LM-8923' || code === 'LM-8925') return true;
+  const email = String(r.customerEmail || '').toLowerCase();
+  const notes = String(r.notes || '').toLowerCase();
+
+  // Known fake sample IDs
   if (
-    name.includes('fernanda albuquerque') ||
-    name.includes('eduardo guimarães') ||
-    name.includes('eduardo guimaraes') ||
-    name.includes('lucas ferreira mendes')
+    id === 'test-01' ||
+    id === 'res-1001' ||
+    id === 'res-1002' ||
+    id === 'res-1003' ||
+    id === 'res-5194' ||
+    id === 'res-101' ||
+    id === 'res-102' ||
+    id === 'res-103' ||
+    id.startsWith('mock-') ||
+    id.startsWith('fake-')
   ) {
     return true;
   }
+
+  // Known fake sample codes
+  if (
+    code === 'LM-9999' ||
+    code === 'LM-1001' ||
+    code === 'LM-1002' ||
+    code === 'LM-1003' ||
+    code === 'LM-5194' ||
+    code === 'LM-8921' ||
+    code === 'LM-8922' ||
+    code === 'LM-8923' ||
+    code === 'LM-8925'
+  ) {
+    return true;
+  }
+
+  // Known sample / dummy names & emails
+  if (
+    name.includes('mariana rios') ||
+    name.includes('rodrigo albuquerque') ||
+    name.includes('juliana mendes') ||
+    name.includes('marcelo fagundes') ||
+    name.includes('fernanda albuquerque') ||
+    name.includes('eduardo guimarães') ||
+    name.includes('eduardo guimaraes') ||
+    name.includes('lucas ferreira mendes') ||
+    email.includes('mariana.rios@design.com.br') ||
+    email.includes('rodrigo.albuquerque@itau.com.br') ||
+    email.includes('juliana.mendes@med.usp.br') ||
+    email.includes('cliente.5194@litoralemmovimento.com.br') ||
+    notes.includes('voo de miami') ||
+    notes.includes('cliente vip litoral em movimento') ||
+    notes.includes('gol g3-1422')
+  ) {
+    return true;
+  }
+
   return false;
 }
 
@@ -330,12 +375,15 @@ async function startServer() {
       return res.status(404).json({ success: false, message: 'Reserva não encontrada no servidor.' });
     }
 
-    if (driverId) {
-      serverReservations[idx].assignedDriverId = driverId;
-      serverReservations[idx].assignedDriverName = driverName || '';
-      serverReservations[idx].driverPhone = driverPhone || '';
-      serverReservations[idx].driverVehicle = driverVehicle || '';
-      serverReservations[idx].driverPlate = driverPlate || '';
+    if (driverId || (driverName && driverName !== 'Não Atribuído' && driverName !== 'Sem Motorista')) {
+      // Find driver info from server drivers if available
+      const driver = serverDrivers.find(d => d.id === driverId || (driverName && d.name.toLowerCase() === driverName.toLowerCase()));
+
+      serverReservations[idx].assignedDriverId = driver ? driver.id : (driverId || undefined);
+      serverReservations[idx].assignedDriverName = driver ? driver.name : (driverName || '');
+      serverReservations[idx].driverPhone = driver ? driver.phone : (driverPhone || '');
+      serverReservations[idx].driverVehicle = driver ? driver.vehicleModel : (driverVehicle || '');
+      serverReservations[idx].driverPlate = driver ? driver.plate : (driverPlate || '');
       if (serverReservations[idx].status === 'Pendente') {
         serverReservations[idx].status = status || 'Confirmado';
       }
@@ -416,16 +464,22 @@ async function startServer() {
         if (existingIdx === -1) {
           serverReservations.push(item);
         } else {
-          // Keep server's assigned driver if client didn't have it, or take client's if set
+          // Keep best driver assignment from either client or server
+          const bestDriverId = item.assignedDriverId || serverReservations[existingIdx].assignedDriverId;
+          const bestDriverName = item.assignedDriverName || serverReservations[existingIdx].assignedDriverName;
+          const bestDriverPhone = item.driverPhone || serverReservations[existingIdx].driverPhone;
+          const bestDriverVehicle = item.driverVehicle || serverReservations[existingIdx].driverVehicle;
+          const bestDriverPlate = item.driverPlate || serverReservations[existingIdx].driverPlate;
+
           serverReservations[existingIdx] = {
-            ...item,
             ...serverReservations[existingIdx],
-            ...(item.assignedDriverId ? {
-              assignedDriverId: item.assignedDriverId,
-              assignedDriverName: item.assignedDriverName,
-              driverPhone: item.driverPhone,
-              driverVehicle: item.driverVehicle,
-              driverPlate: item.driverPlate,
+            ...item,
+            ...(bestDriverId ? {
+              assignedDriverId: bestDriverId,
+              assignedDriverName: bestDriverName,
+              driverPhone: bestDriverPhone,
+              driverVehicle: bestDriverVehicle,
+              driverPlate: bestDriverPlate,
             } : {}),
             ...(item.status && item.status !== 'Pendente' ? { status: item.status } : {}),
           };
