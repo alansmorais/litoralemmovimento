@@ -8,7 +8,6 @@ interface HeaderProps {
   onOpenTrackModal: () => void;
   onOpenAIModal: () => void;
   onOpenAdmin: () => void;
-  onOpenDriverPortal?: () => void;
   onScrollToBooking: () => void;
   onOpenContactModal?: () => void;
 }
@@ -19,7 +18,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTrackModal,
   onOpenAIModal,
   onOpenAdmin,
-  onOpenDriverPortal,
   onScrollToBooking,
   onOpenContactModal,
 }) => {
@@ -52,18 +50,6 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5 sm:gap-4 flex-shrink-0">
-            {onOpenDriverPortal && (
-              <button
-                onClick={onOpenDriverPortal}
-                id="header-driver-portal-top-btn"
-                className="inline-flex items-center gap-1 text-[11px] bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 px-2.5 py-0.5 rounded-full border border-amber-500/30 transition-colors cursor-pointer font-medium"
-                title="Área exclusiva dos motoristas para ver viagens atribuídas e rota"
-              >
-                <Car className="w-3 h-3 text-amber-400" />
-                <span>Área do Motorista</span>
-              </button>
-            )}
-
             <button
               onClick={onOpenAdmin}
               id="header-admin-portal-btn"
@@ -321,19 +307,6 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <Phone className="w-4 h-4 text-amber-400" />
                   <span>Central de Atendimento & Dúvidas (Fale Conosco)</span>
-                </button>
-              )}
-
-              {onOpenDriverPortal && (
-                <button
-                  onClick={() => {
-                    onOpenDriverPortal();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 text-left py-2.5 px-3 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/30 font-semibold text-xs transition-colors cursor-pointer"
-                >
-                  <Car className="w-4 h-4 text-amber-400" />
-                  <span>Área do Motorista (Escala & Viagens)</span>
                 </button>
               )}
 

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Litoral em Movimento - Transfer Executivo & Gestão</title>
+    <meta name="description" content="Serviço executivo de transfer São Paulo ⇌ Litoral Norte com agendamento online, cotação e painel de gestão completo.">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #020617;
+            color: #f8fafc;
+        }
+        .gold-gradient-text {
+            background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gold-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        .gold-btn:hover {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .loader {
+            border-top-color: #f59e0b;
+            animation: spinner 0.8s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+        <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-2xl flex flex-col items-center max-w-xs text-center">
+            <div class="loader ease-linear rounded-full border-4 border-slate-800 border-t-amber-500 h-10 w-10 mb-3"></div>
+            <p id="loadingMsg" class="font-bold text-sm text-slate-200">Processando...</p>
+            <p class="text-xs text-slate-400 mt-1">Conectando ao Google Sheets</p>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="navigate('booking')">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-xl">
+                    🌊
+                </div>
+                <div>
+                    <h1 class="font-bold text-base leading-tight tracking-tight gold-gradient-text">Litoral em Movimento</h1>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest">Transfer SP ⇌ Litoral Norte</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="flex items-center gap-1.5 bg-slate-950/60 p-1 rounded-xl border border-slate-800 text-xs">
+                <button id="navBtnBooking" onclick="navigate('booking')" class="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <span>Agendar Transfer</span>
+                </button>
+                <button id="navBtnAdmin" onclick="navigate('admin')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer">
+                    <span>Painel Gestão</span>
+                </button>
+                <button id="navBtnDriver" onclick="navigate('driver')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer">
+                    <span>Motorista</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN APP CONTAINER -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6">
+
+        <!-- ======================================================== -->
+        <!-- VIEW 1: CUSTOMER BOOKING ENGINE                          -->
+        <!-- ======================================================== -->
+        <section id="viewBooking" class="block space-y-8">
+            
+            <!-- Hero Banner -->
+            <div class="glass-card rounded-3xl p-6 md:p-10 relative overflow-hidden text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-6 border-amber-500/20">
+                <div class="max-w-xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold mb-3">
+                        <span>⭐ Frota Executiva 7 Lugares com Ar Duplo</span>
+                    </div>
+                    <h2 class="text-2xl md:text-4xl font-extrabold text-white leading-tight">
+                        Viagens Seguras e Pontuais entre <span class="gold-gradient-text">São Paulo e o Litoral Norte</span>
+                    </h2>
+                    <p class="text-slate-400 text-xs md:text-sm mt-2.5 leading-relaxed">
+                        São Sebastião, Ilhabela, Caraguatatuba e Ubatuba. Conforto com embarque na sua porta, aeroportos (GRU/CGH) ou ponto de encontro central.
+                    </p>
+                </div>
+                <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 text-center min-w-[200px]">
+                    <span class="text-xs text-slate-400 block">A partir de</span>
+                    <span class="text-3xl font-black text-amber-400">R$ 90</span>
+                    <span class="text-[11px] text-slate-500 block">por passageiro / viagem</span>
+                </div>
+            </div>
+
+            <!-- Booking Stepper Form -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Left 2 Cols: Interactive Booking Form -->
+                <div class="lg:col-span-2 glass-card rounded-3xl p-6 md:p-8 space-y-6">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                        <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                            <span>📋 Reserva & Cotação Online</span>
+                        </h3>
+                        <span class="text-xs text-amber-400 font-semibold">Passo Único</span>
+                    </div>
+
+                    <form id="bookingForm" onsubmit="handleBookingSubmit(event)" class="space-y-4">
+                        
+                        <!-- Route Selection -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Origem (Embarque)</label>
+                                <select id="bOrigin" required onchange="calculatePrice()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                    <option value="São Paulo">São Paulo (Capital / Metrô Tietê)</option>
+                                    <option value="Aeroporto de Guarulhos (GRU)">Aeroporto de Guarulhos (GRU)</option>
+                                    <option value="Aeroporto de Congonhas (CGH)">Aeroporto de Congonhas (CGH)</option>
+                                    <option value="São Sebastião">São Sebastião (Centro / Praias)</option>
+                                    <option value="Ilhabela">Ilhabela (Balsa / Hotéis)</option>
+                                    <option value="Caraguatatuba">Caraguatatuba</option>
+                                    <option value="Ubatuba">Ubatuba</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Destino (Desembarque)</label>
+                                <select id="bDestination" required onchange="calculatePrice()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                    <option value="São Sebastião">São Sebastião (Centro / Praias)</option>
+                                    <option value="Ilhabela">Ilhabela (Balsa / Hotéis)</option>
+                                    <option value="Caraguatatuba">Caraguatatuba</option>
+                                    <option value="Ubatuba">Ubatuba</option>
+                                    <option value="São Paulo">São Paulo (Capital / Metrô Tietê)</option>
+                                    <option value="Aeroporto de Guarulhos (GRU)">Aeroporto de Guarulhos (GRU)</option>
+                                    <option value="Aeroporto de Congonhas (CGH)">Aeroporto de Congonhas (CGH)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Specific Addresses -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Endereço / Ponto de Coleta</label>
+                                <input type="text" id="bOriginDetails" placeholder="Ex: Metrô Portuguesa-Tietê ou Rua..." required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Endereço / Pousada de Entrega</label>
+                                <input type="text" id="bDestinationDetails" placeholder="Ex: Pousada Maresias, Rua..." required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Date, Time, Passengers -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Data da Viagem</label>
+                                <input type="date" id="bDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Horário Desejado</label>
+                                <input type="time" id="bTime" required value="08:00" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Passageiros</label>
+                                <select id="bPassengers" onchange="calculatePrice()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                    <option value="1">1 Passageiro</option>
+                                    <option value="2">2 Passageiros</option>
+                                    <option value="3">3 Passageiros</option>
+                                    <option value="4">4 Passageiros</option>
+                                    <option value="5">5 Passageiros</option>
+                                    <option value="6">6 Passageiros (Van/Spin Fechada)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Trip Type & Luggage -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Modalidade do Transfer</label>
+                                <select id="bTripType" onchange="calculatePrice()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                    <option value="Compartilhada">Compartilhada Executiva (Melhor Custo)</option>
+                                    <option value="Privativa">Exclusiva / Privativa (Carro 100% seu)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Qtd. Malas Grandes</label>
+                                <select id="bLuggage" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                    <option value="1">1 Mala + 1 Mochila</option>
+                                    <option value="2">2 Malas</option>
+                                    <option value="3">3 Malas</option>
+                                    <option value="4">4+ Malas</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Customer Details -->
+                        <div class="pt-4 border-t border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Seu Nome Completo</label>
+                                <input type="text" id="bCustomerName" placeholder="Nome e Sobrenome" required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">WhatsApp com DDD</label>
+                                <input type="tel" id="bCustomerPhone" placeholder="(11) 99999-9999" required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">E-mail para Confirmação</label>
+                                <input type="email" id="bCustomerEmail" placeholder="seu@email.com" required class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full gold-btn text-slate-950 font-extrabold text-base py-4 rounded-2xl shadow-lg shadow-amber-500/20 transition cursor-pointer flex items-center justify-center gap-2 mt-4">
+                            <span>Gerar Agendamento & Confirmar Sinal</span>
+                            <span>→</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right 1 Col: Summary & Payment Card -->
+                <div class="space-y-4">
+                    <div class="glass-card rounded-3xl p-6 border-amber-500/30 space-y-4">
+                        <h4 class="font-bold text-sm text-amber-400 uppercase tracking-wider">Resumo do Valor</h4>
+                        
+                        <div class="space-y-2 text-xs text-slate-400">
+                            <div class="flex justify-between">
+                                <span>Tarifa Base:</span>
+                                <span id="summaryBasePrice" class="text-slate-200 font-bold">R$ 90,00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Passageiros:</span>
+                                <span id="summaryPassCount" class="text-slate-200 font-bold">1 pessoa</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Modalidade:</span>
+                                <span id="summaryTripType" class="text-slate-200 font-bold">Compartilhada</span>
+                            </div>
+                            <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-sm">
+                                <span class="font-bold text-white">Total da Corrida:</span>
+                                <span id="summaryTotalPrice" class="font-black text-xl text-amber-400">R$ 90,00</span>
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 space-y-1">
+                            <div class="flex justify-between font-bold">
+                                <span>Sinal para Reserva (50%):</span>
+                                <span id="summaryDepositPrice" class="text-amber-400">R$ 45,00</span>
+                            </div>
+                            <p class="text-[11px] text-amber-300/80">O saldo restante é pago diretamente ao motorista no dia.</p>
+                        </div>
+
+                        <!-- Key Benefits -->
+                        <div class="pt-2 space-y-2 text-xs text-slate-400">
+                            <div class="flex items-center gap-2">
+                                <span class="text-emerald-400">✓</span> Seguro APP para todos passageiros
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-emerald-400">✓</span> Motoristas cadastrados e checados
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-emerald-400">✓</span> Veículo com ar-condicionado duplo
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Voucher Success Box -->
+                    <div id="voucherCard" class="hidden glass-card rounded-3xl p-6 border-emerald-500/40 bg-emerald-950/20 text-center space-y-3">
+                        <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold">✓</div>
+                        <h4 class="font-bold text-emerald-400 text-sm">Reserva Registrada com Sucesso!</h4>
+                        <p class="text-xs text-slate-300">Código do Voucher: <strong id="vCode" class="text-white font-mono bg-slate-900 px-2 py-1 rounded">LM-0000</strong></p>
+                        <a id="vWhatsAppLink" target="_blank" class="block w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition">
+                            Enviar Comprovante no WhatsApp
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VIEW 2: FULL ADMIN & FLEET MANAGEMENT DASHBOARD         -->
+        <!-- ======================================================== -->
+        <section id="viewAdmin" class="hidden space-y-6">
+            
+            <!-- Admin Top Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-card p-4 rounded-2xl border-slate-800">
+                    <span class="text-xs text-slate-400 font-medium">Total de Viagens</span>
+                    <h3 id="statTotalTrips" class="text-2xl font-black text-white mt-1">0</h3>
+                </div>
+                <div class="glass-card p-4 rounded-2xl border-slate-800">
+                    <span class="text-xs text-slate-400 font-medium">Pendentes / Confirmadas</span>
+                    <h3 id="statPendingTrips" class="text-2xl font-black text-amber-400 mt-1">0</h3>
+                </div>
+                <div class="glass-card p-4 rounded-2xl border-slate-800">
+                    <span class="text-xs text-slate-400 font-medium">Em Andamento</span>
+                    <h3 id="statActiveTrips" class="text-2xl font-black text-blue-400 mt-1">0</h3>
+                </div>
+                <div class="glass-card p-4 rounded-2xl border-slate-800">
+                    <span class="text-xs text-slate-400 font-medium">Faturamento Total</span>
+                    <h3 id="statTotalRevenue" class="text-2xl font-black text-emerald-400 mt-1">R$ 0,00</h3>
+                </div>
+            </div>
+
+            <!-- Action Controls Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                <div class="flex items-center gap-2">
+                    <input type="text" id="adminSearchInput" oninput="filterAdminReservations()" placeholder="Buscar por cliente, código, cidade..." class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500 w-60">
+                    <select id="adminStatusFilter" onchange="filterAdminReservations()" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                        <option value="ALL">Todos os Status</option>
+                        <option value="Pendente">Pendentes</option>
+                        <option value="Confirmado">Confirmados</option>
+                        <option value="A caminho">A caminho</option>
+                        <option value="Concluído">Concluídos</option>
+                        <option value="Cancelado">Cancelados</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="refreshData(false)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 transition cursor-pointer">
+                        🔄 Atualizar Planilha
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reservations Table Container -->
+            <div class="glass-card rounded-3xl overflow-hidden border-slate-800">
+                <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-white">Todas as Reservas Registradas</h3>
+                    <span id="adminTableCount" class="text-xs text-slate-400">0 reservas</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-950/80 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Código</th>
+                                <th class="p-3">Cliente</th>
+                                <th class="p-3">Data / Hora</th>
+                                <th class="p-3">Trajeto</th>
+                                <th class="p-3">Motorista</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3">Valor</th>
+                                <th class="p-3 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminReservationsTableBody" class="divide-y divide-slate-800/60">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VIEW 3: EMBEDDED DRIVER PORTAL                          -->
+        <!-- ======================================================== -->
+        <section id="viewDriver" class="hidden max-w-md mx-auto space-y-4">
+            
+            <div id="dLoginCard" class="glass-card rounded-3xl p-6 border-slate-800 text-center space-y-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-xl font-bold">🚕</div>
+                <h3 class="font-bold text-lg text-white">Acesso do Motorista</h3>
+                <p class="text-xs text-slate-400">Selecione seu perfil para visualizar as corridas atribuídas</p>
+                <select id="dDriverSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none">
+                    <option value="">Carregando motoristas...</option>
+                </select>
+                <button onclick="driverLogin()" class="w-full gold-btn text-slate-950 font-bold py-3 rounded-xl text-sm transition cursor-pointer">
+                    Entrar na Frota
+                </button>
+            </div>
+
+            <div id="dDashboardCard" class="hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 id="dWelcomeMsg" class="font-bold text-lg text-white">Olá, Motorista!</h3>
+                        <p class="text-xs text-slate-400">Minhas viagens agendadas</p>
+                    </div>
+                    <button onclick="driverLogout()" class="text-xs text-slate-400 hover:text-white bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 cursor-pointer">
+                        Sair
+                    </button>
+                </div>
+
+                <div id="dTripsList" class="space-y-3">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- JS Core Logic -->
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzVXHlSLJykQpgwJBs6OEiLZx70lBstHfQNkB7EvvL275foVcxRCSAzxDUKb8gqEoilNA/exec';
+
+        let reservations = [];
+        let drivers = [];
+        let currentActiveDriver = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            today.setDate(today.getDate() + 1);
+            document.getElementById('bDate').value = today.toISOString().split('T')[0];
+
+            calculatePrice();
+            refreshData(true);
+        });
+
+        function showLoading(show, msg = 'Processando...') {
+            document.getElementById('loadingMsg').innerText = msg;
+            document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+        }
+
+        function navigate(viewName) {
+            ['viewBooking', 'viewAdmin', 'viewDriver'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            
+            const btnB = document.getElementById('navBtnBooking');
+            const btnA = document.getElementById('navBtnAdmin');
+            const btnD = document.getElementById('navBtnDriver');
+
+            [btnB, btnA, btnD].forEach(b => {
+                b.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer";
+            });
+
+            if (viewName === 'booking') {
+                document.getElementById('viewBooking').classList.remove('hidden');
+                btnB.className = "px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold transition flex items-center gap-1.5 cursor-pointer";
+            } else if (viewName === 'admin') {
+                document.getElementById('viewAdmin').classList.remove('hidden');
+                btnA.className = "px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold transition flex items-center gap-1.5 cursor-pointer";
+                renderAdminTable();
+            } else if (viewName === 'driver') {
+                document.getElementById('viewDriver').classList.remove('hidden');
+                btnD.className = "px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold transition flex items-center gap-1.5 cursor-pointer";
+            }
+        }
+
+        function calculatePrice() {
+            const passengers = parseInt(document.getElementById('bPassengers').value) || 1;
+            const tripType = document.getElementById('bTripType').value;
+            const origin = document.getElementById('bOrigin').value;
+            const dest = document.getElementById('bDestination').value;
+
+            let baseRate = 90;
+
+            if (origin.includes('Aeroporto') || dest.includes('Aeroporto')) {
+                baseRate = 120;
+            }
+            if (origin.includes('Ilhabela') || dest.includes('Ilhabela') || origin.includes('Ubatuba') || dest.includes('Ubatuba')) {
+                baseRate += 30;
+            }
+
+            let totalPrice = 0;
+            if (tripType === 'Privativa') {
+                totalPrice = Math.max(baseRate * 4, 450);
+            } else {
+                totalPrice = baseRate * passengers;
+            }
+
+            const deposit = totalPrice * 0.5;
+
+            document.getElementById('summaryBasePrice').innerText = `R$ ${baseRate.toFixed(2)}`;
+            document.getElementById('summaryPassCount').innerText = `${passengers} pessoa(s)`;
+            document.getElementById('summaryTripType').innerText = tripType;
+            document.getElementById('summaryTotalPrice').innerText = `R$ ${totalPrice.toFixed(2)}`;
+            document.getElementById('summaryDepositPrice').innerText = `R$ ${deposit.toFixed(2)}`;
+
+            return { baseRate, totalPrice, deposit };
+        }
+
+        async function refreshData(initial = false) {
+            showLoading(true, 'Sincronizando com a planilha...');
+            try {
+                const dRes = await fetch(`${API_URL}?action=getDrivers`);
+                drivers = await dRes.json();
+                populateDriverSelects();
+
+                const rRes = await fetch(`${API_URL}?action=getReservations`);
+                reservations = await rRes.json();
+                
+                updateAdminStats();
+                renderAdminTable();
+                if (currentActiveDriver) renderDriverTrips();
+            } catch (err) {
+                console.error('Erro de sincronizacao:', err);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function populateDriverSelects() {
+            const select = document.getElementById('dDriverSelect');
+            select.innerHTML = '<option value="">Selecione seu nome...</option>';
+            drivers.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.name;
+                opt.textContent = `${d.name} (${d.vehicleModel || 'Spin'})`;
+                select.appendChild(opt);
+            });
+        }
+
+        async function handleBookingSubmit(e) {
+            e.preventDefault();
+            const { totalPrice, deposit } = calculatePrice();
+            const code = 'LM-' + Math.floor(1000 + Math.random() * 9000);
+
+            const newReservation = {
+                id: 'res-' + Date.now(),
+                code: code,
+                customerName: document.getElementById('bCustomerName').value,
+                customerPhone: document.getElementById('bCustomerPhone').value,
+                customerEmail: document.getElementById('bCustomerEmail').value,
+                origin: document.getElementById('bOrigin').value,
+                originDetails: document.getElementById('bOriginDetails').value,
+                destination: document.getElementById('bDestination').value,
+                destinationDetails: document.getElementById('bDestinationDetails').value,
+                date: document.getElementById('bDate').value,
+                time: document.getElementById('bTime').value,
+                passengers: parseInt(document.getElementById('bPassengers').value),
+                tripType: document.getElementById('bTripType').value,
+                luggageCount: parseInt(document.getElementById('bLuggage').value),
+                hasChildSeat: false,
+                totalPrice: totalPrice,
+                depositAmount: deposit,
+                remainingAmount: totalPrice - deposit,
+                depositPaid: false,
+                paymentMethod: 'PIX',
+                status: 'Pendente',
+                paymentStatus: 'Pendente de Sinal',
+                assignedDriverName: '',
+                driverVehicle: '',
+                notes: ''
+            };
+
+            showLoading(true, 'Gravando sua reserva...');
+            try {
+                reservations.unshift(newReservation);
+
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'syncAll',
+                        reservations: reservations
+                    })
+                });
+
+                document.getElementById('vCode').innerText = code;
+                const cleanPhone = '5512988506597';
+                const msg = encodeURIComponent(`Olá! Acabei de agendar o transfer ${code} de ${newReservation.origin} para ${newReservation.destination} no dia ${newReservation.date}. Gostaria de confirmar o pagamento do sinal!`);
+                document.getElementById('vWhatsAppLink').href = `https://wa.me/${cleanPhone}?text=${msg}`;
+                document.getElementById('voucherCard').classList.remove('hidden');
+
+                alert(`Reserva ${code} registrada! Por favor, confirme o sinal via WhatsApp.`);
+                updateAdminStats();
+            } catch (err) {
+                alert('Reserva salva localmente!');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // ================= ADMIN FUNCTIONS =================
+        function updateAdminStats() {
+            document.getElementById('statTotalTrips').innerText = reservations.length;
+            const pending = reservations.filter(r => r.status === 'Pendente' || r.status === 'Confirmado').length;
+            const active = reservations.filter(r => r.status === 'A caminho').length;
+            const totalRev = reservations.reduce((acc, r) => acc + (Number(r.totalPrice) || 0), 0);
+
+            document.getElementById('statPendingTrips').innerText = pending;
+            document.getElementById('statActiveTrips').innerText = active;
+            document.getElementById('statTotalRevenue').innerText = `R$ ${totalRev.toFixed(2)}`;
+        }
+
+        function renderAdminTable(filteredData = null) {
+            const list = filteredData || reservations;
+            const tbody = document.getElementById('adminReservationsTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('adminTableCount').innerText = `${list.length} reservas`;
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500">Nenhuma reserva encontrada.</td></tr>`;
+                return;
+            }
+
+            list.forEach(res => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-900/50 transition";
+
+                let statusBadge = "bg-yellow-500/10 text-yellow-400 border-yellow-500/30";
+                if (res.status === 'A caminho') statusBadge = "bg-blue-500/10 text-blue-400 border-blue-500/30";
+                if (res.status === 'Concluído') statusBadge = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30";
+                if (res.status === 'Cancelado') statusBadge = "bg-red-500/10 text-red-400 border-red-500/30";
+
+                tr.innerHTML = `
+                    <td class="p-3 font-mono font-bold text-amber-400">${res.code || 'LM-TRIP'}</td>
+                    <td class="p-3">
+                        <div class="font-bold text-white">${res.customerName}</div>
+                        <div class="text-[11px] text-slate-500">${res.customerPhone || ''}</div>
+                    </td>
+                    <td class="p-3">${res.date} <br><span class="text-slate-500">${res.time}</span></td>
+                    <td class="p-3">
+                        <div class="text-slate-200">${res.origin} → ${res.destination}</div>
+                        <div class="text-[10px] text-slate-500">${res.tripType} • ${res.passengers} pass.</div>
+                    </td>
+                    <td class="p-3">
+                        <select onchange="updateDriver('${res.id}', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs text-white">
+                            <option value="">-- Sem Motorista --</option>
+                            ${drivers.map(d => `<option value="${d.name}" ${res.assignedDriverName === d.name ? 'selected' : ''}>${d.name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="p-3">
+                        <select onchange="updateStatus('${res.id}', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg p-1.5 text-xs font-bold ${statusBadge}">
+                            <option value="Pendente" ${res.status === 'Pendente' ? 'selected' : ''}>Pendente</option>
+                            <option value="Confirmado" ${res.status === 'Confirmado' ? 'selected' : ''}>Confirmado</option>
+                            <option value="A caminho" ${res.status === 'A caminho' ? 'selected' : ''}>A caminho</option>
+                            <option value="Concluído" ${res.status === 'Concluído' ? 'selected' : ''}>Concluído</option>
+                            <option value="Cancelado" ${res.status === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
+                        </select>
+                    </td>
+                    <td class="p-3 font-bold text-emerald-400">R$ ${(Number(res.totalPrice) || 0).toFixed(2)}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="deleteReservation('${res.id}')" class="text-slate-500 hover:text-red-400 p-1 cursor-pointer" title="Excluir">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterAdminReservations() {
+            const query = document.getElementById('adminSearchInput').value.toLowerCase();
+            const status = document.getElementById('adminStatusFilter').value;
+
+            const filtered = reservations.filter(r => {
+                const matchQuery = (r.customerName || '').toLowerCase().includes(query) ||
+                                   (r.code || '').toLowerCase().includes(query) ||
+                                   (r.origin || '').toLowerCase().includes(query) ||
+                                   (r.destination || '').toLowerCase().includes(query);
+                const matchStatus = status === 'ALL' || r.status === status;
+                return matchQuery && matchStatus;
+            });
+
+            renderAdminTable(filtered);
+        }
+
+        async function updateDriver(resId, driverName) {
+            const res = reservations.find(r => r.id === resId);
+            if (res) {
+                res.assignedDriverName = driverName;
+                const dObj = drivers.find(d => d.name === driverName);
+                if (dObj) res.driverVehicle = dObj.vehicleModel;
+                syncToSheet();
+            }
+        }
+
+        async function updateStatus(resId, newStatus) {
+            const res = reservations.find(r => r.id === resId);
+            if (res) {
+                res.status = newStatus;
+                syncToSheet();
+            }
+        }
+
+        async function deleteReservation(resId) {
+            if (!confirm('Deseja realmente remover esta reserva?')) return;
+            reservations = reservations.filter(r => r.id !== resId);
+            renderAdminTable();
+            updateAdminStats();
+            syncToSheet();
+        }
+
+        async function syncToSheet() {
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'syncAll',
+                        reservations: reservations
+                    })
+                });
+            } catch (err) {
+                console.error('Erro sync:', err);
+            }
+        }
+
+        // ================= DRIVER PORTAL FUNCTIONS =================
+        function driverLogin() {
+            const val = document.getElementById('dDriverSelect').value;
+            if (!val) {
+                alert('Selecione um motorista.');
+                return;
+            }
+            currentActiveDriver = val;
+            document.getElementById('dLoginCard').classList.add('hidden');
+            document.getElementById('dDashboardCard').classList.remove('hidden');
+            document.getElementById('dWelcomeMsg').innerText = `Olá, ${currentActiveDriver}!`;
+            renderDriverTrips();
+        }
+
+        function driverLogout() {
+            currentActiveDriver = null;
+            document.getElementById('dDashboardCard').classList.add('hidden');
+            document.getElementById('dLoginCard').classList.remove('hidden');
+        }
+
+        function renderDriverTrips() {
+            const container = document.getElementById('dTripsList');
+            container.innerHTML = '';
+
+            const myTrips = reservations.filter(r => {
+                if (!r.assignedDriverName) return false;
+                return r.assignedDriverName.toLowerCase().includes(currentActiveDriver.toLowerCase().split(' ')[0]);
+            });
+
+            if (myTrips.length === 0) {
+                container.innerHTML = `<div class="glass-card p-6 rounded-2xl text-center text-xs text-slate-400">Nenhuma viagem atribuída a você no momento.</div>`;
+                return;
+            }
+
+            myTrips.forEach(res => {
+                const card = document.createElement('div');
+                card.className = "glass-card p-4 rounded-2xl border-slate-800 space-y-3 text-xs";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="font-mono text-amber-400 font-bold">${res.code}</span>
+                        <span class="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px]">${res.status}</span>
+                    </div>
+                    <div class="text-sm font-bold text-white">${res.date} às ${res.time}</div>
+                    <div class="bg-slate-900 p-2.5 rounded-xl space-y-1 text-slate-300">
+                        <div><strong>A:</strong> ${res.origin} (${res.originDetails || ''})</div>
+                        <div><strong>B:</strong> ${res.destination} (${res.destinationDetails || ''})</div>
+                    </div>
+                    <div class="flex justify-between text-slate-400">
+                        <span>Passageiros: ${res.passengers}</span>
+                        <span>A Receber: <strong class="text-emerald-400">R$ ${(Number(res.remainingAmount) || 0).toFixed(2)}</strong></span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>

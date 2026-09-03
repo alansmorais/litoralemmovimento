@@ -1,6 +1,6 @@
 {
-  "name": "Litoral em Movimento",
-  "description": "Serviço de transfer e viagens executivas São Paulo ⇌ Litoral Norte (São Sebastião, Ilhabela, Caraguatatuba) com agendamento online e painel administrativo para gestão e controle.",
-  "requestFramePermissions": [],
+  "name": "Litoral em Movimento • Transfer Executivo",
+  "description": "Serviço oficial de transfer executivo em Chevrolet Spin 7 Lugares com ar-condicionado duplo. Conectando São Paulo, Aeroportos (GRU/CGH) e todo o Litoral Norte com painel de gestão.",
+  "requestFramePermissions": ["geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

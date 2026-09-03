@@ -78,8 +78,8 @@ export interface Driver {
   mustChangePassword?: boolean; // Trocar senha no 1º acesso
   email: string;
   phone: string;
-  photoUrl: string;
-  vehicleModel: string; // e.g. Chevrolet Spin Premier 7 Lugares 2024
+  photoUrl?: string;
+  vehicleModel: string; // e.g. Chevrolet Spin Premier 7 Lugares
   plate: string;
   rating: number;
   totalTrips: number;

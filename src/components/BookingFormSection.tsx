@@ -525,7 +525,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
                     <input
                       type="email"
                       required
-                      placeholder="mariana@exemplo.com.br"
+                      placeholder="seu.email@dominio.com.br"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-600 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-all"

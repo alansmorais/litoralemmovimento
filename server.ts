@@ -77,53 +77,38 @@ const INITIAL_SERVER_DRIVERS: ServerDriver[] = [
   {
     id: 'drv-01',
     name: 'Eduardo',
-    email: 'eduardo.motorista@litoralemmovimento.com.br',
+    email: 'eduardo@litoralemmovimento.com.br',
     phone: '(12) 98850-6597',
-    photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
-    vehicleModel: 'Chevrolet Spin Premier 7L • 2024 (Ar-Cond. Duplo, 6 Pass. + Mot.)',
-    plate: 'SP-LIT7A24',
-    rating: 4.98,
-    totalTrips: 420,
+    photoUrl: '',
+    vehicleModel: 'Chevrolet Spin Premier 7L (Ar-Cond. Duplo, 6 Pass. + Mot.)',
+    plate: '',
+    rating: 5.0,
+    totalTrips: 0,
     activeStatus: 'Disponível',
-    currentLocation: {
-      lat: -23.5505,
-      lng: -45.4158,
-      address: 'Rodovia dos Tamoios (SP-099) - Sentido Litoral',
-    },
   },
   {
     id: 'drv-02',
-    name: 'Edivam Santos',
-    email: 'edivam.motorista@litoralemmovimento.com.br',
+    name: 'Edivam',
+    email: 'edivam@litoralemmovimento.com.br',
     phone: '(12) 98850-6597',
-    photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
-    vehicleModel: 'Chevrolet Spin Premier 7L • 2024 (Ar-Cond. Duplo, 6 Pass. + Mot.)',
-    plate: 'SP-MOV7B88',
-    rating: 4.97,
-    totalTrips: 310,
+    photoUrl: '',
+    vehicleModel: 'Chevrolet Spin Premier 7L (Ar-Cond. Duplo, 6 Pass. + Mot.)',
+    plate: '',
+    rating: 5.0,
+    totalTrips: 0,
     activeStatus: 'Disponível',
-    currentLocation: {
-      lat: -23.5505,
-      lng: -46.6333,
-      address: 'Aeroporto Internacional de Guarulhos (GRU) - Terminal 2',
-    },
   },
   {
     id: 'drv-03',
-    name: 'Karine Souza',
-    email: 'karine.motorista@litoralemmovimento.com.br',
+    name: 'Karine',
+    email: 'karine@litoralemmovimento.com.br',
     phone: '(12) 98850-6597',
-    photoUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80',
-    vehicleModel: 'Chevrolet Spin Premier 7L • 2024 (Ar-Cond. Duplo, 6 Pass. + Mot.)',
-    plate: 'SP-LIT7C50',
-    rating: 4.99,
-    totalTrips: 275,
+    photoUrl: '',
+    vehicleModel: 'Chevrolet Spin Premier 7L (Ar-Cond. Duplo, 6 Pass. + Mot.)',
+    plate: '',
+    rating: 5.0,
+    totalTrips: 0,
     activeStatus: 'Disponível',
-    currentLocation: {
-      lat: -23.7785,
-      lng: -45.3571,
-      address: 'Balsa de São Sebastião / Ilhabela',
-    },
   },
 ];
 
@@ -974,6 +959,19 @@ Responda em tom profissional, caloroso, direto e conciso (em português brasilei
         response: 'Para viajar com tranquilidade ao Litoral Norte, viaje com a Litoral em Movimento! Agende com antecedência para garantir seu horário ideal na travessia e na descida da serra.',
       });
     }
+  });
+
+  // Standalone Driver App Direct Routes
+  app.get(['/driver', '/motorista', '/portal-motorista', '/driver.html', '/motorista.html'], (req, res) => {
+    const driverHtmlDist = path.join(distPath, 'driver.html');
+    const driverHtmlPublic = path.join(process.cwd(), 'public', 'driver.html');
+    if (fs.existsSync(driverHtmlDist)) {
+      return res.sendFile(driverHtmlDist);
+    }
+    if (fs.existsSync(driverHtmlPublic)) {
+      return res.sendFile(driverHtmlPublic);
+    }
+    res.redirect('/#driver');
   });
 
   // Determine if running as production bundle or development server

@@ -229,7 +229,7 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
                       type="email"
-                      placeholder="seuemail@exemplo.com"
+                      placeholder="seu.email@dominio.com.br"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white rounded-xl text-xs text-slate-900 outline-none transition-all"
