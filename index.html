@@ -9,11 +9,10 @@
     <meta property="og:description" content="Transfer São Paulo ⇄ Litoral Norte com conforto, pontualidade e segurança." />
     
     <!-- PWA & Mobile Meta -->
-    <meta name="theme-color" content="#020617" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Litoral em Movimento" />
-    <link rel="manifest" href="./manifest.json" />
     <link rel="icon" type="image/jpeg" href="./images/icon-logo.jpg" />
     <link rel="shortcut icon" type="image/jpeg" href="./images/icon-logo.jpg" />
     <link rel="apple-touch-icon" href="./images/icon-logo.jpg" />
@@ -24,7 +23,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <script>
-      // Clear any stale service workers or caches that could cause loading issues
+      // Clear stale service workers
       try {
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(function(regs) {
@@ -36,8 +35,19 @@
       } catch (e) {}
     </script>
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-amber-500 selection:text-slate-950 min-h-screen" style="background-color: #020617; color: #f8fafc; margin: 0;">
-    <div id="root"></div>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-amber-500 selection:text-slate-950 min-h-screen" style="background-color: #f8fafc; color: #0f172a; margin: 0;">
+    <div id="root">
+      <div style="min-height: 100vh; background: #f8fafc; color: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; padding: 24px; text-align: center;">
+        <div style="max-width: 400px; width: 100%; space-y: 16px;">
+          <div style="font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Litoral em Movimento</div>
+          <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">Carregando transfer executivo...</p>
+          <div style="width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+        </div>
+      </div>
+      <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
