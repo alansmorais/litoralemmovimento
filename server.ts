@@ -53,6 +53,7 @@ export interface ServerReservation {
   notes?: string;
   internalAdminNotes?: string;
   gpsDeviation?: any;
+  updatedAt?: string;
 }
 
 export interface ServerDriver {
@@ -392,6 +393,7 @@ async function startServer() {
       delete serverReservations[idx].driverPlate;
     }
 
+    serverReservations[idx].updatedAt = new Date().toISOString();
     saveReservationsToDisk(serverReservations);
 
     res.json({

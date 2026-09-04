@@ -1062,8 +1062,8 @@ function doPost(e) {
       for (var j = 1; j < dataRows.length; j++) {
         if (String(dataRows[j][0]) === codeOrId || String(dataRows[j][1]) === codeOrId) {
           if (newStatus) sheet.getRange(j + 1, 22).setValue(newStatus);
-          if (payload.driverName) sheet.getRange(j + 1, 25).setValue(payload.driverName);
-          if (payload.driverVehicle) sheet.getRange(j + 1, 26).setValue(payload.driverVehicle);
+          if (payload.driverName !== undefined) sheet.getRange(j + 1, 25).setValue(payload.driverName || '');
+          if (payload.driverVehicle !== undefined) sheet.getRange(j + 1, 26).setValue(payload.driverVehicle || '');
           updated = true;
           break;
         }
@@ -1071,7 +1071,7 @@ function doPost(e) {
 
       return createJsonResponse({
         status: updated ? 'success' : 'not_found',
-        message: updated ? 'Status da viagem atualizado na planilha!' : 'Reserva não encontrada.'
+        message: updated ? 'Status e motorista da viagem atualizados na planilha!' : 'Reserva não encontrada.'
       });
     }
 

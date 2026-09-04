@@ -68,6 +68,7 @@ export interface Reservation {
   pickupAddress: string;
   dropoffAddress: string;
   flightNumber?: string;
+  updatedAt?: string;
 }
 
 export interface Driver {

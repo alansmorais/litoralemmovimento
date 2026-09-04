@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Litoral em Movimento • Redirecionando...</title>
+    <link rel="icon" type="image/jpeg" href="./images/icon-logo.jpg" />
+    <script>
+      // Single Page Apps for GitHub Pages redirection script
+      var path = window.location.pathname;
+      var repo = '/litoralemmovimento';
+      if (path.startsWith(repo)) {
+        path = path.slice(repo.length);
+      }
+      var search = window.location.search;
+      var hash = window.location.hash;
+      window.location.replace('./' + (path && path !== '/' ? '?p=' + encodeURIComponent(path) : '') + (hash || ''));
+    </script>
+  </head>
+  <body style="background:#020617; color:#fff; display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
+    <p>Carregando Litoral em Movimento...</p>
+  </body>
+</html>

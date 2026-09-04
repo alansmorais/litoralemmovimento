@@ -249,14 +249,23 @@ export class StorageService {
       assignedDriverId = undefined;
     }
 
-    if (assignedDriverName || assignedDriverId) {
+    if (assignedDriverId || assignedDriverName) {
       const allDrivers = typeof window !== 'undefined' ? this.getDrivers() : DRIVERS;
-      const matchedDriver = allDrivers.find(
-        (d) =>
-          (assignedDriverId && d.id === assignedDriverId) ||
-          (assignedDriverName && d.name.toLowerCase() === assignedDriverName.toLowerCase()) ||
-          (assignedDriverName && (assignedDriverName.toLowerCase().includes(d.name.toLowerCase()) || d.name.toLowerCase().includes(assignedDriverName.toLowerCase())))
-      );
+      let matchedDriver: Driver | undefined;
+
+      if (assignedDriverId) {
+        matchedDriver = allDrivers.find((d) => d.id === assignedDriverId);
+      }
+
+      if (!matchedDriver && assignedDriverName) {
+        const cleanName = assignedDriverName.toLowerCase().trim();
+        matchedDriver = allDrivers.find(
+          (d) =>
+            d.name.toLowerCase() === cleanName ||
+            d.name.toLowerCase().includes(cleanName) ||
+            cleanName.includes(d.name.toLowerCase())
+        );
+      }
 
       if (matchedDriver) {
         assignedDriverId = matchedDriver.id;
@@ -306,6 +315,7 @@ export class StorageService {
       internalAdminNotes: r.internalAdminNotes ? String(r.internalAdminNotes).trim() : undefined,
       gpsDeviation: r.gpsDeviation,
       createdAt: r.createdAt ? String(r.createdAt) : new Date().toISOString(),
+      updatedAt: r.updatedAt ? String(r.updatedAt) : r.createdAt ? String(r.createdAt) : new Date().toISOString(),
     };
   }
 
@@ -529,7 +539,31 @@ export class StorageService {
                 const norm = this.normalizeReservation(item);
                 if (!isFakeReservation(norm)) {
                   const existing = resMap.get(norm.id);
-                  resMap.set(norm.id, existing ? { ...existing, ...norm } : norm);
+                  if (existing) {
+                    const localUpdated = existing.updatedAt ? new Date(existing.updatedAt).getTime() : new Date(existing.createdAt).getTime();
+                    const sheetUpdated = norm.updatedAt ? new Date(norm.updatedAt).getTime() : new Date(norm.createdAt).getTime();
+
+                    // If local was modified more recently, prioritize local
+                    if (localUpdated > sheetUpdated) {
+                      resMap.set(norm.id, {
+                        ...norm,
+                        ...existing,
+                      });
+                    } else {
+                      // Sheet is newer or equal; if sheet has no driver assigned yet but local has, preserve local driver
+                      const merged = { ...existing, ...norm };
+                      if (!norm.assignedDriverId && existing.assignedDriverId) {
+                        merged.assignedDriverId = existing.assignedDriverId;
+                        merged.assignedDriverName = existing.assignedDriverName;
+                        merged.driverPhone = existing.driverPhone;
+                        merged.driverVehicle = existing.driverVehicle;
+                        merged.driverPlate = existing.driverPlate;
+                      }
+                      resMap.set(norm.id, merged);
+                    }
+                  } else {
+                    resMap.set(norm.id, norm);
+                  }
                 }
               }
 
@@ -765,7 +799,7 @@ export class StorageService {
             }
           }
 
-          // Merge: server has authoritative status and assigned driver
+          // Merge: compare timestamps so recent local driver assignments are not overwritten
           const mergedMap = new Map<string, Reservation>();
           for (const item of localList) {
             if (!isFakeReservation(item)) mergedMap.set(item.id, item);
@@ -773,7 +807,17 @@ export class StorageService {
           for (const sItem of serverList) {
             if (!isFakeReservation(sItem)) {
               const local = mergedMap.get(sItem.id);
-              mergedMap.set(sItem.id, local ? { ...local, ...sItem } : sItem);
+              if (local) {
+                const localTime = local.updatedAt ? new Date(local.updatedAt).getTime() : new Date(local.createdAt).getTime();
+                const serverTime = sItem.updatedAt ? new Date(sItem.updatedAt).getTime() : new Date(sItem.createdAt).getTime();
+                if (localTime > serverTime) {
+                  mergedMap.set(sItem.id, { ...sItem, ...local });
+                } else {
+                  mergedMap.set(sItem.id, { ...local, ...sItem });
+                }
+              } else {
+                mergedMap.set(sItem.id, sItem);
+              }
             }
           }
 
@@ -1619,6 +1663,8 @@ export class StorageService {
     if (reservationIndex === -1) return null;
 
     const driver = drivers.find((d) => d.id === driverId);
+    const nowIso = new Date().toISOString();
+
     if (driver) {
       list[reservationIndex].assignedDriverId = driver.id;
       list[reservationIndex].assignedDriverName = driver.name;
@@ -1636,34 +1682,44 @@ export class StorageService {
       list[reservationIndex].driverPlate = undefined;
     }
 
+    list[reservationIndex].updatedAt = nowIso;
     this.saveReservations(list);
 
     // CRITICAL FOR CROSS-DEVICE DRIVER DISPATCH:
     // Notify server immediately so driver device receives the assignment in real time!
     try {
-      await fetch(`/api/reservations/${reservationId}/assign-driver`, {
+      fetch(`/api/reservations/${reservationId}/assign-driver`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           driverId: driver ? driver.id : null,
-          driverName: driver ? driver.name : null,
-          driverPhone: driver ? driver.phone : null,
-          driverVehicle: driver ? driver.vehicleModel : null,
-          driverPlate: driver ? driver.plate : null,
+          driverName: driver ? driver.name : '',
+          driverPhone: driver ? driver.phone : '',
+          driverVehicle: driver ? driver.vehicleModel : '',
+          driverPlate: driver ? driver.plate : '',
           status: list[reservationIndex].status,
+          updatedAt: nowIso,
         }),
-      });
-    } catch (apiErr) {
-      console.warn('Real-time server sync for driver assignment delayed:', apiErr);
+      }).catch(() => {});
+    } catch {
+      // ignore
     }
 
+    // Sync to Google Sheets immediately
     this.syncToGoogleSheets('updateStatus', {
       id: list[reservationIndex].id,
       code: list[reservationIndex].code,
       status: list[reservationIndex].status,
-      driverName: list[reservationIndex].assignedDriverName,
-      driverVehicle: list[reservationIndex].driverVehicle,
-    });
+      driverName: list[reservationIndex].assignedDriverName || '',
+      driverVehicle: list[reservationIndex].driverVehicle || '',
+      updatedAt: nowIso,
+    }).catch(() => {});
+
+    // Also push full list to Google Sheets
+    this.syncToGoogleSheets('syncAll', {
+      reservations: list,
+      drivers,
+    }).catch(() => {});
 
     return list[reservationIndex];
   }
