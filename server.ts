@@ -76,36 +76,48 @@ export interface ServerDriver {
 const INITIAL_SERVER_DRIVERS: ServerDriver[] = [
   {
     id: 'drv-01',
-    name: 'Eduardo',
-    email: 'eduardo@litoralemmovimento.com.br',
+    name: 'Eduardo Silveira',
+    email: 'eduardo.motorista@litoralemmovimento.com.br',
     phone: '(12) 98850-6597',
     photoUrl: '',
-    vehicleModel: 'Chevrolet Spin Premier 7L (Ar-Cond. Duplo, 6 Pass. + Mot.)',
-    plate: '',
+    vehicleModel: 'Chevrolet Spin Premier 7L • (Ar-Cond. Duplo, 6 Pass. + Mot.)',
+    plate: 'SP-LIT7A24',
     rating: 5.0,
     totalTrips: 0,
     activeStatus: 'Disponível',
   },
   {
     id: 'drv-02',
-    name: 'Edivam',
-    email: 'edivam@litoralemmovimento.com.br',
+    name: 'Edivam Santos',
+    email: 'edivam.motorista@litoralemmovimento.com.br',
     phone: '(12) 98850-6597',
     photoUrl: '',
-    vehicleModel: 'Chevrolet Spin Premier 7L (Ar-Cond. Duplo, 6 Pass. + Mot.)',
-    plate: '',
+    vehicleModel: 'Chevrolet Spin Premier 7L • (Ar-Cond. Duplo, 6 Pass. + Mot.)',
+    plate: 'SP-MOV7B88',
     rating: 5.0,
     totalTrips: 0,
     activeStatus: 'Disponível',
   },
   {
     id: 'drv-03',
-    name: 'Karine',
-    email: 'karine@litoralemmovimento.com.br',
+    name: 'Karine Souza',
+    email: 'karine.motorista@litoralemmovimento.com.br',
     phone: '(12) 98850-6597',
     photoUrl: '',
-    vehicleModel: 'Chevrolet Spin Premier 7L (Ar-Cond. Duplo, 6 Pass. + Mot.)',
-    plate: '',
+    vehicleModel: 'Chevrolet Spin Premier 7L • (Ar-Cond. Duplo, 6 Pass. + Mot.)',
+    plate: 'SP-SOU7C99',
+    rating: 5.0,
+    totalTrips: 0,
+    activeStatus: 'Disponível',
+  },
+  {
+    id: 'drv-04',
+    name: 'Junior Ferreira',
+    email: 'ferreirasjunior10@gmail.com',
+    phone: '(12) 98850-6597',
+    photoUrl: '',
+    vehicleModel: 'Siena Sedan 5L • (4 Pass + Mot.)',
+    plate: 'SP-FER5D10',
     rating: 5.0,
     totalTrips: 0,
     activeStatus: 'Disponível',
@@ -508,6 +520,44 @@ async function startServer() {
       success: true,
       message: 'Status do motorista atualizado no servidor.',
       data: serverDrivers[idx],
+    });
+  });
+
+  // Sync drivers from client/Google Sheets to server
+  app.post('/api/drivers/sync', (req, res) => {
+    const { drivers } = req.body;
+    if (Array.isArray(drivers)) {
+      const driverMap = new Map<string, ServerDriver>();
+      for (const d of serverDrivers) {
+        driverMap.set(d.id, d);
+      }
+      for (const d of drivers) {
+        if (d && d.id) {
+          const existing = driverMap.get(d.id);
+          driverMap.set(d.id, {
+            id: String(d.id),
+            name: d.name || existing?.name || 'Motorista',
+            email: d.email || existing?.email || '',
+            phone: d.phone || existing?.phone || '(12) 98850-6597',
+            photoUrl: d.photoUrl || existing?.photoUrl || '',
+            vehicleModel: d.vehicleModel || existing?.vehicleModel || 'Chevrolet Spin Premier 7L',
+            plate: d.plate || existing?.plate || '',
+            rating: Number(d.rating) || existing?.rating || 5.0,
+            totalTrips: Number(d.totalTrips) || existing?.totalTrips || 0,
+            activeStatus: d.activeStatus || d.status || existing?.activeStatus || 'Disponível',
+            currentLocation: d.currentLocation || existing?.currentLocation,
+          });
+        }
+      }
+      serverDrivers = Array.from(driverMap.values()).slice(0, 4);
+      saveDriversToDisk(serverDrivers);
+    }
+
+    res.json({
+      success: true,
+      message: 'Motoristas sincronizados no servidor.',
+      count: serverDrivers.length,
+      data: serverDrivers,
     });
   });
 

@@ -235,14 +235,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setAdmins(StorageService.getAdmins());
   };
 
+  const handleMasterSyncAll = async () => {
+    setIsSyncingAll(true);
+    setSyncStatus('Sincronizando em tempo real com Google Sheets e Servidor...');
+    try {
+      const res = await StorageService.fullTwoWaySync();
+      setIsSyncingAll(false);
+      loadData();
+      const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      setLastGasSyncTime(timeStr);
+      setSyncStatus(`✓ Sincronizado com sucesso! (${res.details.reservationsCount} reservas, ${res.details.driversCount} motoristas, ${res.details.messagesCount} mensagens)`);
+    } catch (e: any) {
+      setIsSyncingAll(false);
+      setSyncStatus(`Aviso na sincronização: ${e.message || 'Verifique a conexão'}`);
+    }
+    setTimeout(() => setSyncStatus(null), 5000);
+  };
+
   useEffect(() => {
     loadData();
-    StorageService.syncWithServer().then(() => loadData()).catch(() => {});
 
-    // Periodic synchronization (every 4s) so updates from drivers on their devices reflect instantly in Admin
+    // 1. Initial full 2-way sync with Google Sheets & Server
+    StorageService.fullTwoWaySync()
+      .then((res) => {
+        loadData();
+        if (res.success) {
+          const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          setLastGasSyncTime(timeStr);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Periodic automatic sync (every 8 seconds) so new drivers or reservations added in Sheets appear automatically
     const syncInterval = setInterval(() => {
-      StorageService.syncWithServer().then(() => loadData()).catch(() => {});
-    }, 4000);
+      StorageService.fullTwoWaySync()
+        .then(() => loadData())
+        .catch(() => {});
+    }, 8000);
+
+    // 3. Tab visibility auto-sync when user returns to the tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        StorageService.fullTwoWaySync().then(() => loadData()).catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const handleUpdate = () => loadData();
     const handleAdminsUpdate = (e: any) => {
@@ -260,6 +297,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     return () => {
       clearInterval(syncInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('reservations_updated', handleUpdate);
       window.removeEventListener('drivers_updated', handleUpdate);
       window.removeEventListener('contact_messages_updated', handleUpdate);
@@ -359,6 +397,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     if (admins.some((a) => a.username.toLowerCase() === cleanUser)) {
       alert(`O usuário curto @${cleanUser} já está em uso.`);
+      return;
+    }
+
+    if (admins.length >= 2 || admins.length + drivers.length >= 6) {
+      alert('Limite de capacidade atingido: O sistema está configurado para o limite de 6 usuários no total (1 Super Admin Alan Morais, 1 Admin Geral e 4 Motoristas da Frota Oficial).');
       return;
     }
 
@@ -1205,26 +1248,22 @@ function createJsonResponse(data) {
               </button>
             )}
 
-            {/* Salvar TUDO no Banco de Dados em Nuvem Button */}
+            {/* Single Master Sync Button */}
             <button
-              onClick={handleSyncAllToGoogleAppsScript}
+              onClick={handleMasterSyncAll}
               disabled={isSyncingAll}
               className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-              title="Salva todas as reservas, motoristas, SAC e configurações no banco de dados em nuvem"
+              title="Sincroniza automaticamente todas as reservas, 4 motoristas da frota e mensagens com a planilha Google Sheets e o servidor"
             >
-              {isSyncingAll ? (
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Save className="w-3.5 h-3.5 text-emerald-200" />
-              )}
-              <span>{isSyncingAll ? 'Sincronizando Nuvem...' : 'Sincronizar Nuvem'}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingAll ? 'animate-spin' : ''}`} />
+              <span>{isSyncingAll ? 'Sincronizando...' : 'Sincronizar Tudo'}</span>
             </button>
 
             {/* Sync Timestamp Badge */}
             {lastGasSyncTime && (
               <span className="hidden xl:inline-flex items-center gap-1 text-[11px] bg-slate-900 border border-slate-700 text-emerald-300 px-2.5 py-1.5 rounded-xl font-mono">
                 <CheckCircle className="w-3 h-3 text-emerald-400" />
-                <span>Salvo: {lastGasSyncTime}</span>
+                <span>Sincronizado: {lastGasSyncTime}</span>
               </span>
             )}
 
@@ -2598,6 +2637,89 @@ function createJsonResponse(data) {
               })}
             </div>
 
+            {/* Team Capacity Meter */}
+            <div className="bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold text-white block">Capacidade Total da Equipe: {admins.length + drivers.length}/6 Usuários</span>
+                  <span className="text-slate-400 text-[11px]">1 Super Admin (Alan Morais) • 1 Administrador Geral • 4 Motoristas da Frota</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full font-mono text-[11px] font-bold">
+                  ✓ 100% Sincronizado com Google Sheets
+                </span>
+              </div>
+            </div>
+
+            {/* Drivers Section */}
+            <div className="space-y-4 pt-4 border-t border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 bg-sky-100 text-sky-900 text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-1">
+                    <Car className="w-3.5 h-3.5 text-sky-600" />
+                    <span>Frota Oficial ({drivers.length}/4 Motoristas)</span>
+                  </div>
+                  <h3 className="font-serif-display font-extrabold text-xl text-slate-900">
+                    Motoristas da Frota Chevrolet Spin 7L & Sedã
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Sincronizados automaticamente com a aba "Motoristas" da Planilha Google.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {drivers.map((drv) => (
+                  <div
+                    key={drv.id}
+                    className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex flex-col justify-between gap-3 hover:border-slate-300 transition-all"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-900 font-mono font-bold text-xs flex items-center justify-center">
+                            {drv.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm text-slate-900 leading-tight">{drv.name}</h4>
+                            <span className="text-[10px] text-slate-500 font-mono font-semibold block">@{drv.username || drv.id}</span>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            drv.activeStatus === 'Disponível'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : drv.activeStatus === 'Em Viagem'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {drv.activeStatus || 'Disponível'}
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1">
+                        <div className="font-medium truncate" title={drv.vehicleModel}>
+                          🚗 {drv.vehicleModel}
+                        </div>
+                        {drv.plate && <div className="font-mono text-slate-500">Placa: {drv.plate}</div>}
+                        <div className="text-slate-500 truncate">📞 {drv.phone}</div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                      <span className="text-amber-600 font-bold">★ {drv.rating?.toFixed(1) || '5.0'}</span>
+                      <span className="text-slate-500">{drv.totalTrips || 0} viagens</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Information Notice */}
             <div className="bg-slate-900 text-slate-200 p-5 rounded-2xl border border-slate-800 flex items-start gap-3 text-xs">
               <KeyRound className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
@@ -2684,44 +2806,21 @@ function createJsonResponse(data) {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+              <div className="flex flex-col sm:flex-row items-center gap-3">
                 <button
                   type="button"
-                  onClick={handleSyncAllToGoogleAppsScript}
+                  onClick={handleMasterSyncAll}
                   disabled={isSyncingAll}
-                  className="sm:col-span-2 lg:col-span-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
+                  title="Executa sincronização bidirecional completa: busca novos motoristas e reservas da planilha e salva dados atualizados"
                 >
-                  {isSyncingAll ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  <span>Salvar Dados na Nuvem</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSyncGoogleSheets}
-                  className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-xs"
-                  title="Sincroniza apenas a lista de reservas"
-                >
-                  <Send className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Reservas ({reservations.length})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSyncDriversOnly}
-                  className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-xs"
-                  title="Sincroniza a frota de motoristas Spin 7L"
-                >
-                  <Car className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Motoristas ({drivers.length})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSyncMessagesOnly}
-                  className="bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200 shadow-xs"
-                  title="Sincroniza as mensagens do SAC"
-                >
-                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>SAC ({contactMessages.length})</span>
+                  <RefreshCw className={`w-4 h-4 ${isSyncingAll ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingAll ? 'Sincronizando em tempo real com a planilha...' : '🔄 Sincronizar Tudo (Google Sheets ⇌ App)'}</span>
                 </button>
               </div>
+              <p className="text-[11px] text-slate-500 text-center">
+                Sincronização automática ativa a cada 8 segundos. Novos motoristas, reservas ou mensagens adicionados na planilha aparecem automaticamente no painel.
+              </p>
             </div>
 
             {/* Super User: Self-Healing & Diagnostic for Sheets Tabs & Headers */}

@@ -432,6 +432,203 @@ export class StorageService {
     }
   }
 
+  public static async fullTwoWaySync(): Promise<{
+    success: boolean;
+    message: string;
+    details: { reservationsCount: number; driversCount: number; messagesCount: number };
+  }> {
+    const scriptUrl = this.getGoogleScriptUrl();
+    let driversCount = this.getDrivers().length;
+    let reservationsCount = this.getReservations().length;
+    let messagesCount = this.getContactMessages().length;
+
+    try {
+      // 1. First sync with local express server backend
+      await this.syncWithServer();
+
+      if (scriptUrl) {
+        // 2. Fetch all latest data from Google Apps Script in parallel
+        const getDrvUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getDrivers` : `${scriptUrl}?action=getDrivers`;
+        const getResUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getReservations` : `${scriptUrl}?action=getReservations`;
+        const getMsgUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getContactMessages` : `${scriptUrl}?action=getContactMessages`;
+        const getCfgUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getConfig` : `${scriptUrl}?action=getConfig`;
+
+        const [drvFetch, resFetch, msgFetch, cfgFetch] = await Promise.allSettled([
+          fetch(getDrvUrl),
+          fetch(getResUrl),
+          fetch(getMsgUrl),
+          fetch(getCfgUrl),
+        ]);
+
+        // --- Process Drivers from Google Sheets ---
+        if (drvFetch.status === 'fulfilled' && drvFetch.value.ok) {
+          try {
+            const sheetDrivers = await drvFetch.value.json();
+            if (Array.isArray(sheetDrivers) && sheetDrivers.length > 0) {
+              const currentDrivers = this.getDrivers();
+              const driverMap = new Map<string, Driver>();
+
+              // Load existing drivers first
+              for (const d of currentDrivers) {
+                driverMap.set(d.id, d);
+              }
+
+              // Merge / add all drivers from Google Sheets
+              for (const sd of sheetDrivers) {
+                if (!sd) continue;
+                const driverId = String(sd.id || (sd.username ? `drv-${sd.username}` : `drv-${Date.now()}`));
+                const existing = driverMap.get(driverId) || currentDrivers.find((d) => d.username === sd.username);
+                const mergedDriver: Driver = {
+                  id: driverId,
+                  name: sd.name || existing?.name || 'Motorista',
+                  username: sd.username || existing?.username || (sd.name ? sd.name.split(' ')[0].toLowerCase() : 'motorista'),
+                  pin: sd.pin || existing?.pin || '1234',
+                  mustChangePassword: sd.mustChangePassword !== undefined ? sd.mustChangePassword : (existing?.mustChangePassword ?? false),
+                  email: sd.email || existing?.email || '',
+                  phone: sd.phone || existing?.phone || '(12) 98850-6597',
+                  photoUrl: sd.photoUrl || existing?.photoUrl || '',
+                  vehicleModel: sd.vehicleModel || existing?.vehicleModel || 'Chevrolet Spin Premier 7L',
+                  plate: sd.plate || existing?.plate || '',
+                  rating: Number(sd.rating) || existing?.rating || 5.0,
+                  totalTrips: Number(sd.totalTrips) || existing?.totalTrips || 0,
+                  activeStatus: (sd.activeStatus || sd.status || existing?.activeStatus || 'Disponível') as any,
+                  currentLocation: existing?.currentLocation,
+                };
+                driverMap.set(driverId, mergedDriver);
+              }
+
+              // Enforce maximum of 4 drivers for the fleet limit
+              const mergedDriversList = Array.from(driverMap.values()).slice(0, 4);
+              this.saveDrivers(mergedDriversList);
+              driversCount = mergedDriversList.length;
+
+              // Forward to express server
+              fetch('/api/drivers/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ drivers: mergedDriversList }),
+              }).catch(() => {});
+            }
+          } catch (err) {
+            console.warn('Error parsing drivers from Google Sheets:', err);
+          }
+        }
+
+        // --- Process Reservations from Google Sheets ---
+        if (resFetch.status === 'fulfilled' && resFetch.value.ok) {
+          try {
+            const sheetReservations = await resFetch.value.json();
+            if (Array.isArray(sheetReservations)) {
+              const currentRes = this.getReservations().filter((r) => !isFakeReservation(r));
+              const resMap = new Map<string, Reservation>();
+              for (const r of currentRes) {
+                resMap.set(r.id, r);
+              }
+
+              for (const item of sheetReservations) {
+                const norm = this.normalizeReservation(item);
+                if (!isFakeReservation(norm)) {
+                  const existing = resMap.get(norm.id);
+                  resMap.set(norm.id, existing ? { ...existing, ...norm } : norm);
+                }
+              }
+
+              const mergedReservations = Array.from(resMap.values()).filter((r) => !isFakeReservation(r));
+              mergedReservations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              this.saveReservations(mergedReservations);
+              reservationsCount = mergedReservations.length;
+
+              // Forward to express server
+              fetch('/api/reservations/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reservations: mergedReservations }),
+              }).catch(() => {});
+            }
+          } catch (err) {
+            console.warn('Error parsing reservations from Google Sheets:', err);
+          }
+        }
+
+        // --- Process SAC Messages from Google Sheets ---
+        if (msgFetch.status === 'fulfilled' && msgFetch.value.ok) {
+          try {
+            const sheetMessages = await msgFetch.value.json();
+            if (Array.isArray(sheetMessages)) {
+              const currentMsgs = this.getContactMessages();
+              const msgMap = new Map<string, ContactMessage>();
+              for (const m of currentMsgs) {
+                msgMap.set(m.id, m);
+              }
+              for (const m of sheetMessages) {
+                if (!m || !m.id) continue;
+                msgMap.set(String(m.id), {
+                  id: String(m.id),
+                  ticketCode: m.ticketCode || `SAC-${String(m.id).slice(-4)}`,
+                  createdAt: m.createdAt || new Date().toISOString(),
+                  name: m.name || '',
+                  phone: m.phone || '',
+                  email: m.email || '',
+                  subject: m.subject || 'Dúvida Geral',
+                  message: m.message || '',
+                  preferredContact: (m.preferredContact as any) || 'WhatsApp',
+                  status: (m.status as MessageStatus) || 'Pendente',
+                  answeredBy: m.answeredBy || '',
+                  adminNotes: m.adminNotes || '',
+                });
+              }
+              const mergedMsgs = Array.from(msgMap.values());
+              mergedMsgs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              this.saveContactMessages(mergedMsgs);
+              messagesCount = mergedMsgs.length;
+            }
+          } catch (err) {
+            console.warn('Error parsing SAC messages from Google Sheets:', err);
+          }
+        }
+
+        // --- Process Configurations from Google Sheets ---
+        if (cfgFetch.status === 'fulfilled' && cfgFetch.value.ok) {
+          try {
+            const configs = await cfgFetch.value.json();
+            if (configs && typeof configs === 'object') {
+              if (configs.SENHA_SUPERADMIN_ALAN) {
+                this.setSuperAdminPassword(configs.SENHA_SUPERADMIN_ALAN);
+              }
+            }
+          } catch (err) {
+            console.warn('Error parsing configs from Google Sheets:', err);
+          }
+        }
+
+        // 3. Push complete consolidated state back to Google Sheets (2-way sync)
+        await this.syncAllToGoogleSheets();
+      }
+
+      this.setLastSyncTimestamp();
+      return {
+        success: true,
+        message: 'Sincronização bidirecional completa com Google Sheets e Servidor!',
+        details: {
+          reservationsCount,
+          driversCount,
+          messagesCount,
+        },
+      };
+    } catch (e: any) {
+      console.warn('Two-way sync error:', e);
+      return {
+        success: false,
+        message: `Aviso na sincronização: ${e.message || 'Verifique a conexão'}`,
+        details: {
+          reservationsCount,
+          driversCount,
+          messagesCount,
+        },
+      };
+    }
+  }
+
   public static async syncAllToGoogleSheets(): Promise<{
     success: boolean;
     message: string;
@@ -1104,66 +1301,11 @@ export class StorageService {
   }
 
   public static async syncAccountsFromGoogleSheets(): Promise<{ success: boolean; message: string }> {
-    const scriptUrl = this.getGoogleScriptUrl();
-    if (!scriptUrl) {
-      return { success: false, message: 'URL do Apps Script não configurada.' };
-    }
-
-    try {
-      // 1. Fetch Drivers from Sheets
-      const drvUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getDrivers` : `${scriptUrl}?action=getDrivers`;
-      const drvRes = await fetch(drvUrl);
-      if (drvRes.ok) {
-        const sheetDrivers = await drvRes.json();
-        if (Array.isArray(sheetDrivers) && sheetDrivers.length > 0) {
-          const currentDrivers = this.getDrivers();
-          const merged = currentDrivers.map((cd) => {
-            const sd = sheetDrivers.find((d: any) => d.id === cd.id || (d.username && d.username === cd.username));
-            if (!sd) return cd;
-            return {
-              ...cd,
-              name: sd.name || cd.name,
-              phone: sd.phone || cd.phone,
-              email: sd.email || cd.email,
-              vehicleModel: sd.vehicleModel || cd.vehicleModel,
-              plate: sd.plate || cd.plate,
-              rating: sd.rating || cd.rating,
-              username: sd.username || cd.username || cd.name.split(' ')[0].toLowerCase(),
-              pin: sd.pin || cd.pin || '1234',
-              mustChangePassword: sd.mustChangePassword !== undefined ? sd.mustChangePassword : cd.mustChangePassword,
-            };
-          });
-          this.saveDrivers(merged);
-        }
-      }
-
-      // 2. Fetch Admins from Sheets
-      const admUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getAdmins` : `${scriptUrl}?action=getAdmins`;
-      const admRes = await fetch(admUrl);
-      if (admRes.ok) {
-        const sheetAdmins = await admRes.json();
-        if (Array.isArray(sheetAdmins) && sheetAdmins.length > 0) {
-          const currentAdmins = this.getAdmins();
-          const mergedAdmins = currentAdmins.map((ca) => {
-            const sa = sheetAdmins.find((a: any) => a.id === ca.id || (a.username && a.username === ca.username));
-            if (!sa) return ca;
-            return {
-              ...ca,
-              name: sa.name || ca.name,
-              role: sa.role || ca.role,
-              username: sa.username || ca.username,
-              password: sa.password || ca.password || 'litoral2026',
-              mustChangePassword: sa.mustChangePassword !== undefined ? sa.mustChangePassword : ca.mustChangePassword,
-            };
-          });
-          this.saveAdmins(mergedAdmins);
-        }
-      }
-
-      return { success: true, message: 'Usuários e senhas sincronizados com a planilha Google Sheets!' };
-    } catch (e: any) {
-      return { success: false, message: `Erro ao sincronizar do Google Sheets: ${e.message}` };
-    }
+    const res = await this.fullTwoWaySync();
+    return {
+      success: res.success,
+      message: res.message,
+    };
   }
 
   public static getLoggedDriverId(): string | null {
