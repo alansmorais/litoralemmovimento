@@ -1,25 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
-import { WhatWeOfferSection } from './components/WhatWeOfferSection';
-import { TimetableSection } from './components/TimetableSection';
-import { BookingFormSection } from './components/BookingFormSection';
-import { HowItWorksSection } from './components/HowItWorksSection';
-import { ServicesSection } from './components/ServicesSection';
-import { DestinationsGrid } from './components/DestinationsGrid';
-import { VehicleFleetSection } from './components/VehicleFleetSection';
-import { WhyChooseUsSection } from './components/WhyChooseUsSection';
-import { FAQSection } from './components/FAQSection';
-import { FinalCTASection } from './components/FinalCTASection';
-import { Footer } from './components/Footer';
 import { FloatingContactButton } from './components/FloatingContactButton';
-import { AdminDashboard } from './components/AdminDashboard';
-import { TrackRideModal } from './components/TrackRideModal';
-import { AISmartAssistantModal } from './components/AISmartAssistantModal';
-import { ContactSupportModal } from './components/ContactSupportModal';
-import { AdminAuthModal } from './components/AdminAuthModal';
 import { Reservation, TripType } from './types';
 import { StorageService } from './services/storageService';
+
+const WhatWeOfferSection = lazy(() => import('./components/WhatWeOfferSection').then(m => ({ default: m.WhatWeOfferSection })));
+const TimetableSection = lazy(() => import('./components/TimetableSection').then(m => ({ default: m.TimetableSection })));
+const BookingFormSection = lazy(() => import('./components/BookingFormSection').then(m => ({ default: m.BookingFormSection })));
+const HowItWorksSection = lazy(() => import('./components/HowItWorksSection').then(m => ({ default: m.HowItWorksSection })));
+const ServicesSection = lazy(() => import('./components/ServicesSection').then(m => ({ default: m.ServicesSection })));
+const DestinationsGrid = lazy(() => import('./components/DestinationsGrid').then(m => ({ default: m.DestinationsGrid })));
+const VehicleFleetSection = lazy(() => import('./components/VehicleFleetSection').then(m => ({ default: m.VehicleFleetSection })));
+const WhyChooseUsSection = lazy(() => import('./components/WhyChooseUsSection').then(m => ({ default: m.WhyChooseUsSection })));
+const FAQSection = lazy(() => import('./components/FAQSection').then(m => ({ default: m.FAQSection })));
+const FinalCTASection = lazy(() => import('./components/FinalCTASection').then(m => ({ default: m.FinalCTASection })));
+const Footer = lazy(() => import('./components/Footer').then(m => ({ default: m.Footer })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const TrackRideModal = lazy(() => import('./components/TrackRideModal').then(m => ({ default: m.TrackRideModal })));
+const AISmartAssistantModal = lazy(() => import('./components/AISmartAssistantModal').then(m => ({ default: m.AISmartAssistantModal })));
+const ContactSupportModal = lazy(() => import('./components/ContactSupportModal').then(m => ({ default: m.ContactSupportModal })));
+const AdminAuthModal = lazy(() => import('./components/AdminAuthModal').then(m => ({ default: m.AdminAuthModal })));
 
 function getInitialView(): 'landing' | 'admin' {
   try {
@@ -85,14 +86,17 @@ export default function App() {
       }
     };
 
-    // Initial synchronization with central server backend & Google Sheets
-    StorageService.syncWithServer().catch((e) => console.warn('Boot sync with server:', e));
-    StorageService.fetchFromGoogleSheets().catch((e) => console.warn('Boot sync with Google Sheets:', e));
+    // Deferred synchronization with central server backend & Google Sheets to prioritize FCP/LCP
+    const syncTimer = setTimeout(() => {
+      StorageService.syncWithServer().catch((e) => console.warn('Boot sync with server:', e));
+      StorageService.fetchFromGoogleSheets().catch((e) => console.warn('Boot sync with Google Sheets:', e));
+    }, 1000);
 
     handleLocationChange();
     window.addEventListener('hashchange', handleLocationChange);
     window.addEventListener('popstate', handleLocationChange);
     return () => {
+      clearTimeout(syncTimer);
       window.removeEventListener('hashchange', handleLocationChange);
       window.removeEventListener('popstate', handleLocationChange);
     };
@@ -169,6 +173,12 @@ export default function App() {
     // Reservation booked directly in system
   };
 
+  const SectionLoader = () => (
+    <div className="py-16 flex items-center justify-center bg-slate-50">
+      <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
+
   return (
     <div
       className="w-full min-h-[100dvh] flex flex-col overflow-x-hidden bg-slate-50 text-slate-900 justify-between"
@@ -188,7 +198,7 @@ export default function App() {
       <main className="flex-1 flex flex-col w-full">
         {currentView === 'landing' && (
           <>
-            {/* 2. Hero Section */}
+            {/* 2. Hero Section (Eagerly loaded for instant LCP) */}
             <HeroSection
               onSelectDestination={handleSelectDestination}
               onScrollToBooking={scrollToBooking}
@@ -196,56 +206,58 @@ export default function App() {
               onOpenAIModal={() => setIsAIModalOpen(true)}
             />
 
-            {/* 3. Quick Trust / Benefits (O Que Oferecemos) */}
-            <WhatWeOfferSection />
+            <Suspense fallback={<SectionLoader />}>
+              {/* 3. Quick Trust / Benefits (O Que Oferecemos) */}
+              <WhatWeOfferSection />
 
-            {/* 3.5 Quadro de Horários & Tarifas Oficiais */}
-            <TimetableSection
-              onSelectRouteTime={handleSelectRouteTime}
-              onScrollToBooking={scrollToBooking}
-            />
+              {/* 3.5 Quadro de Horários & Tarifas Oficiais */}
+              <TimetableSection
+                onSelectRouteTime={handleSelectRouteTime}
+                onScrollToBooking={scrollToBooking}
+              />
 
-            {/* 4. Booking Section ("Reserve seu transfer") */}
-            <BookingFormSection
-              initialDestination={selectedDestination}
-              preloadRoute={preloadRoute}
-              onBookingSuccess={handleBookingSuccess}
-              onOpenTrackModal={handleOpenTrackModal}
-            />
+              {/* 4. Booking Section ("Reserve seu transfer") */}
+              <BookingFormSection
+                initialDestination={selectedDestination}
+                preloadRoute={preloadRoute}
+                onBookingSuccess={handleBookingSuccess}
+                onOpenTrackModal={handleOpenTrackModal}
+              />
 
-            {/* 5. Como Funciona (3-Step Clear Flow) */}
-            <HowItWorksSection onScrollToBooking={scrollToBooking} />
+              {/* 5. Como Funciona (3-Step Clear Flow) */}
+              <HowItWorksSection onScrollToBooking={scrollToBooking} />
 
-            {/* 6. Serviços (Privativo, Compartilhado, Aeroportos, Eventos) */}
-            <ServicesSection onScrollToBooking={scrollToBooking} />
+              {/* 6. Serviços (Privativo, Compartilhado, Aeroportos, Eventos) */}
+              <ServicesSection onScrollToBooking={scrollToBooking} />
 
-            {/* 7. Destinos (São Sebastião, Ilhabela, Caraguatatuba) */}
-            <DestinationsGrid
-              onSelectDestination={handleSelectDestination}
-              onScrollToBooking={scrollToBooking}
-            />
+              {/* 7. Destinos (São Sebastião, Ilhabela, Caraguatatuba) */}
+              <DestinationsGrid
+                onSelectDestination={handleSelectDestination}
+                onScrollToBooking={scrollToBooking}
+              />
 
-            {/* 8. Frota (Chevrolet Spin 7 Lugares) */}
-            <VehicleFleetSection />
+              {/* 8. Frota (Chevrolet Spin 7 Lugares) */}
+              <VehicleFleetSection />
 
-            {/* 9. Por Que Litoral em Movimento (Trust & Operational Strength) */}
-            <WhyChooseUsSection />
+              {/* 9. Por Que Litoral em Movimento (Trust & Operational Strength) */}
+              <WhyChooseUsSection />
 
-            {/* 10. FAQ Section */}
-            <FAQSection />
+              {/* 10. FAQ Section */}
+              <FAQSection />
 
-            {/* 11. Final Conversion CTA */}
-            <FinalCTASection
-              onScrollToBooking={scrollToBooking}
-              onOpenContactModal={() => setIsContactModalOpen(true)}
-            />
+              {/* 11. Final Conversion CTA */}
+              <FinalCTASection
+                onScrollToBooking={scrollToBooking}
+                onOpenContactModal={() => setIsContactModalOpen(true)}
+              />
 
-            {/* 12. Footer */}
-            <Footer
-              onScrollToBooking={scrollToBooking}
-              onOpenAdmin={handleOpenAdmin}
-              onOpenContactModal={() => setIsContactModalOpen(true)}
-            />
+              {/* 12. Footer */}
+              <Footer
+                onScrollToBooking={scrollToBooking}
+                onOpenAdmin={handleOpenAdmin}
+                onOpenContactModal={() => setIsContactModalOpen(true)}
+              />
+            </Suspense>
 
             {/* Floating Contact & Support Button (Opens modal form) */}
             <FloatingContactButton onOpenContactModal={() => setIsContactModalOpen(true)} />
@@ -253,37 +265,41 @@ export default function App() {
         )}
 
         {currentView === 'admin' && (
-          <AdminDashboard
-            onBackToSite={handleLogoutAdmin}
-          />
+          <Suspense fallback={<SectionLoader />}>
+            <AdminDashboard
+              onBackToSite={handleLogoutAdmin}
+            />
+          </Suspense>
         )}
       </main>
 
-      {/* Modals */}
-      <TrackRideModal
-        isOpen={isTrackModalOpen}
-        initialCode={trackRideCode}
-        onClose={() => {
-          setIsTrackModalOpen(false);
-          setTrackRideCode('');
-        }}
-      />
+      {/* Modals (Lazy loaded when invoked) */}
+      <Suspense fallback={null}>
+        <TrackRideModal
+          isOpen={isTrackModalOpen}
+          initialCode={trackRideCode}
+          onClose={() => {
+            setIsTrackModalOpen(false);
+            setTrackRideCode('');
+          }}
+        />
 
-      <AISmartAssistantModal
-        isOpen={isAIModalOpen}
-        onClose={() => setIsAIModalOpen(false)}
-      />
+        <AISmartAssistantModal
+          isOpen={isAIModalOpen}
+          onClose={() => setIsAIModalOpen(false)}
+        />
 
-      <ContactSupportModal
-        isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
-      />
+        <ContactSupportModal
+          isOpen={isContactModalOpen}
+          onClose={() => setIsContactModalOpen(false)}
+        />
 
-      <AdminAuthModal
-        isOpen={isAdminAuthOpen}
-        onClose={() => setIsAdminAuthOpen(false)}
-        onSuccess={handleAdminAuthSuccess}
-      />
+        <AdminAuthModal
+          isOpen={isAdminAuthOpen}
+          onClose={() => setIsAdminAuthOpen(false)}
+          onSuccess={handleAdminAuthSuccess}
+        />
+      </Suspense>
     </div>
   );
 }
