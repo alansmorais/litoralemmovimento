@@ -1,28 +1,26 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { HeroSection } from './components/HeroSection';
+import { WhatWeOfferSection } from './components/WhatWeOfferSection';
+import { TimetableSection } from './components/TimetableSection';
+import { BookingFormSection } from './components/BookingFormSection';
+import { HowItWorksSection } from './components/HowItWorksSection';
+import { ServicesSection } from './components/ServicesSection';
+import { DestinationsGrid } from './components/DestinationsGrid';
+import { VehicleFleetSection } from './components/VehicleFleetSection';
+import { WhyChooseUsSection } from './components/WhyChooseUsSection';
+import { FAQSection } from './components/FAQSection';
+import { FinalCTASection } from './components/FinalCTASection';
+import { Footer } from './components/Footer';
+import { AdminDashboard } from './components/AdminDashboard';
+import { TrackRideModal } from './components/TrackRideModal';
+import { AISmartAssistantModal } from './components/AISmartAssistantModal';
+import { ContactSupportModal } from './components/ContactSupportModal';
+import { AdminAuthModal } from './components/AdminAuthModal';
 import { FloatingContactButton } from './components/FloatingContactButton';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { Reservation, TripType } from './types';
 import { StorageService } from './services/storageService';
-import { X } from 'lucide-react';
-
-const WhatWeOfferSection = lazy(() => import('./components/WhatWeOfferSection').then(m => ({ default: m.WhatWeOfferSection })));
-const TimetableSection = lazy(() => import('./components/TimetableSection').then(m => ({ default: m.TimetableSection })));
-const BookingFormSection = lazy(() => import('./components/BookingFormSection').then(m => ({ default: m.BookingFormSection })));
-const HowItWorksSection = lazy(() => import('./components/HowItWorksSection').then(m => ({ default: m.HowItWorksSection })));
-const ServicesSection = lazy(() => import('./components/ServicesSection').then(m => ({ default: m.ServicesSection })));
-const DestinationsGrid = lazy(() => import('./components/DestinationsGrid').then(m => ({ default: m.DestinationsGrid })));
-const VehicleFleetSection = lazy(() => import('./components/VehicleFleetSection').then(m => ({ default: m.VehicleFleetSection })));
-const WhyChooseUsSection = lazy(() => import('./components/WhyChooseUsSection').then(m => ({ default: m.WhyChooseUsSection })));
-const FAQSection = lazy(() => import('./components/FAQSection').then(m => ({ default: m.FAQSection })));
-const FinalCTASection = lazy(() => import('./components/FinalCTASection').then(m => ({ default: m.FinalCTASection })));
-const Footer = lazy(() => import('./components/Footer').then(m => ({ default: m.Footer })));
-const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const TrackRideModal = lazy(() => import('./components/TrackRideModal').then(m => ({ default: m.TrackRideModal })));
-const AISmartAssistantModal = lazy(() => import('./components/AISmartAssistantModal').then(m => ({ default: m.AISmartAssistantModal })));
-const ContactSupportModal = lazy(() => import('./components/ContactSupportModal').then(m => ({ default: m.ContactSupportModal })));
-const AdminAuthModal = lazy(() => import('./components/AdminAuthModal').then(m => ({ default: m.AdminAuthModal })));
 
 function getInitialView(): 'landing' | 'admin' {
   try {
@@ -88,11 +86,11 @@ export default function App() {
       }
     };
 
-    // Deferred synchronization with central server backend & Google Sheets to prioritize FCP/LCP
+    // Deferred background synchronization with central server backend & Google Sheets
     const syncTimer = setTimeout(() => {
       StorageService.syncWithServer().catch((e) => console.warn('Boot sync with server:', e));
       StorageService.fetchFromGoogleSheets().catch((e) => console.warn('Boot sync with Google Sheets:', e));
-    }, 1000);
+    }, 1500);
 
     handleLocationChange();
     window.addEventListener('hashchange', handleLocationChange);
@@ -176,14 +174,8 @@ export default function App() {
   };
 
   const handleBookingSuccess = (reservation: Reservation) => {
-    // Reservation booked directly in system
+    // Reservation booked successfully
   };
-
-  const SectionLoader = () => (
-    <div className="py-16 flex items-center justify-center bg-slate-50">
-      <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  );
 
   return (
     <div
@@ -204,7 +196,7 @@ export default function App() {
       <main className="flex-1 flex flex-col w-full">
         {currentView === 'landing' && (
           <>
-            {/* 2. Hero Section (Eagerly loaded for instant LCP) */}
+            {/* 2. Hero Section */}
             <HeroSection
               onSelectDestination={handleSelectDestination}
               onScrollToBooking={scrollToBooking}
@@ -212,78 +204,76 @@ export default function App() {
               onOpenAIModal={() => setIsAIModalOpen(true)}
             />
 
-            <Suspense fallback={<SectionLoader />}>
-              {/* 3. Quick Trust / Benefits (O Que Oferecemos) */}
-              <WhatWeOfferSection />
+            {/* 3. Quick Trust / Benefits */}
+            <WhatWeOfferSection />
 
-              {/* 3.5 Quadro de Horários & Tarifas Oficiais */}
-              <TimetableSection
-                onSelectRouteTime={handleSelectRouteTime}
-                onScrollToBooking={scrollToBooking}
-              />
+            {/* 3.5 Quadro de Horários & Tarifas Oficiais */}
+            <TimetableSection
+              onSelectRouteTime={handleSelectRouteTime}
+              onScrollToBooking={scrollToBooking}
+            />
 
-              {/* 4. Booking Section Standard Inline */}
-              <div id="agendar" className="py-16 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white px-4 sm:px-6 border-y border-amber-400/20">
-                <div className="max-w-4xl mx-auto space-y-8">
-                  <div className="text-center space-y-4">
-                    <span className="text-xs uppercase tracking-widest text-amber-400 font-bold bg-amber-400/10 px-4 py-1.5 rounded-full border border-amber-400/30 inline-block shadow-sm">
-                      Sistema Oficial de Agendamento 24h
-                    </span>
-                    <h2 className="text-3xl sm:text-5xl font-extrabold font-serif-display tracking-tight text-white leading-tight">
-                      Reserve Seu Transfer Executivo ou Compartilhado
-                    </h2>
-                    <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-                      Frota oficial Chevrolet Spin 7 Lugares com ar-condicionado duplo, Wi-Fi e motoristas profissionais cadastrados. Garanta sua vaga com apenas 50% de sinal.
-                    </p>
-                  </div>
+            {/* 4. Booking Section Standard Inline */}
+            <div id="agendar" className="py-16 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white px-4 sm:px-6 border-y border-amber-400/20">
+              <div className="max-w-4xl mx-auto space-y-8">
+                <div className="text-center space-y-4">
+                  <span className="text-xs uppercase tracking-widest text-amber-400 font-bold bg-amber-400/10 px-4 py-1.5 rounded-full border border-amber-400/30 inline-block shadow-sm">
+                    Sistema Oficial de Agendamento 24h
+                  </span>
+                  <h2 className="text-3xl sm:text-5xl font-extrabold font-serif-display tracking-tight text-white leading-tight">
+                    Reserve Seu Transfer Executivo ou Compartilhado
+                  </h2>
+                  <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+                    Frota oficial Chevrolet Spin 7 Lugares com ar-condicionado duplo, Wi-Fi e motoristas profissionais cadastrados. Garanta sua vaga com apenas 50% de sinal.
+                  </p>
+                </div>
 
-                  <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-8 shadow-2xl">
-                    <BookingFormSection
-                      initialDestination={selectedDestination}
-                      preloadRoute={preloadRoute}
-                      onBookingSuccess={handleBookingSuccess}
-                      onOpenTrackModal={handleOpenTrackModal}
-                    />
-                  </div>
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-8 shadow-2xl">
+                  <BookingFormSection
+                    initialDestination={selectedDestination}
+                    preloadRoute={preloadRoute}
+                    onBookingSuccess={handleBookingSuccess}
+                    onOpenTrackModal={handleOpenTrackModal}
+                  />
                 </div>
               </div>
+            </div>
 
-              {/* 5. Como Funciona (3-Step Clear Flow) */}
-              <HowItWorksSection onScrollToBooking={scrollToBooking} />
+            {/* 5. Como Funciona */}
+            <HowItWorksSection onScrollToBooking={scrollToBooking} />
 
-              {/* 6. Serviços (Privativo, Compartilhado, Aeroportos, Eventos) */}
-              <ServicesSection onScrollToBooking={scrollToBooking} />
+            {/* 6. Serviços */}
+            <ServicesSection onScrollToBooking={scrollToBooking} />
 
-              {/* 7. Destinos (São Sebastião, Ilhabela, Caraguatatuba) */}
-              <DestinationsGrid
-                onSelectDestination={handleSelectDestination}
-                onScrollToBooking={scrollToBooking}
-              />
+            {/* 7. Destinos */}
+            <DestinationsGrid
+              onSelectDestination={handleSelectDestination}
+              onScrollToBooking={scrollToBooking}
+            />
 
-              {/* 8. Frota (Chevrolet Spin 7 Lugares) */}
-              <VehicleFleetSection />
+            {/* 8. Frota */}
+            <VehicleFleetSection />
 
-              {/* 9. Por Que Litoral em Movimento (Trust & Operational Strength) */}
-              <WhyChooseUsSection />
+            {/* 9. Por Que Litoral em Movimento */}
+            <WhyChooseUsSection />
 
-              {/* 10. FAQ Section */}
-              <FAQSection />
+            {/* 10. FAQ Section */}
+            <FAQSection />
 
-              {/* 11. Final Conversion CTA */}
-              <FinalCTASection
-                onScrollToBooking={scrollToBooking}
-                onOpenContactModal={() => setIsContactModalOpen(true)}
-              />
+            {/* 11. Final Conversion CTA */}
+            <FinalCTASection
+              onScrollToBooking={scrollToBooking}
+              onOpenContactModal={() => setIsContactModalOpen(true)}
+            />
 
-              {/* 12. Footer */}
-              <Footer
-                onScrollToBooking={scrollToBooking}
-                onOpenAdmin={handleOpenAdmin}
-                onOpenContactModal={() => setIsContactModalOpen(true)}
-              />
-            </Suspense>
+            {/* 12. Footer */}
+            <Footer
+              onScrollToBooking={scrollToBooking}
+              onOpenAdmin={handleOpenAdmin}
+              onOpenContactModal={() => setIsContactModalOpen(true)}
+            />
 
-            {/* Floating Contact & Support Button (Opens modal form) */}
+            {/* Floating Contact & Support Button */}
             <FloatingContactButton onOpenContactModal={() => setIsContactModalOpen(true)} />
 
             {/* Mobile Bottom Responsive Navigation */}
@@ -303,41 +293,37 @@ export default function App() {
         )}
 
         {currentView === 'admin' && (
-          <Suspense fallback={<SectionLoader />}>
-            <AdminDashboard
-              onBackToSite={handleLogoutAdmin}
-            />
-          </Suspense>
+          <AdminDashboard
+            onBackToSite={handleLogoutAdmin}
+          />
         )}
       </main>
 
-      {/* Modals (Lazy loaded when invoked) */}
-      <Suspense fallback={null}>
-        <TrackRideModal
-          isOpen={isTrackModalOpen}
-          initialCode={trackRideCode}
-          onClose={() => {
-            setIsTrackModalOpen(false);
-            setTrackRideCode('');
-          }}
-        />
+      {/* Modals */}
+      <TrackRideModal
+        isOpen={isTrackModalOpen}
+        initialCode={trackRideCode}
+        onClose={() => {
+          setIsTrackModalOpen(false);
+          setTrackRideCode('');
+        }}
+      />
 
-        <AISmartAssistantModal
-          isOpen={isAIModalOpen}
-          onClose={() => setIsAIModalOpen(false)}
-        />
+      <AISmartAssistantModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+      />
 
-        <ContactSupportModal
-          isOpen={isContactModalOpen}
-          onClose={() => setIsContactModalOpen(false)}
-        />
+      <ContactSupportModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+      />
 
-        <AdminAuthModal
-          isOpen={isAdminAuthOpen}
-          onClose={() => setIsAdminAuthOpen(false)}
-          onSuccess={handleAdminAuthSuccess}
-        />
-      </Suspense>
+      <AdminAuthModal
+        isOpen={isAdminAuthOpen}
+        onClose={() => setIsAdminAuthOpen(false)}
+        onSuccess={handleAdminAuthSuccess}
+      />
     </div>
   );
 }
