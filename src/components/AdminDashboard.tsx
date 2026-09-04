@@ -271,12 +271,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       })
       .catch(() => {});
 
-    // 2. Periodic automatic sync (every 8 seconds) so new drivers or reservations added in Sheets appear automatically
+    // 2. Periodic automatic sync (every 1 minute) so new drivers or reservations added in Sheets appear automatically
     const syncInterval = setInterval(() => {
       StorageService.fullTwoWaySync()
         .then(() => loadData())
         .catch(() => {});
-    }, 8000);
+    }, 60000);
 
     // 3. Tab visibility auto-sync when user returns to the tab
     const handleVisibilityChange = () => {

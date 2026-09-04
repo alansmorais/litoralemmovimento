@@ -597,6 +597,12 @@ export class StorageService {
               }
               for (const m of sheetMessages) {
                 if (!m || !m.id) continue;
+                const name = String(m.name || '').toLowerCase();
+                const email = String(m.email || '').toLowerCase();
+                const ticket = String(m.ticketCode || '').toUpperCase();
+                if (ticket === 'FAL-101' || ticket === 'FAL-102' || ticket === 'FAL-103') continue;
+                if (name.includes('pedro silva') || name.includes('juliana mendes') || email.includes('fake@') || email.includes('teste@')) continue;
+
                 msgMap.set(String(m.id), {
                   id: String(m.id),
                   ticketCode: m.ticketCode || `SAC-${String(m.id).slice(-4)}`,
