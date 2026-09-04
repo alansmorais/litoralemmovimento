@@ -66,7 +66,6 @@ export default function App() {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   // Sync with URL changes, hashes, and navigation events
   useEffect(() => {
@@ -124,12 +123,18 @@ export default function App() {
   };
 
   const scrollToBooking = () => {
-    setIsBookingModalOpen(true);
+    const el = document.getElementById('agendar');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const handleSelectRouteTime = (origin: string, destination: string, time: string, tripType: TripType) => {
     setPreloadRoute({ origin, destination, time, tripType });
-    setIsBookingModalOpen(true);
+    const el = document.getElementById('agendar');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const scrollToDestinations = () => {
@@ -217,26 +222,28 @@ export default function App() {
                 onScrollToBooking={scrollToBooking}
               />
 
-              {/* 4. Booking Section CTA Banner */}
-              <div id="agendar" className="py-16 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white text-center px-4 border-y border-amber-400/20">
-                <div className="max-w-3xl mx-auto space-y-6">
-                  <span className="text-xs uppercase tracking-widest text-amber-400 font-bold bg-amber-400/10 px-4 py-1.5 rounded-full border border-amber-400/30 inline-block shadow-sm">
-                    Sistema Oficial de Agendamento 24h
-                  </span>
-                  <h2 className="text-3xl sm:text-5xl font-extrabold font-serif-display tracking-tight text-white leading-tight">
-                    Reserve Seu Transfer Executivo ou Compartilhado
-                  </h2>
-                  <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-                    Frota oficial Chevrolet Spin 7 Lugares com ar-condicionado duplo, Wi-Fi e motoristas profissionais cadastrados. Garanta sua vaga com apenas 50% de sinal.
-                  </p>
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsBookingModalOpen(true)}
-                      className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold px-10 py-5 rounded-2xl text-lg shadow-2xl transition-all transform hover:scale-105 cursor-pointer inline-flex items-center gap-3 border border-amber-300/40"
-                    >
-                      <span>🚀 Fazer Nova Reserva Agora</span>
-                    </button>
+              {/* 4. Booking Section Standard Inline */}
+              <div id="agendar" className="py-16 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white px-4 sm:px-6 border-y border-amber-400/20">
+                <div className="max-w-4xl mx-auto space-y-8">
+                  <div className="text-center space-y-4">
+                    <span className="text-xs uppercase tracking-widest text-amber-400 font-bold bg-amber-400/10 px-4 py-1.5 rounded-full border border-amber-400/30 inline-block shadow-sm">
+                      Sistema Oficial de Agendamento 24h
+                    </span>
+                    <h2 className="text-3xl sm:text-5xl font-extrabold font-serif-display tracking-tight text-white leading-tight">
+                      Reserve Seu Transfer Executivo ou Compartilhado
+                    </h2>
+                    <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+                      Frota oficial Chevrolet Spin 7 Lugares com ar-condicionado duplo, Wi-Fi e motoristas profissionais cadastrados. Garanta sua vaga com apenas 50% de sinal.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-8 shadow-2xl">
+                    <BookingFormSection
+                      initialDestination={selectedDestination}
+                      preloadRoute={preloadRoute}
+                      onBookingSuccess={handleBookingSuccess}
+                      onOpenTrackModal={handleOpenTrackModal}
+                    />
                   </div>
                 </div>
               </div>
@@ -331,40 +338,6 @@ export default function App() {
           onSuccess={handleAdminAuthSuccess}
         />
       </Suspense>
-
-      {/* Booking Modal */}
-      {isBookingModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-          <div className="bg-slate-900 text-white border border-slate-700 rounded-3xl max-w-4xl w-full max-h-[92vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-            <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold">
-                  🚕
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm sm:text-base text-white">Sistema de Reserva Online • Litoral em Movimento</h3>
-                  <p className="text-[11px] text-slate-400">Preencha os dados da sua viagem passo a passo</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsBookingModalOpen(false)}
-                className="p-2 text-slate-300 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 cursor-pointer transition-colors"
-                title="Fechar"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 sm:p-6">
-              <BookingFormSection
-                initialDestination={selectedDestination}
-                preloadRoute={preloadRoute}
-                onBookingSuccess={handleBookingSuccess}
-                onOpenTrackModal={handleOpenTrackModal}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
