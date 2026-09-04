@@ -391,7 +391,8 @@ export class StorageService {
       | 'updateAdminProfile'
       | 'confirmBoardingPayment'
       | 'overrideReservation'
-      | 'updateReservation',
+      | 'updateReservation'
+      | 'deleteReservation',
     payload: any
   ): Promise<{ success: boolean; message?: string }> {
     const scriptUrl = this.getGoogleScriptUrl();
@@ -1220,14 +1221,15 @@ export class StorageService {
     try {
       const data = localStorage.getItem(ADMINS_STORAGE_KEY);
       if (!data) {
-        localStorage.setItem(ADMINS_STORAGE_KEY, JSON.stringify(ADMIN_ACCOUNTS));
-        return ADMIN_ACCOUNTS;
+        const limited = ADMIN_ACCOUNTS.slice(0, 6);
+        localStorage.setItem(ADMINS_STORAGE_KEY, JSON.stringify(limited));
+        return limited;
       }
       const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      return ADMIN_ACCOUNTS;
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed.slice(0, 6);
+      return ADMIN_ACCOUNTS.slice(0, 6);
     } catch (e) {
-      return ADMIN_ACCOUNTS;
+      return ADMIN_ACCOUNTS.slice(0, 6);
     }
   }
 

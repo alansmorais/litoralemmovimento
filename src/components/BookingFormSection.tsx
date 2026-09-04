@@ -426,10 +426,512 @@ ${trackingLink}
     window.print();
   };
 
+  const renderConfirmationModal = () => {
+    if (!confirmedReservation) return null;
+    return (
+      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+        <div className="bg-slate-900 text-white border-2 border-amber-400 rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+          {/* Sticky Header with Close Button */}
+          <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+            <span className="text-xs uppercase tracking-widest text-emerald-400 font-bold flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4" />
+              Voucher #{confirmedReservation.code}
+            </span>
+            <button
+              onClick={() => setConfirmedReservation(null)}
+              className="p-2 text-slate-300 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 cursor-pointer transition-colors"
+              title="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-6 sm:p-7 space-y-5">
+            {/* Success Header */}
+            <div className="text-center">
+              <div className="w-14 h-14 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center mx-auto mb-2.5 shadow-lg">
+                <CheckCircle className="w-8 h-8" />
+              </div>
+              <h3 className="font-serif-display font-extrabold text-2xl text-white mt-1">
+                Reserva Confirmada com Sucesso!
+              </h3>
+              <p className="text-xs text-slate-300 mt-1">
+                Sua reserva está cadastrada no sistema. Efetue o pagamento do sinal de 50% para confirmação definitiva.
+              </p>
+            </div>
+
+            {/* Details Box / Digital Voucher */}
+            <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 space-y-2 text-xs mb-4">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Passageiro:</span>
+                <span className="font-bold text-white">{confirmedReservation.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Contato:</span>
+                <span className="font-bold text-white">{confirmedReservation.customerPhone}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Rota:</span>
+                <span className="font-bold text-white text-right">
+                  {confirmedReservation.origin} ➔ {confirmedReservation.destination}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Embarque:</span>
+                <span className="text-slate-200 text-right truncate max-w-[220px]" title={confirmedReservation.pickupAddress}>
+                  {confirmedReservation.pickupAddress}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Data & Hora:</span>
+                <span className="font-bold text-amber-400">
+                  {confirmedReservation.date} às {confirmedReservation.time}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Modalidade:</span>
+                <span className="font-bold text-white">
+                  {confirmedReservation.tripType} • {confirmedReservation.passengers} passageiro(s) • {confirmedReservation.luggageCount} volume(s)
+                </span>
+              </div>
+
+              {/* Financial Breakdown */}
+              <div className="pt-2 border-t border-slate-700 space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-300">Valor Total da Viagem:</span>
+                  <span className="font-bold text-white">
+                    R$ {confirmedReservation.totalPrice.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+                <div className="flex justify-between bg-amber-400/10 p-2 rounded-xl border border-amber-400/30 items-center">
+                  <div>
+                    <span className="text-amber-300 font-bold block">Sinal de Confirmação (50%):</span>
+                    <span className="text-[10px] text-slate-300">Necessário para confirmar reserva</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-extrabold text-amber-400 text-sm block">
+                      R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded inline-block ${
+                      confirmedReservation.depositPaid
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : 'bg-amber-500/20 text-amber-300'
+                    }`}>
+                      {confirmedReservation.depositPaid ? '✓ SINAL PAGO' : 'AGUARDANDO SINAL'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-slate-300 text-[11px] px-1">
+                  <span>Saldo Restante no Embarque (50%):</span>
+                  <span className="font-medium text-slate-200">
+                    R$ {confirmedReservation.remainingAmount.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* PIX Instant Payment Box */}
+            {!confirmedReservation.depositPaid && (
+              <div className="bg-slate-950 border border-amber-400/60 rounded-2xl p-4 mb-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                      PIX
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">Pagar Sinal de 50% via PIX</h4>
+                      <span className="text-[10px] text-slate-400">Confirmação e bloqueio imediato do veículo</span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-extrabold text-amber-400">
+                    R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+
+                <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-[11px] space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Chave PIX (Celular):</span>
+                    <span className="font-mono font-bold text-amber-300">{COMPANY_CONTACT.pixKey}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Favorecido:</span>
+                    <span className="text-slate-200">{COMPANY_CONTACT.pixBeneficiary}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Instituição:</span>
+                    <span className="text-slate-200">{COMPANY_CONTACT.pixBank}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyPixKey}
+                    className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer border border-slate-700"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{copiedPixKey ? 'Chave Copiada!' : 'Copiar Chave PIX'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmDepositPayment}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-md"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Confirmar Pagamento (50%)</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {confirmedReservation.depositPaid && (
+              <div className="bg-emerald-950/60 border border-emerald-500/50 rounded-2xl p-3.5 mb-4 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0">
+                  <Check className="w-5 h-5 stroke-[3]" />
+                </div>
+                <div className="text-xs">
+                  <strong className="text-emerald-300 font-bold block">Sinal de 50% Confirmado!</strong>
+                  <span className="text-slate-300 text-[11px]">
+                    Veículo Chevrolet Spin e motorista garantidos. Saldo de R$ {confirmedReservation.remainingAmount.toFixed(2).replace('.', ',')} a pagar no embarque.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Ordem de Serviço (OS) Instant Dispatch Box */}
+            <div className="bg-slate-950/80 border border-slate-700 rounded-2xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4" />
+                  Ordem de Serviço (OS) Digital
+                </span>
+                <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold">
+                  OS #{confirmedReservation.code}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSendOSWhatsApp(confirmedReservation)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Enviar OS via WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSendOSEmail(confirmedReservation)}
+                  className="bg-sky-700 hover:bg-sky-600 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Enviar OS por E-mail</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowOSModal(true)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 text-[11px] transition-colors cursor-pointer border border-slate-700"
+                >
+                  <FileText className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Ver OS Formatada</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleCopyOSText(confirmedReservation)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 text-[11px] transition-colors cursor-pointer border border-slate-700"
+                >
+                  <Copy className="w-3.5 h-3.5 text-slate-300" />
+                  <span>{copiedOSText ? 'Texto OS Copiado!' : 'Copiar Texto da OS'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Direct In-App Actions */}
+            <div className="space-y-2.5">
+              {onOpenTrackModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = confirmedReservation.code;
+                    setConfirmedReservation(null);
+                    onOpenTrackModal(code);
+                  }}
+                  className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all text-sm cursor-pointer"
+                >
+                  <Search className="w-4 h-4" />
+                  <span>Acompanhar Status da Corrida em Tempo Real</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyReservationCode}
+                  className="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer border border-slate-700"
+                >
+                  <Copy className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{copiedReservationCode ? 'Código Copiado!' : 'Copiar Código'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrintVoucher}
+                  className="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer border border-slate-700"
+                >
+                  <Printer className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Imprimir Voucher</span>
+                </button>
+              </div>
+
+              <div className="pt-2 text-center text-[11px] text-slate-400 border-t border-slate-800 mb-4">
+                <span>Agendamento 100% online. Central de Atendimento & Dúvidas: </span>
+                <strong className="text-slate-200">{COMPANY_CONTACT.phone}</strong>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmedReservation(null)}
+                  className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all shadow-lg cursor-pointer text-center"
+                >
+                  Fechar Voucher / Concluir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderOSModal = () => {
+    if (!showOSModal || !confirmedReservation) return null;
+    return (
+      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div className="bg-white text-slate-900 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative animate-in fade-in zoom-in-95 my-8 border border-slate-300">
+          {/* Action Bar (Top) */}
+          <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200 print:hidden">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-xs">
+                OS
+              </div>
+              <div>
+                <h4 className="font-extrabold text-slate-900 text-sm">Ordem de Serviço Oficial</h4>
+                <span className="text-[11px] text-slate-500">Documento de transporte executivo</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-300 transition-colors cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-700" />
+                <span>Imprimir / PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowOSModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Printable Document Body */}
+          <div className="space-y-5 text-xs text-slate-800 font-sans" id="printable-service-order">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b-2 border-slate-900 gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-serif-display font-black text-xl text-slate-950">
+                    LITORAL EM MOVIMENTO
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Transporte Executivo, Receptivo em Aeroportos & Turismo
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Central: {COMPANY_CONTACT.phone} • Chave PIX: {COMPANY_CONTACT.pixKey}
+                </p>
+              </div>
+              <div className="text-left sm:text-right bg-amber-50 border border-amber-300 p-3 rounded-2xl shrink-0">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-900 block">
+                  ORDEM DE SERVIÇO
+                </span>
+                <span className="text-base font-black font-mono text-slate-950 block">
+                  #{confirmedReservation.code}
+                </span>
+                <span className="text-[10px] font-bold text-slate-600 block">
+                  Emissão: {new Date().toLocaleDateString('pt-BR')}
+                </span>
+              </div>
+            </div>
+
+            {/* Passenger & Status Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                  Passageiro Principal / Solicitante
+                </span>
+                <div className="font-bold text-slate-900 text-sm">{confirmedReservation.customerName}</div>
+                <div className="text-slate-600 text-xs mt-0.5">WhatsApp: {confirmedReservation.customerPhone}</div>
+                <div className="text-slate-600 text-xs">E-mail: {confirmedReservation.customerEmail}</div>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                  Status da Ordem de Serviço
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 ${
+                    confirmedReservation.depositPaid
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-amber-100 text-amber-900 border border-amber-300'
+                  }`}>
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    {confirmedReservation.depositPaid ? 'Sinal Confirmado (Garantida)' : 'Aguardando Pagamento Sinal'}
+                  </span>
+                </div>
+                <div className="text-slate-500 text-[11px] mt-1.5">
+                  Modalidade: <strong>{confirmedReservation.tripType}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Itinerary & Schedule */}
+            <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-3">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                Itinerário & Detalhes da Corrida
+              </span>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Data da Viagem</span>
+                  <strong className="text-slate-900 text-sm">📅 {confirmedReservation.date}</strong>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 block">Horário Previsto de Embarque</span>
+                  <strong className="text-amber-600 text-sm">⏰ {confirmedReservation.time}</strong>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-600 block">Origem / Local de Embarque:</span>
+                  <div className="font-bold text-slate-900 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                    📍 {confirmedReservation.origin} — {confirmedReservation.pickupAddress}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-600 block">Destino / Local de Desembarque:</span>
+                  <div className="font-bold text-slate-900 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                    🏁 {confirmedReservation.destination} — {confirmedReservation.dropoffAddress || 'Conforme agendado'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
+                  <span className="text-[10px] text-slate-500 block">Passageiros</span>
+                  <strong className="text-slate-900 text-xs">👥 {confirmedReservation.passengers} pessoa(s)</strong>
+                </div>
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
+                  <span className="text-[10px] text-slate-500 block">Bagagens</span>
+                  <strong className="text-slate-900 text-xs">🧳 {confirmedReservation.luggageCount} volume(s)</strong>
+                </div>
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
+                  <span className="text-[10px] text-slate-500 block">Veículo Oficial</span>
+                  <strong className="text-slate-900 text-xs">🚗 {confirmedReservation.vehicleCategory === 'sedan_4' ? 'Sedã 4L' : 'Spin 7 Lugares'}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Financial Box */}
+            <div className="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-2">
+              <span className="text-[10px] font-bold uppercase text-amber-400 block">
+                Demonstrativo Financeiro & Condições Comerciais
+              </span>
+
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-300">Valor Total Contratado:</span>
+                <span className="font-bold text-base text-white">
+                  R$ {confirmedReservation.totalPrice.toFixed(2).replace('.', ',')}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center text-xs bg-slate-800 p-2 rounded-xl border border-slate-700">
+                <div>
+                  <span className="font-bold text-amber-400 block">Sinal de Reserva (50%):</span>
+                  <span className="text-[10px] text-slate-400">Garante bloqueio de horário e veículo</span>
+                </div>
+                <span className="font-black text-amber-400 text-sm">
+                  R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}
+                  <span className="text-[10px] ml-1.5 font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300">
+                    {confirmedReservation.depositPaid ? 'PAGO' : 'A PAGAR'}
+                  </span>
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-300">Saldo Restante (50% no Embarque):</span>
+                <span className="font-bold text-slate-200">
+                  R$ {confirmedReservation.remainingAmount.toFixed(2).replace('.', ',')}
+                </span>
+              </div>
+            </div>
+
+            {/* PIX Details & Terms */}
+            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-[11px] text-amber-950 space-y-1">
+              <strong>Chave PIX Oficial para Confirmação do Sinal:</strong>
+              <div>Chave (Celular): <strong className="font-mono">{COMPANY_CONTACT.pixKey}</strong> • Favorecido: <strong>{COMPANY_CONTACT.pixBeneficiary}</strong> ({COMPANY_CONTACT.pixBank})</div>
+            </div>
+
+            {/* Actions inside OS Modal */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-slate-200 print:hidden">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleSendOSWhatsApp(confirmedReservation)}
+                  className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendOSEmail(confirmedReservation)}
+                  className="flex-1 sm:flex-initial bg-sky-700 hover:bg-sky-600 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>E-mail</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowOSModal(false)}
+                className="w-full sm:w-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Fechar Ordem de Serviço
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <section id="agendar" className="py-16 sm:py-24 bg-slate-50 relative border-t border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Section Heading & Organized Presentation */}
+    <div className="space-y-6 max-w-4xl mx-auto px-4 py-8 sm:py-12">
+      {/* Section Heading & Organized Presentation */}
         <div className="max-w-4xl mx-auto mb-10 sm:mb-14">
           <div className="text-center space-y-3">
             <div className="inline-flex items-center gap-2 bg-slate-900 text-amber-400 text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-xs">
@@ -1428,492 +1930,9 @@ ${trackingLink}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Confirmation Modal / Digital Voucher */}
-      {confirmedReservation && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 text-white border-2 border-amber-400 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 my-8">
-            {/* Close Button */}
-            <button
-              onClick={() => setConfirmedReservation(null)}
-              className="absolute top-4 right-4 p-2 text-slate-300 hover:text-white rounded-full bg-slate-800 border border-slate-700 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {/* Success Header */}
-            <div className="text-center mb-5">
-              <div className="w-14 h-14 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center mx-auto mb-2.5 shadow-lg">
-                <CheckCircle className="w-8 h-8" />
-              </div>
-              <span className="text-[11px] uppercase tracking-widest text-emerald-400 font-bold flex items-center justify-center gap-1.5">
-                <ShieldCheck className="w-4 h-4" />
-                Agendamento Registrado Online!
-              </span>
-              <h3 className="font-serif-display font-extrabold text-2xl text-white mt-1">
-                Voucher #{confirmedReservation.code}
-              </h3>
-              <p className="text-xs text-slate-300 mt-1">
-                Sua reserva está cadastrada no sistema. Efetue o pagamento do sinal de 50% para confirmação definitiva.
-              </p>
-            </div>
-
-            {/* Details Box / Digital Voucher */}
-            <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 space-y-2 text-xs mb-4">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Passageiro:</span>
-                <span className="font-bold text-white">{confirmedReservation.customerName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Contato:</span>
-                <span className="font-bold text-white">{confirmedReservation.customerPhone}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Rota:</span>
-                <span className="font-bold text-white text-right">
-                  {confirmedReservation.origin} ➔ {confirmedReservation.destination}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Embarque:</span>
-                <span className="text-slate-200 text-right truncate max-w-[220px]" title={confirmedReservation.pickupAddress}>
-                  {confirmedReservation.pickupAddress}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Data & Hora:</span>
-                <span className="font-bold text-amber-400">
-                  {confirmedReservation.date} às {confirmedReservation.time}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Modalidade:</span>
-                <span className="font-bold text-white">
-                  {confirmedReservation.tripType} • {confirmedReservation.passengers} passageiro(s) • {confirmedReservation.luggageCount} volume(s)
-                </span>
-              </div>
-
-              {/* Financial Breakdown: Total, 50% Deposit, 50% Remaining */}
-              <div className="pt-2 border-t border-slate-700 space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-300">Valor Total da Viagem:</span>
-                  <span className="font-bold text-white">
-                    R$ {confirmedReservation.totalPrice.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-amber-400/10 p-2 rounded-xl border border-amber-400/30 items-center">
-                  <div>
-                    <span className="text-amber-300 font-bold block">Sinal de Confirmação (50%):</span>
-                    <span className="text-[10px] text-slate-300">Necessário para confirmar reserva</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-extrabold text-amber-400 text-sm block">
-                      R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}
-                    </span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded inline-block ${
-                      confirmedReservation.depositPaid
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : 'bg-amber-500/20 text-amber-300'
-                    }`}>
-                      {confirmedReservation.depositPaid ? '✓ SINAL PAGO' : 'AGUARDANDO SINAL'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between text-slate-300 text-[11px] px-1">
-                  <span>Saldo Restante no Embarque (50%):</span>
-                  <span className="font-medium text-slate-200">
-                    R$ {confirmedReservation.remainingAmount.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* PIX Instant Payment Box if Deposit is Pending */}
-            {!confirmedReservation.depositPaid ? (
-              <div className="bg-slate-950 border border-amber-400/60 rounded-2xl p-4 mb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
-                      PIX
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white">Pagar Sinal de 50% via PIX</h4>
-                      <span className="text-[10px] text-slate-400">Confirmação e bloqueio imediato do veículo</span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-extrabold text-amber-400">
-                    R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-
-                <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-[11px] space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Chave PIX (Celular):</span>
-                    <span className="font-mono font-bold text-amber-300">{COMPANY_CONTACT.pixKey}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Favorecido:</span>
-                    <span className="text-slate-200">{COMPANY_CONTACT.pixBeneficiary}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Instituição:</span>
-                    <span className="text-slate-200">{COMPANY_CONTACT.pixBank}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCopyPixKey}
-                    className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer border border-slate-700"
-                  >
-                    <Copy className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{copiedPixKey ? 'Chave Copiada!' : 'Copiar Chave PIX'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleConfirmDepositPayment}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-md"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Confirmar Pagamento (50%)</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-emerald-950/60 border border-emerald-500/50 rounded-2xl p-3.5 mb-4 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0">
-                  <Check className="w-5 h-5 stroke-[3]" />
-                </div>
-                <div className="text-xs">
-                  <strong className="text-emerald-300 font-bold block">Sinal de 50% Confirmado!</strong>
-                  <span className="text-slate-300 text-[11px]">
-                    Veículo Chevrolet Spin e motorista garantidos. Saldo de R$ {confirmedReservation.remainingAmount.toFixed(2).replace('.', ',')} a pagar no embarque.
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Ordem de Serviço (OS) Instant Dispatch Box */}
-            <div className="bg-slate-950/80 border border-slate-700 rounded-2xl p-3.5 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                  <FileText className="w-4 h-4" />
-                  Ordem de Serviço (OS) Digital
-                </span>
-                <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold">
-                  OS #{confirmedReservation.code}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleSendOSWhatsApp(confirmedReservation)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
-                  title="Enviar Ordem de Serviço pelo WhatsApp"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Enviar OS via WhatsApp</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSendOSEmail(confirmedReservation)}
-                  className="bg-sky-700 hover:bg-sky-600 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
-                  title="Enviar Ordem de Serviço por E-mail"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Enviar OS por E-mail</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowOSModal(true)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 text-[11px] transition-colors cursor-pointer border border-slate-700"
-                >
-                  <FileText className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Ver OS Formatada</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleCopyOSText(confirmedReservation)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 text-[11px] transition-colors cursor-pointer border border-slate-700"
-                >
-                  <Copy className="w-3.5 h-3.5 text-slate-300" />
-                  <span>{copiedOSText ? 'Texto OS Copiado!' : 'Copiar Texto da OS'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Direct In-App Actions */}
-            <div className="space-y-2.5">
-              {onOpenTrackModal && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const code = confirmedReservation.code;
-                    setConfirmedReservation(null);
-                    onOpenTrackModal(code);
-                  }}
-                  className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all text-sm cursor-pointer"
-                >
-                  <Search className="w-4 h-4" />
-                  <span>Acompanhar Status da Corrida em Tempo Real</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopyReservationCode}
-                  className="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer border border-slate-700"
-                >
-                  <Copy className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{copiedReservationCode ? 'Código Copiado!' : 'Copiar Código'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handlePrintVoucher}
-                  className="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer border border-slate-700"
-                >
-                  <Printer className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Imprimir Voucher</span>
-                </button>
-              </div>
-
-              <div className="pt-2 text-center text-[11px] text-slate-400 border-t border-slate-800">
-                <span>Agendamento 100% online. Central de Atendimento & Dúvidas: </span>
-                <strong className="text-slate-200">{COMPANY_CONTACT.phone}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DETAILED ORDEM DE SERVIÇO (OS) MODAL */}
-      {showOSModal && confirmedReservation && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white text-slate-900 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative animate-in fade-in zoom-in-95 my-8 border border-slate-300">
-            {/* Action Bar (Top) */}
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200 print:hidden">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-xs">
-                  OS
-                </div>
-                <div>
-                  <h4 className="font-extrabold text-slate-900 text-sm">Ordem de Serviço Oficial</h4>
-                  <span className="text-[11px] text-slate-500">Documento de transporte executivo</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-300 transition-colors cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5 text-slate-700" />
-                  <span>Imprimir / PDF</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowOSModal(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Printable Document Body */}
-            <div className="space-y-5 text-xs text-slate-800 font-sans" id="printable-service-order">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b-2 border-slate-900 gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-serif-display font-black text-xl text-slate-950">
-                      LITORAL EM MOVIMENTO
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-0.5">
-                    Transporte Executivo, Receptivo em Aeroportos & Turismo
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    Central: {COMPANY_CONTACT.phone} • Chave PIX: {COMPANY_CONTACT.pixKey}
-                  </p>
-                </div>
-                <div className="text-left sm:text-right bg-amber-50 border border-amber-300 p-3 rounded-2xl shrink-0">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-900 block">
-                    ORDEM DE SERVIÇO
-                  </span>
-                  <span className="text-base font-black font-mono text-slate-950 block">
-                    #{confirmedReservation.code}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-600 block">
-                    Emissão: {new Date().toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
-              </div>
-
-              {/* Passenger & Status Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
-                <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
-                    Passageiro Principal / Solicitante
-                  </span>
-                  <div className="font-bold text-slate-900 text-sm">{confirmedReservation.customerName}</div>
-                  <div className="text-slate-600 text-xs mt-0.5">WhatsApp: {confirmedReservation.customerPhone}</div>
-                  <div className="text-slate-600 text-xs">E-mail: {confirmedReservation.customerEmail}</div>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
-                    Status da Ordem de Serviço
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 ${
-                      confirmedReservation.depositPaid
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                        : 'bg-amber-100 text-amber-900 border border-amber-300'
-                    }`}>
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      {confirmedReservation.depositPaid ? 'Sinal Confirmado (Garantida)' : 'Aguardando Pagamento Sinal'}
-                    </span>
-                  </div>
-                  <div className="text-slate-500 text-[11px] mt-1.5">
-                    Modalidade: <strong>{confirmedReservation.tripType}</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Itinerary & Schedule */}
-              <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-3">
-                <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                  Itinerário & Detalhes da Corrida
-                </span>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <span className="text-[11px] text-slate-500 block">Data da Viagem</span>
-                    <strong className="text-slate-900 text-sm">📅 {confirmedReservation.date}</strong>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500 block">Horário Previsto de Embarque</span>
-                    <strong className="text-amber-600 text-sm">⏰ {confirmedReservation.time}</strong>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 space-y-2">
-                  <div>
-                    <span className="text-[11px] font-semibold text-slate-600 block">Origem / Local de Embarque:</span>
-                    <div className="font-bold text-slate-900 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                      📍 {confirmedReservation.origin} — {confirmedReservation.pickupAddress}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-semibold text-slate-600 block">Destino / Local de Desembarque:</span>
-                    <div className="font-bold text-slate-900 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                      🏁 {confirmedReservation.destination} — {confirmedReservation.dropoffAddress || 'Conforme agendado'}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
-                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    <span className="text-[10px] text-slate-500 block">Passageiros</span>
-                    <strong className="text-slate-900 text-xs">👥 {confirmedReservation.passengers} pessoa(s)</strong>
-                  </div>
-                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    <span className="text-[10px] text-slate-500 block">Bagagens</span>
-                    <strong className="text-slate-900 text-xs">🧳 {confirmedReservation.luggageCount} volume(s)</strong>
-                  </div>
-                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    <span className="text-[10px] text-slate-500 block">Veículo Oficial</span>
-                    <strong className="text-slate-900 text-xs">🚗 {confirmedReservation.vehicleCategory === 'sedan_4' ? 'Sedã 4L' : 'Spin 7 Lugares'}</strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Financial Box */}
-              <div className="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-2">
-                <span className="text-[10px] font-bold uppercase text-amber-400 block">
-                  Demonstrativo Financeiro & Condições Comerciais
-                </span>
-
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-300">Valor Total Contratado:</span>
-                  <span className="font-bold text-base text-white">
-                    R$ {confirmedReservation.totalPrice.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center text-xs bg-slate-800 p-2 rounded-xl border border-slate-700">
-                  <div>
-                    <span className="font-bold text-amber-400 block">Sinal de Reserva (50%):</span>
-                    <span className="text-[10px] text-slate-400">Garante bloqueio de horário e veículo</span>
-                  </div>
-                  <span className="font-black text-amber-400 text-sm">
-                    R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}
-                    <span className="text-[10px] ml-1.5 font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300">
-                      {confirmedReservation.depositPaid ? 'PAGO' : 'A PAGAR'}
-                    </span>
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-300">Saldo Restante (50% no Embarque):</span>
-                  <span className="font-bold text-slate-200">
-                    R$ {confirmedReservation.remainingAmount.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              </div>
-
-              {/* PIX Details & Terms */}
-              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-[11px] text-amber-950 space-y-1">
-                <strong>Chave PIX Oficial para Confirmação do Sinal:</strong>
-                <div>Chave (Celular): <strong className="font-mono">{COMPANY_CONTACT.pixKey}</strong> • Favorecido: <strong>{COMPANY_CONTACT.pixBeneficiary}</strong> ({COMPANY_CONTACT.pixBank})</div>
-              </div>
-
-              {/* Actions inside OS Modal */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-slate-200 print:hidden">
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => handleSendOSWhatsApp(confirmedReservation)}
-                    className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>WhatsApp</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSendOSEmail(confirmedReservation)}
-                    className="flex-1 sm:flex-initial bg-sky-700 hover:bg-sky-600 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>E-mail</span>
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowOSModal(false)}
-                  className="w-full sm:w-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-                >
-                  Fechar Ordem de Serviço
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </section>
+      {renderConfirmationModal()}
+      {renderOSModal()}
+    </div>
   );
 };
