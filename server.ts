@@ -961,37 +961,16 @@ Responda em tom profissional, caloroso, direto e conciso (em português brasilei
     }
   });
 
-  // Standalone Driver App Direct Routes
-  app.get(['/driver', '/motorista', '/portal-motorista', '/driver.html', '/motorista.html'], (req, res) => {
-    const driverHtmlDist = path.join(distPath, 'driver.html');
-    const driverHtmlPublic = path.join(process.cwd(), 'public', 'driver.html');
-    if (fs.existsSync(driverHtmlDist)) {
-      return res.sendFile(driverHtmlDist);
-    }
-    if (fs.existsSync(driverHtmlPublic)) {
-      return res.sendFile(driverHtmlPublic);
-    }
-    res.redirect('/#driver');
-  });
-
-  // Determine if running as production bundle or development server
-  const distPath = path.join(process.cwd(), 'dist');
-  const isBundled = typeof __filename !== 'undefined' && __filename.endsWith('.cjs');
-  const hasDist = fs.existsSync(path.join(distPath, 'index.html'));
-  const isProduction = process.env.NODE_ENV === 'production' || isBundled || (hasDist && process.env.NODE_ENV !== 'development');
-
-  if (!isProduction) {
+  // Vite middleware for development vs static serve for production
+  if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    // Serve static files from dist
-    app.use(express.static(distPath, {
-      index: false,
-      maxAge: '1d',
-    }));
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
