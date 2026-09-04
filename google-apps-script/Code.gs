@@ -1052,6 +1052,24 @@ function doPost(e) {
       });
     }
 
+    // 3.5 Deletar Reserva
+    if (action === 'deleteReservation') {
+      var targetId = String(payload.id || '');
+      var rows = sheet.getDataRange().getValues();
+      var deleted = false;
+      for (var k = 1; k < rows.length; k++) {
+        if (String(rows[k][0]) === targetId || String(rows[k][1]) === targetId) {
+          sheet.deleteRow(k + 1);
+          deleted = true;
+          break;
+        }
+      }
+      return createJsonResponse({
+        status: deleted ? 'success' : 'not_found',
+        message: deleted ? 'Reserva removida da planilha com sucesso!' : 'Reserva não encontrada.'
+      });
+    }
+
     // 3. Atualizar Status e Motorista
     if (action === 'updateStatus') {
       var codeOrId = String(payload.id || payload.code || '');

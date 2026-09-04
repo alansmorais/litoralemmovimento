@@ -940,12 +940,9 @@ export class StorageService {
       this.saveReservations(list);
 
       try {
-        await fetch(`/api/reservations/${id}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-        });
+        await this.syncToGoogleSheets('deleteReservation', { id });
       } catch (err) {
-        console.warn('Failed to delete reservation on server:', err);
+        console.warn('Failed to delete reservation on cloud server:', err);
       }
 
       return true;

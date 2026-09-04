@@ -729,7 +729,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
 var SHEET_RESERVAS = 'Reservas';
 var SHEET_MOTORISTAS = 'Motoristas';
-var SHEET_ADMINS = 'Administradores & Gestores';
+var SHEET_ADMINS = 'Usuarios_Admin';
 var SHEET_DASHBOARD = 'Dashboard';
 var SHEET_CONFIG = 'Configuracoes';
 var SHEET_SAC = 'Mensagens_SAC';
@@ -1099,6 +1099,20 @@ function doPost(e) {
         }
       }
       return createJsonResponse({ status: 'success', message: 'Sinal de 50% confirmado!' });
+    }
+
+    if (action === 'deleteReservation') {
+      var targetId = String(payload.id || '');
+      var rows = sheet.getDataRange().getValues();
+      var deleted = false;
+      for (var k = 1; k < rows.length; k++) {
+        if (String(rows[k][0]) === targetId || String(rows[k][1]) === targetId) {
+          sheet.deleteRow(k + 1);
+          deleted = true;
+          break;
+        }
+      }
+      return createJsonResponse({ status: deleted ? 'success' : 'not_found', message: 'Reserva removida do servidor cloud com sucesso!' });
     }
 
     if (action === 'updateStatus' || action === 'assignDriver' || action === 'updateReservation') {
