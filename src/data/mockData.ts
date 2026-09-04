@@ -30,8 +30,8 @@ export const COMPANY_CONTACT = {
 };
 
 export const BRAND_IMAGES = {
-  logo: '/images/logo.jpg',
-  iconLogo: '/images/icon-logo.jpg',
+  logo: './images/logo.jpg',
+  iconLogo: './images/icon-logo.jpg',
   spinVehicle: 'https://raw.githubusercontent.com/alansmorais/litoralemmovimento/refs/heads/main/images/CHEVROLET-Spin-7-Lugares.jpg',
   saoSebastiao: 'https://raw.githubusercontent.com/alansmorais/litoralemmovimento/refs/heads/main/images/Praias-de-Sao-Sebastiao-Credito-dsa-foto-Marcos-Bonello-1024x575.webp',
   ilhabela: 'https://raw.githubusercontent.com/alansmorais/litoralemmovimento/refs/heads/main/images/turismo-em-ilhabela.jpg',
