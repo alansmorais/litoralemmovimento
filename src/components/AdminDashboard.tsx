@@ -138,7 +138,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [messageNoteDraft, setMessageNoteDraft] = useState('');
   const [messageStatusFilter, setMessageStatusFilter] = useState<string>('all');
 
-  const isAlanMorais = activeAdmin.name.toLowerCase().includes('alan') || activeAdmin.role === 'Super Admin';
+  const isAlanMorais = Boolean(activeAdmin?.name?.toLowerCase().includes('alan') || activeAdmin?.role === 'Super Admin');
 
   const handleOpenApiConnection = () => {
     if (isSuperAdminUnlocked) {

@@ -23,6 +23,9 @@ import { StorageService } from './services/storageService';
 
 function getInitialView(): 'landing' | 'admin' {
   try {
+    const isAuth = typeof window !== 'undefined' && sessionStorage.getItem('litoral_admin_auth') === 'true';
+    if (!isAuth) return 'landing';
+
     // 1. Check URL parameters: ?view=admin or ?mode=admin
     const params = new URLSearchParams(window.location.search);
     const viewParam = (params.get('view') || params.get('app') || params.get('mode') || '').toLowerCase();
