@@ -55,6 +55,9 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
   onBookingSuccess,
   onOpenTrackModal,
 }) => {
+  // 3-Step Wizard State
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+
   // Form State
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -97,6 +100,7 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
       }
     }
   }, [preloadRoute]);
+
   const [luggageCount, setLuggageCount] = useState(2);
   const [heavyLuggageCount, setHeavyLuggageCount] = useState(0);
   const [hasChildSeat, setHasChildSeat] = useState(false);
@@ -121,7 +125,6 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
   // Status & Modal State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmedReservation, setConfirmedReservation] = useState<Reservation | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [selectedDepositMethod, setSelectedDepositMethod] = useState<'PIX' | 'Cartão'>('PIX');
   const [copiedPixKey, setCopiedPixKey] = useState(false);
 
@@ -180,7 +183,6 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
     }
   };
 
-  // Quick Date presets
   const setQuickDate = (daysAhead: number) => {
     const d = new Date();
     d.setDate(d.getDate() + daysAhead);
@@ -198,7 +200,6 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
     heavyLuggageCount,
   });
 
-  // Calculate discount
   let finalTotalPrice = rawPriceInfo.totalPrice;
   if (appliedCoupon) {
     if (appliedCoupon.discountPercent) {
@@ -426,956 +427,181 @@ ${trackingLink}
     window.print();
   };
 
-  const renderConfirmationModal = () => {
-    if (!confirmedReservation) return null;
-    return (
-      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-        <div className="bg-slate-900 text-white border-2 border-amber-400 rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-          {/* Sticky Header with Close Button */}
-          <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-            <span className="text-xs uppercase tracking-widest text-emerald-400 font-bold flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4" />
-              Voucher #{confirmedReservation.code}
-            </span>
-            <button
-              onClick={() => setConfirmedReservation(null)}
-              className="p-2 text-slate-300 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 cursor-pointer transition-colors"
-              title="Fechar"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="p-6 sm:p-7 space-y-5">
-            {/* Success Header */}
-            <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center mx-auto mb-2.5 shadow-lg">
-                <CheckCircle className="w-8 h-8" />
-              </div>
-              <h3 className="font-serif-display font-extrabold text-2xl text-white mt-1">
-                Reserva Confirmada com Sucesso!
-              </h3>
-              <p className="text-xs text-slate-300 mt-1">
-                Sua reserva está cadastrada no sistema. Efetue o pagamento do sinal de 50% para confirmação definitiva.
-              </p>
-            </div>
-
-            {/* Details Box / Digital Voucher */}
-            <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 space-y-2 text-xs mb-4">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Passageiro:</span>
-                <span className="font-bold text-white">{confirmedReservation.customerName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Contato:</span>
-                <span className="font-bold text-white">{confirmedReservation.customerPhone}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Rota:</span>
-                <span className="font-bold text-white text-right">
-                  {confirmedReservation.origin} ➔ {confirmedReservation.destination}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Embarque:</span>
-                <span className="text-slate-200 text-right truncate max-w-[220px]" title={confirmedReservation.pickupAddress}>
-                  {confirmedReservation.pickupAddress}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Data & Hora:</span>
-                <span className="font-bold text-amber-400">
-                  {confirmedReservation.date} às {confirmedReservation.time}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Modalidade:</span>
-                <span className="font-bold text-white">
-                  {confirmedReservation.tripType} • {confirmedReservation.passengers} passageiro(s) • {confirmedReservation.luggageCount} volume(s)
-                </span>
-              </div>
-
-              {/* Financial Breakdown */}
-              <div className="pt-2 border-t border-slate-700 space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-300">Valor Total da Viagem:</span>
-                  <span className="font-bold text-white">
-                    R$ {confirmedReservation.totalPrice.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-                <div className="flex justify-between bg-amber-400/10 p-2 rounded-xl border border-amber-400/30 items-center">
-                  <div>
-                    <span className="text-amber-300 font-bold block">Sinal de Confirmação (50%):</span>
-                    <span className="text-[10px] text-slate-300">Necessário para confirmar reserva</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-extrabold text-amber-400 text-sm block">
-                      R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}
-                    </span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded inline-block ${
-                      confirmedReservation.depositPaid
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : 'bg-amber-500/20 text-amber-300'
-                    }`}>
-                      {confirmedReservation.depositPaid ? '✓ SINAL PAGO' : 'AGUARDANDO SINAL'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between text-slate-300 text-[11px] px-1">
-                  <span>Saldo Restante no Embarque (50%):</span>
-                  <span className="font-medium text-slate-200">
-                    R$ {confirmedReservation.remainingAmount.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* PIX Instant Payment Box */}
-            {!confirmedReservation.depositPaid && (
-              <div className="bg-slate-950 border border-amber-400/60 rounded-2xl p-4 mb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
-                      PIX
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white">Pagar Sinal de 50% via PIX</h4>
-                      <span className="text-[10px] text-slate-400">Confirmação e bloqueio imediato do veículo</span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-extrabold text-amber-400">
-                    R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-
-                <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-[11px] space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Chave PIX (Celular):</span>
-                    <span className="font-mono font-bold text-amber-300">{COMPANY_CONTACT.pixKey}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Favorecido:</span>
-                    <span className="text-slate-200">{COMPANY_CONTACT.pixBeneficiary}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Instituição:</span>
-                    <span className="text-slate-200">{COMPANY_CONTACT.pixBank}</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCopyPixKey}
-                    className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer border border-slate-700"
-                  >
-                    <Copy className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{copiedPixKey ? 'Chave Copiada!' : 'Copiar Chave PIX'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleConfirmDepositPayment}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-md"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Confirmar Pagamento (50%)</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {confirmedReservation.depositPaid && (
-              <div className="bg-emerald-950/60 border border-emerald-500/50 rounded-2xl p-3.5 mb-4 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0">
-                  <Check className="w-5 h-5 stroke-[3]" />
-                </div>
-                <div className="text-xs">
-                  <strong className="text-emerald-300 font-bold block">Sinal de 50% Confirmado!</strong>
-                  <span className="text-slate-300 text-[11px]">
-                    Veículo Chevrolet Spin e motorista garantidos. Saldo de R$ {confirmedReservation.remainingAmount.toFixed(2).replace('.', ',')} a pagar no embarque.
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Ordem de Serviço (OS) Instant Dispatch Box */}
-            <div className="bg-slate-950/80 border border-slate-700 rounded-2xl p-3.5 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                  <FileText className="w-4 h-4" />
-                  Ordem de Serviço (OS) Digital
-                </span>
-                <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono font-bold">
-                  OS #{confirmedReservation.code}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleSendOSWhatsApp(confirmedReservation)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Enviar OS via WhatsApp</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSendOSEmail(confirmedReservation)}
-                  className="bg-sky-700 hover:bg-sky-600 text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Enviar OS por E-mail</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowOSModal(true)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 text-[11px] transition-colors cursor-pointer border border-slate-700"
-                >
-                  <FileText className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Ver OS Formatada</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleCopyOSText(confirmedReservation)}
-                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold py-2 px-2.5 rounded-xl flex items-center justify-center gap-1.5 text-[11px] transition-colors cursor-pointer border border-slate-700"
-                >
-                  <Copy className="w-3.5 h-3.5 text-slate-300" />
-                  <span>{copiedOSText ? 'Texto OS Copiado!' : 'Copiar Texto da OS'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Direct In-App Actions */}
-            <div className="space-y-2.5">
-              {onOpenTrackModal && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const code = confirmedReservation.code;
-                    setConfirmedReservation(null);
-                    onOpenTrackModal(code);
-                  }}
-                  className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all text-sm cursor-pointer"
-                >
-                  <Search className="w-4 h-4" />
-                  <span>Acompanhar Status da Corrida em Tempo Real</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopyReservationCode}
-                  className="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer border border-slate-700"
-                >
-                  <Copy className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{copiedReservationCode ? 'Código Copiado!' : 'Copiar Código'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handlePrintVoucher}
-                  className="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer border border-slate-700"
-                >
-                  <Printer className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Imprimir Voucher</span>
-                </button>
-              </div>
-
-              <div className="pt-2 text-center text-[11px] text-slate-400 border-t border-slate-800 mb-4">
-                <span>Agendamento 100% online. Central de Atendimento & Dúvidas: </span>
-                <strong className="text-slate-200">{COMPANY_CONTACT.phone}</strong>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setConfirmedReservation(null)}
-                  className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all shadow-lg cursor-pointer text-center"
-                >
-                  Fechar Voucher / Concluir
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderOSModal = () => {
-    if (!showOSModal || !confirmedReservation) return null;
-    return (
-      <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-        <div className="bg-white text-slate-900 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative animate-in fade-in zoom-in-95 my-8 border border-slate-300">
-          {/* Action Bar (Top) */}
-          <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200 print:hidden">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-xs">
-                OS
-              </div>
-              <div>
-                <h4 className="font-extrabold text-slate-900 text-sm">Ordem de Serviço Oficial</h4>
-                <span className="text-[11px] text-slate-500">Documento de transporte executivo</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-300 transition-colors cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5 text-slate-700" />
-                <span>Imprimir / PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowOSModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Printable Document Body */}
-          <div className="space-y-5 text-xs text-slate-800 font-sans" id="printable-service-order">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b-2 border-slate-900 gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-serif-display font-black text-xl text-slate-950">
-                    LITORAL EM MOVIMENTO
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-600 mt-0.5">
-                  Transporte Executivo, Receptivo em Aeroportos & Turismo
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  Central: {COMPANY_CONTACT.phone} • Chave PIX: {COMPANY_CONTACT.pixKey}
-                </p>
-              </div>
-              <div className="text-left sm:text-right bg-amber-50 border border-amber-300 p-3 rounded-2xl shrink-0">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-900 block">
-                  ORDEM DE SERVIÇO
-                </span>
-                <span className="text-base font-black font-mono text-slate-950 block">
-                  #{confirmedReservation.code}
-                </span>
-                <span className="text-[10px] font-bold text-slate-600 block">
-                  Emissão: {new Date().toLocaleDateString('pt-BR')}
-                </span>
-              </div>
-            </div>
-
-            {/* Passenger & Status Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
-              <div>
-                <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
-                  Passageiro Principal / Solicitante
-                </span>
-                <div className="font-bold text-slate-900 text-sm">{confirmedReservation.customerName}</div>
-                <div className="text-slate-600 text-xs mt-0.5">WhatsApp: {confirmedReservation.customerPhone}</div>
-                <div className="text-slate-600 text-xs">E-mail: {confirmedReservation.customerEmail}</div>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
-                  Status da Ordem de Serviço
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 ${
-                    confirmedReservation.depositPaid
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-amber-100 text-amber-900 border border-amber-300'
-                  }`}>
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    {confirmedReservation.depositPaid ? 'Sinal Confirmado (Garantida)' : 'Aguardando Pagamento Sinal'}
-                  </span>
-                </div>
-                <div className="text-slate-500 text-[11px] mt-1.5">
-                  Modalidade: <strong>{confirmedReservation.tripType}</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* Itinerary & Schedule */}
-            <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-3">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">
-                Itinerário & Detalhes da Corrida
-              </span>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <span className="text-[11px] text-slate-500 block">Data da Viagem</span>
-                  <strong className="text-slate-900 text-sm">📅 {confirmedReservation.date}</strong>
-                </div>
-                <div>
-                  <span className="text-[11px] text-slate-500 block">Horário Previsto de Embarque</span>
-                  <strong className="text-amber-600 text-sm">⏰ {confirmedReservation.time}</strong>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-100 space-y-2">
-                <div>
-                  <span className="text-[11px] font-semibold text-slate-600 block">Origem / Local de Embarque:</span>
-                  <div className="font-bold text-slate-900 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    📍 {confirmedReservation.origin} — {confirmedReservation.pickupAddress}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[11px] font-semibold text-slate-600 block">Destino / Local de Desembarque:</span>
-                  <div className="font-bold text-slate-900 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    🏁 {confirmedReservation.destination} — {confirmedReservation.dropoffAddress || 'Conforme agendado'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
-                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="text-[10px] text-slate-500 block">Passageiros</span>
-                  <strong className="text-slate-900 text-xs">👥 {confirmedReservation.passengers} pessoa(s)</strong>
-                </div>
-                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="text-[10px] text-slate-500 block">Bagagens</span>
-                  <strong className="text-slate-900 text-xs">🧳 {confirmedReservation.luggageCount} volume(s)</strong>
-                </div>
-                <div className="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  <span className="text-[10px] text-slate-500 block">Veículo Oficial</span>
-                  <strong className="text-slate-900 text-xs">🚗 {confirmedReservation.vehicleCategory === 'sedan_4' ? 'Sedã 4L' : 'Spin 7 Lugares'}</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* Financial Box */}
-            <div className="p-4 bg-slate-900 text-white rounded-2xl border border-slate-800 space-y-2">
-              <span className="text-[10px] font-bold uppercase text-amber-400 block">
-                Demonstrativo Financeiro & Condições Comerciais
-              </span>
-
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-300">Valor Total Contratado:</span>
-                <span className="font-bold text-base text-white">
-                  R$ {confirmedReservation.totalPrice.toFixed(2).replace('.', ',')}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-xs bg-slate-800 p-2 rounded-xl border border-slate-700">
-                <div>
-                  <span className="font-bold text-amber-400 block">Sinal de Reserva (50%):</span>
-                  <span className="text-[10px] text-slate-400">Garante bloqueio de horário e veículo</span>
-                </div>
-                <span className="font-black text-amber-400 text-sm">
-                  R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}
-                  <span className="text-[10px] ml-1.5 font-bold px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300">
-                    {confirmedReservation.depositPaid ? 'PAGO' : 'A PAGAR'}
-                  </span>
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-300">Saldo Restante (50% no Embarque):</span>
-                <span className="font-bold text-slate-200">
-                  R$ {confirmedReservation.remainingAmount.toFixed(2).replace('.', ',')}
-                </span>
-              </div>
-            </div>
-
-            {/* PIX Details & Terms */}
-            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-[11px] text-amber-950 space-y-1">
-              <strong>Chave PIX Oficial para Confirmação do Sinal:</strong>
-              <div>Chave (Celular): <strong className="font-mono">{COMPANY_CONTACT.pixKey}</strong> • Favorecido: <strong>{COMPANY_CONTACT.pixBeneficiary}</strong> ({COMPANY_CONTACT.pixBank})</div>
-            </div>
-
-            {/* Actions inside OS Modal */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-slate-200 print:hidden">
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => handleSendOSWhatsApp(confirmedReservation)}
-                  className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>WhatsApp</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSendOSEmail(confirmedReservation)}
-                  className="flex-1 sm:flex-initial bg-sky-700 hover:bg-sky-600 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>E-mail</span>
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowOSModal(false)}
-                className="w-full sm:w-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-              >
-                Fechar Ordem de Serviço
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const isAirportRoute = origin.toLowerCase().includes('aeroporto') || pickupAddress.toLowerCase().includes('aeroporto') || pickupAddress.toLowerCase().includes('gru') || pickupAddress.toLowerCase().includes('congonhas');
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto px-4 py-8 sm:py-12">
-      {/* Section Heading & Organized Presentation */}
-        <div className="max-w-4xl mx-auto mb-10 sm:mb-14">
-          <div className="text-center space-y-3">
-            <div className="inline-flex items-center gap-2 bg-slate-900 text-amber-400 text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-xs">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Simulador Online & Reserva Transparente</span>
-            </div>
-
-            <h2 className="font-serif-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-              Reserve seu transfer
-            </h2>
-
-            <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-              Informe sua viagem e veja as opções disponíveis com cálculo transparente e sem surpresas.
-            </p>
-          </div>
-
-          {/* 4 Pillars Grid - Clean, high contrast & structured */}
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center text-center sm:text-left gap-2.5 transition-all hover:border-amber-400">
-              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <strong className="text-xs sm:text-sm font-bold text-slate-900 block leading-tight">
-                  Atendimento personalizado
-                </strong>
-                <span className="text-[11px] text-slate-500 hidden sm:block">Apoio direto em cada etapa</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center text-center sm:text-left gap-2.5 transition-all hover:border-amber-400">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-              <div>
-                <strong className="text-xs sm:text-sm font-bold text-slate-900 block leading-tight">
-                  Reserva com confirmação
-                </strong>
-                <span className="text-[11px] text-slate-500 hidden sm:block">Voucher e garantia de vaga</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center text-center sm:text-left gap-2.5 transition-all hover:border-amber-400">
-              <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center flex-shrink-0">
-                <Car className="w-4 h-4" />
-              </div>
-              <div>
-                <strong className="text-xs sm:text-sm font-bold text-slate-900 block leading-tight">
-                  Veículo climatizado
-                </strong>
-                <span className="text-[11px] text-slate-500 hidden sm:block">Frota Spin 7 Lugares</span>
-              </div>
-            </div>
-
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row items-center text-center sm:text-left gap-2.5 transition-all hover:border-amber-400">
-              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-                <Users className="w-4 h-4" />
-              </div>
-              <div>
-                <strong className="text-xs sm:text-sm font-bold text-slate-900 block leading-tight">
-                  Até 6 passageiros + motorista
-                </strong>
-                <span className="text-[11px] text-slate-500 hidden sm:block">Espaço amplo com bagageiro</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Rotas Populares - Organized Interactive Cards */}
-          <div className="mt-8 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xs">
-                  <Compass className="w-3.5 h-3.5" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900 font-serif-display">
-                  Rotas Populares:
-                </h3>
-              </div>
-              <span className="text-[11px] text-slate-500 font-medium">
-                Clique na rota para preencher automaticamente os campos do simulador:
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {routePresets.map((preset, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => applyPreset(preset)}
-                  className="p-3.5 rounded-2xl bg-slate-50 hover:bg-amber-50/70 border border-slate-200 hover:border-amber-400 transition-all text-left group flex flex-col justify-between gap-2.5 cursor-pointer shadow-2xs hover:shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-1.5 w-full">
-                    <span className="text-xs font-bold text-slate-900 group-hover:text-amber-900 leading-tight">
-                      {preset.title}
-                    </span>
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />
-                  </div>
-                  <span className="text-[11px] text-slate-500 line-clamp-1 block">
-                    {preset.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
+    <div className="space-y-6 max-w-5xl mx-auto px-4 py-8 sm:py-12">
+      {/* Section Heading */}
+      <div className="max-w-4xl mx-auto mb-8 sm:mb-10 text-center space-y-3">
+        <div className="inline-flex items-center gap-2 bg-slate-900 text-amber-400 text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-xs">
+          <Calendar className="w-3.5 h-3.5" />
+          <span>Simulador Rápido • 3 Etapas Simples</span>
         </div>
 
-        {/* Two-Column Booking Engine: Form + Live Price Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-          {/* LEFT: Complete Form */}
-          <div className="lg:col-span-8 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
-            <form onSubmit={handleSubmit} className="space-y-6" id="main-booking-form">
-              {/* Step 1: Personal Contact */}
-              <div>
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-4">
-                  <h3 className="font-serif-display font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-mono">
-                      1
-                    </span>
-                    <span>Dados do Responsável pela Reserva</span>
-                  </h3>
-                  <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
-                    Informações protegidas
-                  </span>
+        <h2 className="font-serif-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
+          Reserve seu transfer em segundos
+        </h2>
+
+        <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+          Sem burocracia. Informe sua rota, escolha o veículo e confirme o sinal via PIX com segurança.
+        </p>
+      </div>
+
+      {/* Rotas Populares Quick Presets */}
+      <div className="max-w-4xl mx-auto mb-8 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-2 pb-2 mb-3 border-b border-slate-100 text-xs font-bold text-slate-800">
+          <Compass className="w-4 h-4 text-amber-500" />
+          <span>Sugestões Rápidas de Rotas Populares:</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {routePresets.map((preset, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => {
+                applyPreset(preset);
+                setStep(1);
+              }}
+              className="p-3 rounded-2xl bg-slate-50 hover:bg-amber-50/80 border border-slate-200 hover:border-amber-400 transition-all text-left group flex flex-col justify-between gap-1.5 cursor-pointer"
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs font-bold text-slate-900 group-hover:text-amber-900 truncate">
+                  {preset.title}
+                </span>
+                <ArrowRight className="w-3 h-3 text-slate-400 group-hover:text-amber-600 flex-shrink-0" />
+              </div>
+              <span className="text-[10px] text-slate-500 truncate">{preset.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 3-STEP PROGRESS INDICATOR */}
+      <div className="max-w-4xl mx-auto mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between text-xs sm:text-sm font-semibold">
+        <div className={`flex items-center gap-2 ${step === 1 ? 'text-amber-600 font-extrabold' : step > 1 ? 'text-emerald-700 font-bold' : 'text-slate-400'}`}>
+          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 1 ? 'bg-amber-500 text-slate-950 font-black' : step > 1 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+            {step > 1 ? '✓' : '1'}
+          </span>
+          <span>1. Rota & Horário</span>
+        </div>
+
+        <div className="h-0.5 flex-1 bg-slate-200 mx-3 hidden sm:block" />
+
+        <div className={`flex items-center gap-2 ${step === 2 ? 'text-amber-600 font-extrabold' : step > 2 ? 'text-emerald-700 font-bold' : 'text-slate-400'}`}>
+          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 2 ? 'bg-amber-500 text-slate-950 font-black' : step > 2 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+            {step > 2 ? '✓' : '2'}
+          </span>
+          <span>2. Transfer Disponível</span>
+        </div>
+
+        <div className="h-0.5 flex-1 bg-slate-200 mx-3 hidden sm:block" />
+
+        <div className={`flex items-center gap-2 ${step === 3 ? 'text-amber-600 font-extrabold' : 'text-slate-400'}`}>
+          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 3 ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-200 text-slate-600'}`}>
+            3
+          </span>
+          <span>3. Confirmação & Pagamento</span>
+        </div>
+      </div>
+
+      {/* Two-Column Main Layout: Form Steps (Left) + Sticky Live Summary (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-5xl mx-auto">
+        
+        {/* LEFT: Step Content */}
+        <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
+          
+          {/* STEP 1: ROUTE & TIME */}
+          {step === 1 && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="border-b border-slate-200 pb-3">
+                <h3 className="font-serif-display font-extrabold text-lg text-slate-900">
+                  Etapa 1: Onde você está indo e quando?
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Selecione os locais, data e horário do seu transfer.
+                </p>
+              </div>
+
+              {/* Origin & Destination */}
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-900">
+                    FROM / Origem (Coleta) *
+                  </label>
+                  <select
+                    value={origin}
+                    onChange={(e) => setOrigin(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
+                  >
+                    <option value="São Paulo">São Paulo (Capital / Aeroportos GRU e CGH)</option>
+                    <option value="São Sebastião">São Sebastião (Balsa & Centro Histórico)</option>
+                    <option value="Ilhabela (Balsa São Sebastião)">Ilhabela (Balsa São Sebastião)</option>
+                    <option value="Caraguatatuba (Rodoviária / Sentido S. Sebastião)">Caraguatatuba (Rodoviária / Sentido S. Sebastião)</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Endereço exato de coleta (Ex: GRU Terminal 2 ou Av. Paulista, 1000)"
+                    value={pickupAddress}
+                    onChange={(e) => setPickupAddress(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none mt-1.5"
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-900 mb-1">
-                      Nome Completo *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ex: Dra. Mariana Costa"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-600 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-all"
-                      id="input-customer-name"
-                    />
+                <div className="flex justify-center -my-2 relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-slate-900 text-amber-400 flex items-center justify-center font-bold shadow-md">
+                    ↓
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-900 mb-1">
-                      Telefone / WhatsApp *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="(11) 98765-4321"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-600 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-all"
-                      id="input-customer-phone"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-900 mb-1">
-                      E-mail para Confirmação *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="seu.email@dominio.com.br"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-600 focus:bg-white rounded-xl text-sm text-slate-900 outline-none transition-all"
-                      id="input-customer-email"
-                    />
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-900">
+                    TO / Destino Final *
+                  </label>
+                  <select
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
+                  >
+                    <option value="São Sebastião">São Sebastião (Balsa & Centro Histórico)</option>
+                    <option value="Ilhabela (Balsa São Sebastião)">Ilhabela (Balsa São Sebastião - Porto da Balsa)</option>
+                    <option value="Ilhabela (Travessia Fechada)">Ilhabela (Travessia Fechada para a Ilha • a partir de R$ 900)</option>
+                    <option value="Caraguatatuba (Rodoviária / Sentido S. Sebastião)">Caraguatatuba (Rodoviária & Sentido S. Sebastião)</option>
+                    <option value="São Paulo">São Paulo Capital / Aeroportos</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Endereço de destino (Ex: Hotel, Pousada ou Residência)"
+                    value={dropoffAddress}
+                    onChange={(e) => setDropoffAddress(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none mt-1.5"
+                  />
                 </div>
               </div>
 
-              {/* Step 2: Route & Trajectory */}
-              <div>
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-4">
-                  <h3 className="font-serif-display font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-mono">
-                      2
-                    </span>
-                    <span>Rota & Locais de Embarque / Desembarque</span>
-                  </h3>
-                  <span className="text-[11px] text-amber-600 font-semibold">
-                    Porta a Porta
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Origin */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-900">
-                      Origem (Cidade / Região) *
-                    </label>
-                    <select
-                      value={origin}
-                      onChange={(e) => setOrigin(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-600 focus:bg-white rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
-                      id="select-origin"
-                    >
-                      <option value="São Paulo">São Paulo (Capital / Aeroportos GRU e CGH)</option>
-                      <option value="São Sebastião">São Sebastião (Balsa & Centro Histórico)</option>
-                      <option value="Ilhabela (Balsa São Sebastião)">Ilhabela (Balsa São Sebastião)</option>
-                      <option value="Caraguatatuba (Rodoviária / Sentido S. Sebastião)">Caraguatatuba (Rodoviária / Sentido S. Sebastião)</option>
-                    </select>
-
-                    <input
-                      type="text"
-                      placeholder="Endereço exato de coleta (Ex: GRU Terminal 2 ou Hotel em SP)"
-                      value={pickupAddress}
-                      onChange={(e) => setPickupAddress(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-sky-600 rounded-xl text-xs text-slate-900 outline-none"
-                      id="input-pickup-address"
-                    />
-                  </div>
-
-                  {/* Destination */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-900">
-                      Destino Final *
-                    </label>
-                    <select
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-sky-600 focus:bg-white rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
-                      id="select-destination"
-                    >
-                      <option value="São Sebastião">São Sebastião (Balsa & Centro Histórico)</option>
-                      <option value="Ilhabela (Balsa São Sebastião)">Ilhabela (Balsa São Sebastião - Desembarque Porto da Balsa)</option>
-                      <option value="Ilhabela (Travessia Fechada)">Ilhabela (Travessia Fechada para a Ilha • a partir de R$ 900)</option>
-                      <option value="Caraguatatuba (Rodoviária / Sentido S. Sebastião)">Caraguatatuba (Apenas Rodoviária & Sentido São Sebastião)</option>
-                      <option value="São Paulo">São Paulo Capital / Aeroportos</option>
-                    </select>
-
-                    <input
-                      type="text"
-                      placeholder="Endereço de entrega (Ex: Hotel no Centro ou Porto da Balsa)"
-                      value={dropoffAddress}
-                      onChange={(e) => setDropoffAddress(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-sky-600 rounded-xl text-xs text-slate-900 outline-none"
-                      id="input-dropoff-address"
-                    />
-                  </div>
-                </div>
-
-                {/* Scope & Logistics Notice */}
-                {destination.includes('Travessia') && (
-                  <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-950 flex items-start gap-2.5">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="font-bold block text-amber-900">Aviso sobre Travessia de Balsa para Ilhabela:</strong>
-                      A travessia com carro fechado para o interior da ilha inicia a partir de R$ 900,00 e está sujeita a confirmação prévia e disponibilidade de escala do motorista. Também disponibilizamos o desembarque direto no terminal do Porto da Balsa em São Sebastião.
-                    </div>
-                  </div>
-                )}
-
-                {destination.includes('Caraguatatuba') && (
-                  <div className="mt-3 p-3 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-950 flex items-start gap-2.5">
-                    <MapPin className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="font-bold block text-sky-900">Área Atendida em Caraguatatuba:</strong>
-                      Atendimento exclusivo na Rodoviária de Caraguatatuba e bairros no sentido São Sebastião (Porto Novo, Praia das Palmeiras e Travessão).
-                    </div>
-                  </div>
-                )}
-
-                {/* Extra Stops Section */}
-                <div className="mt-4 pt-3 border-t border-slate-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-amber-500" />
-                      Paradas Intermediárias / Coletas Adicionais:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowStopInput(!showStopInput)}
-                      className="text-xs text-sky-700 hover:text-sky-900 font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>{showStopInput ? 'Cancelar Parada' : '+ Adicionar Parada (R$ 50/parada)'}</span>
-                    </button>
-                  </div>
-
-                  {showStopInput && (
-                    <div className="flex gap-2 mb-3 animate-in fade-in">
-                      <input
-                        type="text"
-                        placeholder="Endereço da parada intermediária (Ex: Av. Faria Lima para pegar passageiro)"
-                        value={newStopAddress}
-                        onChange={(e) => setNewStopAddress(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-sky-600"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddStop}
-                        className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer"
-                      >
-                        Confirmar Parada
-                      </button>
-                    </div>
-                  )}
-
-                  {extraStops.length > 0 && (
-                    <div className="space-y-2 mt-2">
-                      {extraStops.map((stop) => (
-                        <div
-                          key={stop.id}
-                          className="flex items-center justify-between bg-amber-50/70 border border-amber-200 p-2.5 rounded-xl text-xs text-slate-800"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />
-                            <span>{stop.address}</span>
-                            <span className="text-[10px] text-amber-700 font-semibold">
-                              (+R$ {stop.additionalCost.toFixed(2)})
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveStop(stop.id)}
-                            className="text-slate-400 hover:text-red-600 p-1 cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Step 3: Date, Time & Mode with Minimalist Monthly Calendar */}
-              <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-2 mb-4 gap-2">
-                  <h3 className="font-serif-display font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-mono">
-                      3
-                    </span>
-                    <span>Veículo, Modalidade & Horário de Embarque</span>
-                  </h3>
-                  {/* Quick date shortcuts */}
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <span className="text-slate-400 font-medium hidden sm:inline">Atalhos:</span>
+              {/* Date & Time with Calendar */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-900">
+                    Data & Horário de Embarque *
+                  </label>
+                  <div className="flex gap-1">
                     <button
                       type="button"
                       onClick={() => setQuickDate(1)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold cursor-pointer transition-colors"
+                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg cursor-pointer"
                     >
                       Amanhã
                     </button>
                     <button
                       type="button"
                       onClick={() => setQuickDate(3)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold cursor-pointer transition-colors"
+                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg cursor-pointer"
                     >
                       Em 3 dias
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickDate(7)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold cursor-pointer transition-colors"
-                    >
-                      Em 1 semana
-                    </button>
                   </div>
                 </div>
 
-                {/* Vehicle Choice & Trip Type */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                  {/* Vehicle Model Selector */}
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                    <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-2">
-                      <Car className="w-3.5 h-3.5 text-amber-500" />
-                      Tipo de Veículo:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setVehicleCategory('spin_7');
-                          if (passengers > 6) setPassengers(6);
-                        }}
-                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer flex flex-col items-center justify-center text-center gap-1 ${
-                          vehicleCategory === 'spin_7'
-                            ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <span className="text-[11px] font-bold">🚐 Spin 7 Lugares</span>
-                        <span className="text-[9px] opacity-80">Até 6 passageiros + malas</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setVehicleCategory('sedan_4');
-                          if (passengers > 4) setPassengers(4);
-                          if (luggageCount > 4) setLuggageCount(4);
-                        }}
-                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer flex flex-col items-center justify-center text-center gap-1 ${
-                          vehicleCategory === 'sedan_4'
-                            ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <span className="text-[11px] font-bold">🚗 Carro 4 Lugares</span>
-                        <span className="text-[9px] opacity-80">Sedã executivo (até 4 pass.)</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Trip Mode Selector */}
-                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                    <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-2">
-                      <Users className="w-3.5 h-3.5 text-sky-500" />
-                      Modalidade:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setTripType('Individual')}
-                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer flex flex-col items-center justify-center text-center gap-1 ${
-                          tripType === 'Individual'
-                            ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <span className="text-[11px] font-bold">✨ Privativo</span>
-                        <span className="text-[9px] opacity-80">Veículo 100% exclusivo</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTripType('Compartilhada')}
-                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer flex flex-col items-center justify-center text-center gap-1 ${
-                          tripType === 'Compartilhada'
-                            ? 'bg-slate-900 text-white border-amber-400 shadow-sm ring-1 ring-amber-400'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <span className="text-[11px] font-bold">👥 Compartilhado</span>
-                        <span className="text-[9px] opacity-80">Por vaga / assento</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Minimalist & Elegant Monthly Booking Calendar with Available Hours */}
                 <MonthlyBookingCalendar
                   selectedDate={date}
                   selectedTime={time}
@@ -1387,552 +613,605 @@ ${trackingLink}
                 />
               </div>
 
-              {/* Step 4: Passenger & Seat Map Visualizer */}
-              <div>
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-4">
-                  <h3 className="font-serif-display font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-mono">
-                      4
+              {/* Passengers & Luggage Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-amber-600" />
+                      Passageiros:
+                    </label>
+                    <span className="font-extrabold text-sm text-slate-900 bg-amber-400 px-2 py-0.5 rounded-lg">
+                      {passengers} pessoa(s)
                     </span>
-                    <span>
-                      Ocupação & Mapa de Assentos ({vehicleCategory === 'sedan_4' ? 'Carro 4 Lugares' : 'Chevrolet Spin 7L'})
-                    </span>
-                  </h3>
-                  <span className="text-[11px] text-sky-700 font-semibold">
-                    {passengers} de {vehicleCategory === 'sedan_4' ? 4 : 6} Assentos Ocupados
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                  {/* Sliders & Inputs (7 cols) */}
-                  <div className="md:col-span-7 space-y-4">
-                    {/* Passengers */}
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="text-xs font-bold text-slate-900">
-                          Nº de Passageiros ({passengers} {passengers === 1 ? 'pessoa' : 'pessoas'})
-                        </label>
-                        <span className="text-[10px] text-slate-500">
-                          Capacidade máx: {vehicleCategory === 'sedan_4' ? '4 passageiros' : '6 passageiros + motorista'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="range"
-                          min="1"
-                          max={vehicleCategory === 'sedan_4' ? 4 : 6}
-                          value={passengers}
-                          onChange={(e) => setPassengers(Number(e.target.value))}
-                          className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-200 rounded-lg"
-                        />
-                        <span className="font-bold text-sm bg-slate-900 text-white w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0">
-                          {passengers}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Luggage */}
-                    <div className="space-y-3">
-                      <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="text-xs font-bold text-slate-900">
-                            Malas / Volumes de Bagagem ({luggageCount} malas)
-                          </label>
-                          <span className="text-[10px] text-slate-500">
-                            {vehicleCategory === 'sedan_4' ? 'Porta-malas sedã (até 4 malas)' : 'Porta-malas espaçoso (até 6 malas)'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="range"
-                            min="0"
-                            max={vehicleCategory === 'sedan_4' ? 4 : 6}
-                            value={luggageCount}
-                            onChange={(e) => setLuggageCount(Number(e.target.value))}
-                            className="w-full accent-sky-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
-                          />
-                          <span className="font-bold text-sm bg-sky-700 text-white w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0">
-                            {luggageCount}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Heavy Luggage (> 23 kg) */}
-                      <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl">
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                            <span>⚖️ Malas acima de 23 kg</span>
-                            <span className="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold">+ R$ 90,00 / un</span>
-                          </label>
-                          <span className="text-[10px] text-amber-800">
-                            Volume especial
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="range"
-                            min="0"
-                            max={luggageCount}
-                            value={heavyLuggageCount}
-                            onChange={(e) => setHeavyLuggageCount(Math.min(luggageCount, Number(e.target.value)))}
-                            className="w-full accent-amber-600 cursor-pointer h-2 bg-amber-200 rounded-lg"
-                          />
-                          <span className="font-bold text-sm bg-amber-600 text-white w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0">
-                            {heavyLuggageCount}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Flight & Child seat */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-900 mb-1">
-                          Nº do Voo (Opcional)
-                        </label>
-                        <div className="relative">
-                          <Plane className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
-                          <input
-                            type="text"
-                            placeholder="Ex: LA 3450 / AF 456"
-                            value={flightNumber}
-                            onChange={(e) => setFlightNumber(e.target.value)}
-                            className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-sky-600"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-end">
-                        <label className="w-full flex items-center gap-2 bg-slate-50 border border-slate-200 p-2 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={hasChildSeat}
-                            onChange={(e) => setHasChildSeat(e.target.checked)}
-                            className="w-4 h-4 text-sky-600 rounded accent-sky-600"
-                          />
-                          <div className="text-xs">
-                            <span className="font-bold text-slate-900 flex items-center gap-1">
-                              <Baby className="w-3.5 h-3.5 text-sky-600" />
-                              Cadeirinha Infantil
-                            </span>
-                            <span className="text-[10px] text-emerald-700 font-semibold block">
-                              Cortesia Gratuita
-                            </span>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
                   </div>
-
-                  {/* Interactive Seat Chart (5 cols) */}
-                  <div className="md:col-span-5 bg-slate-900 text-white p-4 rounded-2xl border border-slate-800">
-                    <div className="text-center mb-2">
-                      <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
-                        Layout da Cabine • {vehicleCategory === 'sedan_4' ? 'Carro 4 Lugares' : 'Spin 7L'}
-                      </span>
-                      <span className="text-[9px] text-slate-400">Frente / Para-brisa</span>
-                    </div>
-
-                    <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                      {/* Row 1: Driver + Front Passenger */}
-                      <div className="flex justify-center gap-4">
-                        <div className="w-12 h-9 rounded-lg bg-slate-800 border border-slate-700 flex flex-col items-center justify-center text-[9px] text-slate-400">
-                          <span>🚗</span>
-                          <span className="font-semibold">Motorista</span>
-                        </div>
-                        <div
-                          className={`w-12 h-9 rounded-lg flex flex-col items-center justify-center text-[9px] font-bold transition-all ${
-                            passengers >= 1
-                              ? 'bg-amber-400 text-slate-950 shadow-xs ring-1 ring-amber-300'
-                              : 'bg-slate-800 text-slate-500 border border-slate-700'
-                          }`}
-                        >
-                          <span>👤</span>
-                          <span>{passengers >= 1 ? 'Passageiro' : 'Livre'}</span>
-                        </div>
-                      </div>
-
-                      {/* Row 2: Rear Seats */}
-                      <div className="flex justify-center gap-2">
-                        {[2, 3, 4].map((seatNum) => {
-                          const isOccupied = passengers >= seatNum;
-                          const isBabySeat = hasChildSeat && seatNum === 2;
-                          return (
-                            <div
-                              key={seatNum}
-                              className={`w-11 h-9 rounded-lg flex flex-col items-center justify-center text-[9px] font-bold transition-all ${
-                                isBabySeat
-                                  ? 'bg-sky-500 text-white shadow-xs'
-                                  : isOccupied
-                                  ? 'bg-amber-400 text-slate-950 shadow-xs ring-1 ring-amber-300'
-                                  : 'bg-slate-800 text-slate-500 border border-slate-700'
-                              }`}
-                            >
-                              <span>{isBabySeat ? '👶' : '👤'}</span>
-                              <span>{isBabySeat ? 'Bebê' : isOccupied ? `Assento ${seatNum}` : 'Livre'}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Row 3: 3rd Row only if Spin 7 */}
-                      {vehicleCategory === 'spin_7' && (
-                        <div className="flex justify-center gap-4">
-                          {[5, 6].map((seatNum) => {
-                            const isOccupied = passengers >= seatNum;
-                            return (
-                              <div
-                                key={seatNum}
-                                className={`w-12 h-9 rounded-lg flex flex-col items-center justify-center text-[9px] font-bold transition-all ${
-                                  isOccupied
-                                    ? 'bg-amber-400 text-slate-950 shadow-xs ring-1 ring-amber-300'
-                                    : 'bg-slate-800 text-slate-500 border border-slate-700'
-                                }`}
-                              >
-                                <span>👤</span>
-                                <span>{isOccupied ? `Assento ${seatNum}` : 'Livre'}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* Trunk Luggage Indicator */}
-                      <div className="text-center pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-center gap-1.5">
-                        <Briefcase className="w-3 h-3 text-sky-400" />
-                        <span>Porta-malas: {luggageCount} volumes</span>
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPassengers(Math.max(1, passengers - 1))}
+                      className="w-9 h-9 bg-white border border-slate-300 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
+                    >
+                      −
+                    </button>
+                    <span className="text-xs text-slate-500 font-medium">Máx: 6 passageiros</span>
+                    <button
+                      type="button"
+                      onClick={() => setPassengers(Math.min(6, passengers + 1))}
+                      className="w-9 h-9 bg-white border border-slate-300 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
 
-                {/* Notes */}
-                <div className="mt-4">
-                  <label className="block text-xs font-bold text-slate-900 mb-1">
-                    Observações Especiais / Pranchas de Surf / Pets
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Informe se trará pranchas de surf com capa de proteção, pets em caixa de transporte ou paradas específicas."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:border-sky-600 focus:bg-white rounded-xl text-xs text-slate-900 outline-none"
-                  />
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5 text-sky-600" />
+                      Bagagens / Malas:
+                    </label>
+                    <span className="font-extrabold text-sm text-white bg-sky-700 px-2 py-0.5 rounded-lg">
+                      {luggageCount} volume(s)
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLuggageCount(Math.max(0, luggageCount - 1))}
+                      className="w-9 h-9 bg-white border border-slate-300 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
+                    >
+                      −
+                    </button>
+                    <span className="text-xs text-slate-500 font-medium">Porta-malas espaçoso</span>
+                    <button
+                      type="button"
+                      onClick={() => setLuggageCount(Math.min(6, luggageCount + 1))}
+                      className="w-9 h-9 bg-white border border-slate-300 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Step 5: Condições de Pagamento & Sinal de 50% */}
-              <div className="bg-amber-500/5 border-2 border-amber-500/30 rounded-2xl p-4 sm:p-5 space-y-3">
-                <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
-                  <h3 className="font-serif-display font-bold text-base text-slate-900 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 text-xs flex items-center justify-center font-mono font-bold">
-                      5
-                    </span>
-                    <span>Condições de Pagamento: Sinal de 50% Obrigatório</span>
-                  </h3>
-                  <span className="text-[11px] font-bold text-amber-900 bg-amber-200/80 px-2.5 py-0.5 rounded-full">
-                    50% Sinal + 50% Embarque
-                  </span>
-                </div>
+              {/* Continue CTA */}
+              <div className="pt-3">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-amber-400 font-extrabold py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer border-2 border-amber-400"
+                >
+                  <span>Continuar para Escolha do Veículo</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
 
-                <div className="bg-white rounded-xl p-3.5 border border-amber-200 text-xs space-y-2.5">
-                  <div className="flex items-start gap-2.5">
-                    <ShieldCheck className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-slate-700 leading-relaxed text-xs">
-                      Para garantir a <strong>minivan Chevrolet Spin 7 Lugares</strong> e a dedicação exclusiva do motorista na sua data e horário, 
-                      <strong> é exigido o pagamento de 50% do valor como sinal de confirmação</strong>. Os 50% restantes são pagos diretamente ao motorista no embarque.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-center">
-                    <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-300">
-                      <span className="text-[10px] text-amber-900 uppercase font-extrabold block">
-                        1ª Parcela • Sinal (50%)
-                      </span>
-                      <span className="text-base font-extrabold text-slate-950 block my-0.5">
-                        R$ {(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}
-                      </span>
-                      <span className="text-[10px] text-amber-800 font-semibold block">
-                        Garante o agendamento
-                      </span>
-                    </div>
-                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                      <span className="text-[10px] text-slate-600 uppercase font-bold block">
-                        2ª Parcela • Saldo (50%)
-                      </span>
-                      <span className="text-base font-extrabold text-slate-950 block my-0.5">
-                        R$ {(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}
-                      </span>
-                      <span className="text-[10px] text-slate-500 block">
-                        No embarque com motorista
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Deposit payment method choice */}
+          {/* STEP 2: AVAILABLE TRANSFER */}
+          {step === 2 && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
                 <div>
-                  <label className="block text-xs font-bold text-slate-900 mb-1.5">
-                    Escolha a forma de pagamento do Sinal de 50%:
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDepositMethod('PIX')}
-                      className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                        selectedDepositMethod === 'PIX'
-                          ? 'bg-amber-400/20 border-amber-500 text-slate-950 ring-2 ring-amber-400'
-                          : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
-                          PIX
-                        </div>
-                        <div>
-                          <strong className="text-xs text-slate-900 block font-bold">PIX Instantâneo</strong>
-                          <span className="text-[10px] text-slate-500">Chave PIX / Liberação Imediata</span>
-                        </div>
-                      </div>
-                      {selectedDepositMethod === 'PIX' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-                    </button>
+                  <h3 className="font-serif-display font-extrabold text-lg text-slate-900">
+                    Etapa 2: Veículo & Transfer Disponível
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Selecione a modalidade ideal para sua viagem.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-xs text-slate-600 hover:text-slate-900 font-bold underline cursor-pointer"
+                >
+                  ← Voltar
+                </button>
+              </div>
 
+              {/* Transfer Options */}
+              <div className="space-y-4">
+                {/* Option 1: Chevrolet Spin 7 Lugares (Privativo) */}
+                <div
+                  onClick={() => {
+                    setVehicleCategory('spin_7');
+                    setTripType('Individual');
+                  }}
+                  className={`p-5 rounded-3xl border-2 transition-all cursor-pointer relative ${
+                    vehicleCategory === 'spin_7' && tripType === 'Individual'
+                      ? 'border-amber-500 bg-amber-50/50 shadow-md ring-2 ring-amber-400/30'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md">
+                        RECOMENDADO • PRIVATIVO
+                      </span>
+                      <h4 className="font-serif-display font-extrabold text-lg text-slate-900 mt-1">
+                        Chevrolet Spin Premier (7 Lugares)
+                      </h4>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-500 block">Total do Transfer</span>
+                      <span className="text-xl font-extrabold text-amber-600">
+                        R$ {rawPriceInfo.totalPrice.toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 mb-3">
+                    Veículo 100% exclusivo para seu grupo. Ar-condicionado dual zone, bagageiro amplo e motorista profissional.
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-700 py-2 border-t border-b border-slate-100 mb-3">
+                    <div>👥 Até {Math.max(passengers, 6)} passageiros</div>
+                    <div>🧳 Até {Math.max(luggageCount, 6)} malas</div>
+                    <div>⏱️ Duração: ~1h 35min</div>
+                    <div>🛡️ Seguro inclusão</div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> Porta a porta garantido
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setSelectedDepositMethod('Cartão')}
-                      className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                        selectedDepositMethod === 'Cartão'
-                          ? 'bg-amber-400/20 border-amber-500 text-slate-950 ring-2 ring-amber-400'
-                          : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                      }`}
+                      onClick={() => {
+                        setVehicleCategory('spin_7');
+                        setTripType('Individual');
+                        setStep(3);
+                      }}
+                      className="bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center">
-                          <CreditCard className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <strong className="text-xs text-slate-900 block font-bold">Cartão de Crédito</strong>
-                          <span className="text-[10px] text-slate-500">Link Seguro de Pagamento</span>
-                        </div>
-                      </div>
-                      {selectedDepositMethod === 'Cartão' && <CheckCircle2 className="w-4 h-4 text-sky-600" />}
+                      Selecionar Privativo →
+                    </button>
+                  </div>
+                </div>
+
+                {/* Option 2: Chevrolet Spin (Compartilhado por Vaga) */}
+                <div
+                  onClick={() => {
+                    setVehicleCategory('spin_7');
+                    setTripType('Compartilhada');
+                  }}
+                  className={`p-5 rounded-3xl border-2 transition-all cursor-pointer relative ${
+                    vehicleCategory === 'spin_7' && tripType === 'Compartilhada'
+                      ? 'border-amber-500 bg-amber-50/50 shadow-md ring-2 ring-amber-400/30'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider bg-sky-100 text-sky-800 px-2 py-0.5 rounded-md">
+                        ECONÔMICO • POR ASSENTO
+                      </span>
+                      <h4 className="font-serif-display font-extrabold text-lg text-slate-900 mt-1">
+                        Transfer Compartilhado (Por Vaga)
+                      </h4>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-500 block">Por Passageiro</span>
+                      <span className="text-xl font-extrabold text-sky-700">
+                        R$ {(rawPriceInfo.totalPrice / Math.max(1, passengers)).toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 mb-3">
+                    Compartilhe o veículo com outros passageiros na mesma rota. Ideal para quem viaja sozinho ou em duplas.
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-700 py-2 border-t border-b border-slate-100 mb-3">
+                    <div>👥 Vaga garantida</div>
+                    <div>🧳 1 mala inclusa</div>
+                    <div>⏱️ Horário programado</div>
+                    <div>🛡️ Motorista experiente</div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> Melhor custo-benefício
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVehicleCategory('spin_7');
+                        setTripType('Compartilhada');
+                        setStep(3);
+                      }}
+                      className="bg-sky-700 hover:bg-sky-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
+                    >
+                      Selecionar Compartilhado →
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {/* Proceed to Step 3 */}
+              <div className="pt-3">
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-amber-400 font-extrabold py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer border-2 border-amber-400"
+                >
+                  <span>Avançar para Confirmação & Pagamento</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: CONFIRM & PAY */}
+          {step === 3 && (
+            <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in duration-200">
+              <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="font-serif-display font-extrabold text-lg text-slate-900">
+                    Etapa 3: Dados do Passageiro & Pagamento PIX (50% Sinal)
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Preencha apenas o necessário para emitir sua Ordem de Serviço.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="text-xs text-slate-600 hover:text-slate-900 font-bold underline cursor-pointer"
+                >
+                  ← Voltar
+                </button>
+              </div>
+
+              {/* Customer Contact Details */}
+              <div className="space-y-3.5 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Dados de Contato do Passageiro
+                </h4>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-900 mb-1">
+                      Nome Completo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Carlos Eduardo Silveira"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-900 mb-1">
+                        Telefone / WhatsApp *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="(11) 98765-4321"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-900 mb-1">
+                        E-mail (para Ordem de Serviço) *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="seu.email@dominio.com.br"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Airport Flight Number (Only shown if airport route) */}
+                  {isAirportRoute && (
+                    <div className="pt-2">
+                      <label className="block text-xs font-bold text-slate-900 mb-1">
+                        Número do Voo (Monitoreo de Aterrizagem) *
+                      </label>
+                      <div className="relative">
+                        <Plane className="w-4 h-4 text-sky-600 absolute left-3 top-3" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ex: LA 3450 / G3 1240"
+                          value={flightNumber}
+                          onChange={(e) => setFlightNumber(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none font-mono"
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Permite ao motorista acompanhar possíveis atrasos de voo sem custo extra.
+                      </span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-900 mb-1">
+                      Observações Especiais / Cadeirinha (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Preciso de cadeirinha infantil, pranchas de surf, etc."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial & PIX Deposit Breakdown */}
+              <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
+                  <span className="text-xs font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-amber-600" />
+                    Pagamento do Sinal de 50% via PIX
+                  </span>
+                  <span className="text-xs font-extrabold text-amber-900 bg-amber-300 px-2.5 py-0.5 rounded-full">
+                    PIX INSTANTÂNEO
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Valor Total do Transfer:</span>
+                    <strong className="text-slate-900 text-sm">
+                      R$ {finalTotalPrice.toFixed(2).replace('.', ',')}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between bg-amber-400/20 p-2.5 rounded-xl border border-amber-400/50">
+                    <div>
+                      <strong className="text-amber-950 block">Sinal Obrigatório (50%):</strong>
+                      <span className="text-[10px] text-slate-600">Garante bloqueio da minivan Spin</span>
+                    </div>
+                    <span className="text-base font-black text-amber-700">
+                      R$ {(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-[11px] text-slate-600">
+                    <span>Saldo Restante (50% no embarque):</span>
+                    <span>R$ {(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950 text-white p-3 rounded-xl border border-slate-800 text-[11px] space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Chave PIX (Celular):</span>
+                    <strong className="text-amber-300 font-mono">{COMPANY_CONTACT.pixKey}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Favorecido:</span>
+                    <span className="text-slate-200">{COMPANY_CONTACT.pixBeneficiary}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit CTA */}
               <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  id="btn-submit-reservation"
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-slate-100 hover:text-white font-extrabold text-base sm:text-lg py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 border-2 border-amber-400 cursor-pointer transform active:scale-98 disabled:opacity-50"
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-amber-400 font-extrabold py-4 px-6 rounded-2xl text-base shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer border-2 border-amber-400"
                 >
                   <Send className="w-5 h-5 text-amber-400" />
                   <span>
-                    {isSubmitting ? 'PROCESSANDO AGENDAMENTO ONLINE...' : 'CONFIRMAR AGENDAMENTO ONLINE & GERAR VOUCHER'}
+                    {isSubmitting ? 'GERANDO VOUCHER & ORDEM DE SERVIÇO...' : `Pagar 50% (R$ ${(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}) com PIX`}
                   </span>
                 </button>
               </div>
             </form>
-          </div>
+          )}
 
-          {/* RIGHT: Live Price Card, Coupon & Guarantees */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Realtime Quote Ticket */}
-            <div className="bg-slate-900 text-white rounded-3xl p-6 border-2 border-amber-400 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+        </div>
 
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <Car className="w-5 h-5 text-amber-400" />
-                  <span className="font-serif-display font-bold text-sm tracking-wider text-white">
-                    RESUMO DO TRANSFER
-                  </span>
-                </div>
-                <span className="text-[10px] bg-sky-600 text-white px-2 py-0.5 rounded-full font-bold uppercase">
-                  {tripType}
-                </span>
-              </div>
+        {/* RIGHT: Sticky Live Booking Summary Card */}
+        <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
+          <div className="bg-slate-900 text-white rounded-3xl p-6 border-2 border-amber-400 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
 
-              {/* Route snippet */}
-              <div className="space-y-2 text-xs mb-4">
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase">Origem</span>
-                    <strong className="text-white text-xs">{origin}</strong>
-                  </div>
-                </div>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <span className="font-serif-display font-extrabold text-sm tracking-wider text-amber-400 flex items-center gap-2">
+                <Car className="w-4 h-4" />
+                RESUMO EM TEMPO REAL
+              </span>
+              <span className="text-[10px] bg-sky-600 text-white px-2.5 py-0.5 rounded-full font-bold">
+                {tripType}
+              </span>
+            </div>
 
-                <div className="w-0.5 h-4 bg-slate-700 ml-1" />
-
-                <div className="flex items-start gap-2">
-                  <div className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-                  <div>
-                    <span className="text-slate-400 block text-[10px] uppercase">Destino</span>
-                    <strong className="text-white text-xs">{destination}</strong>
-                  </div>
+            {/* Route */}
+            <div className="space-y-2 text-xs mb-4">
+              <div className="flex items-start gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 mt-1 flex-shrink-0" />
+                <div>
+                  <span className="text-slate-400 text-[10px] uppercase block">Origem</span>
+                  <strong className="text-white text-xs">{origin}</strong>
                 </div>
               </div>
-
-              {/* Specs Breakdown */}
-              <div className="bg-slate-800/90 p-3.5 rounded-2xl border border-slate-700 space-y-2 text-xs mb-4">
-                <div className="flex justify-between text-slate-300">
-                  <span>Veículo:</span>
-                  <span className="text-white font-medium">Chevrolet Spin 7 Lugares</span>
+              <div className="w-0.5 h-4 bg-slate-700 ml-1.2" />
+              <div className="flex items-start gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-400 mt-1 flex-shrink-0" />
+                <div>
+                  <span className="text-slate-400 text-[10px] uppercase block">Destino</span>
+                  <strong className="text-white text-xs">{destination}</strong>
                 </div>
-                <div className="flex justify-between text-slate-300">
-                  <span>Data & Hora:</span>
-                  <span className="text-white font-medium">{date} às {time}</span>
-                </div>
-                <div className="flex justify-between text-slate-300">
-                  <span>Passageiros:</span>
-                  <span className="text-white font-medium">{passengers} pessoa(s)</span>
-                </div>
-                <div className="flex justify-between text-slate-300">
-                  <span>Bagagens:</span>
-                  <span className="text-white font-medium">{luggageCount} volume(s)</span>
-                </div>
-                {heavyLuggageCount > 0 && (
-                  <div className="flex justify-between text-slate-300">
-                    <span>Malas pesadas ({heavyLuggageCount} &gt; 23kg):</span>
-                    <span className="text-amber-400 font-medium">+ R$ {rawPriceInfo.heavyLuggageCost.toFixed(2)}</span>
-                  </div>
-                )}
-                {extraStops.length > 0 && (
-                  <div className="flex justify-between text-slate-300">
-                    <span>Paradas extras ({extraStops.length}):</span>
-                    <span className="text-amber-400 font-medium">+ R$ {rawPriceInfo.stopsCost.toFixed(2)}</span>
-                  </div>
-                )}
-                {hasChildSeat && (
-                  <div className="flex justify-between text-emerald-400 text-[11px]">
-                    <span>Cadeirinha Infantil:</span>
-                    <span>Inclusa (Grátis)</span>
-                  </div>
-                )}
-                {appliedCoupon && (
-                  <div className="flex justify-between text-amber-300 text-[11px] font-bold border-t border-slate-700 pt-1.5">
-                    <span>Desconto ({appliedCoupon.code}):</span>
-                    <span>- R$ {(rawPriceInfo.totalPrice - finalTotalPrice).toFixed(2).replace('.', ',')}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Promo code engine inside summary */}
-              <div className="mb-4 pt-2 border-t border-slate-800">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Tag className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-                    <input
-                      type="text"
-                      placeholder="Cupom (Ex: LITORAL10)"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value)}
-                      className="w-full pl-8 pr-2 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white uppercase outline-none focus:border-amber-400"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleApplyCoupon}
-                    className="bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Aplicar
-                  </button>
-                </div>
-                {appliedCoupon && (
-                  <span className="text-[10px] text-emerald-400 mt-1 block">
-                    ✓ {appliedCoupon.description}
-                  </span>
-                )}
-                {couponError && (
-                  <span className="text-[10px] text-red-400 mt-1 block">
-                    {couponError}
-                  </span>
-                )}
-              </div>
-
-              {/* Total Price Display & 50% Deposit Breakdown */}
-              <div className="border-t border-slate-800 pt-4 space-y-3">
-                <div className="text-center">
-                  <span className="text-[11px] uppercase tracking-widest text-slate-400 block">
-                    Valor Total da Corrida
-                  </span>
-                  <div className="font-serif-display font-extrabold text-3xl sm:text-4xl text-amber-400 mt-0.5">
-                    R$ {finalTotalPrice.toFixed(2).replace('.', ',')}
-                  </div>
-                  <p className="text-[10px] text-slate-300 mt-0.5">
-                    {tripType === 'Individual'
-                      ? 'Tarifa fechada para a minivan Chevrolet Spin inteira'
-                      : `Tarifa compartilhada (R$ ${(finalTotalPrice / passengers).toFixed(2).replace('.', ',')} por pessoa)`}
-                  </p>
-                </div>
-
-                {/* 50% Deposit Notice Box */}
-                <div className="bg-slate-800/90 rounded-2xl p-3 border border-amber-400/40 text-xs space-y-2">
-                  <div className="flex justify-between items-center text-amber-300 font-bold">
-                    <span className="flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                      Sinal de Confirmação (50%):
-                    </span>
-                    <span className="text-sm text-amber-400 font-extrabold">
-                      R$ {(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-slate-300 text-[11px]">
-                    <span>Saldo Restante no Embarque (50%):</span>
-                    <span className="font-medium text-slate-200">
-                      R$ {(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-amber-200/90 pt-1.5 border-t border-slate-700/60 leading-tight">
-                    🔒 Pagamento de 50% exigido para bloqueio do veículo Spin e garantia da data.
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Methods */}
-              <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-center gap-3 text-[11px] text-slate-400">
-                <span className="flex items-center gap-1">
-                  <CreditCard className="w-3.5 h-3.5 text-amber-400" />
-                  PIX / Cartão de Crédito
-                </span>
-                <span>•</span>
-                <span>Sem taxa de cancelamento</span>
               </div>
             </div>
 
-            {/* Trust highlights */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-              <h4 className="font-serif-display font-bold text-sm text-slate-900">
-                Garantias Litoral em Movimento
-              </h4>
-              <ul className="text-xs text-slate-600 space-y-2">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>Agendamento 100% online com confirmação instantânea no sistema</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>Regra transparente de 50% de sinal para reserva garantida</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>Minivan Chevrolet Spin climatizada com ar duplo e Wi-Fi</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>Monitoramento de voo em GRU e CGH sem custo adicional</span>
-                </li>
-              </ul>
+            {/* Details */}
+            <div className="bg-slate-800/90 p-3.5 rounded-2xl border border-slate-700 space-y-2 text-xs mb-4">
+              <div className="flex justify-between text-slate-300">
+                <span>Data & Horário:</span>
+                <span className="text-amber-400 font-bold">{date} às {time}</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Passageiros:</span>
+                <span className="text-white font-medium">{passengers} pessoa(s)</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Bagagens:</span>
+                <span className="text-white font-medium">{luggageCount} volume(s)</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Veículo:</span>
+                <span className="text-white font-medium">Chevrolet Spin 7L</span>
+              </div>
+            </div>
+
+            {/* Coupon Engine */}
+            <div className="mb-4 pt-2 border-t border-slate-800">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Cupom (Ex: LITORAL10)"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    className="w-full pl-8 pr-2 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-white uppercase outline-none focus:border-amber-400"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer"
+                >
+                  Aplicar
+                </button>
+              </div>
+              {appliedCoupon && (
+                <span className="text-[10px] text-emerald-400 mt-1 block">✓ {appliedCoupon.description}</span>
+              )}
+            </div>
+
+            {/* Price & Deposit Summary */}
+            <div className="border-t border-slate-800 pt-4 space-y-3">
+              <div className="text-center">
+                <span className="text-[10px] uppercase tracking-widest text-slate-400 block">
+                  Total da Viagem
+                </span>
+                <div className="font-serif-display font-extrabold text-3xl text-amber-400 mt-0.5">
+                  R$ {finalTotalPrice.toFixed(2).replace('.', ',')}
+                </div>
+              </div>
+
+              <div className="bg-slate-800/90 rounded-2xl p-3 border border-amber-400/40 text-xs space-y-1.5">
+                <div className="flex justify-between text-amber-300 font-bold">
+                  <span>Sinal de 50% (para confirmar):</span>
+                  <span className="text-amber-400 text-sm">
+                    R$ {(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-300 text-[11px]">
+                  <span>Saldo no embarque (50%):</span>
+                  <span>R$ {(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-      {renderConfirmationModal()}
-      {renderOSModal()}
+      </div>
+
+      {confirmedReservation && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 text-white border-2 border-amber-400 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center mx-auto mb-2">
+                <Check className="w-7 h-7 stroke-[3]" />
+              </div>
+              <h3 className="font-serif-display font-extrabold text-2xl text-white">
+                Reserva Realizada com Sucesso!
+              </h3>
+              <p className="text-xs text-slate-300 mt-1">
+                Ordem de Serviço gerada. Efetue o pagamento do sinal de 50% via PIX para garantir o veículo.
+              </p>
+            </div>
+
+            <div className="bg-slate-800 p-4 rounded-2xl text-xs space-y-2 border border-slate-700">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Código da Reserva:</span>
+                <strong className="font-mono text-amber-400">#{confirmedReservation.code}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Passageiro:</span>
+                <span className="font-bold text-white">{confirmedReservation.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Rota:</span>
+                <span className="font-bold text-white">{confirmedReservation.origin} ➔ {confirmedReservation.destination}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Sinal PIX (50%):</span>
+                <strong className="text-amber-400 text-sm">R$ {confirmedReservation.depositAmount.toFixed(2).replace('.', ',')}</strong>
+              </div>
+            </div>
+
+            {/* PIX Payment Box */}
+            <div className="bg-slate-950 p-4 rounded-2xl border border-amber-400/50 space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-amber-300">
+                <span>Chave PIX (Celular):</span>
+                <span className="font-mono">{COMPANY_CONTACT.pixKey}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopyPixKey}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700"
+              >
+                <Copy className="w-3.5 h-3.5 text-amber-400" />
+                <span>{copiedPixKey ? 'Chave Copiada!' : 'Copiar Chave PIX'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDepositPayment}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <Check className="w-4 h-4" />
+                <span>Simular Pagamento Confirmado (50%)</span>
+              </button>
+            </div>
+
+            {/* OS Dispatch */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleSendOSWhatsApp(confirmedReservation)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>WhatsApp OS</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendOSEmail(confirmedReservation)}
+                className="bg-sky-700 hover:bg-sky-600 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>E-mail OS</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setConfirmedReservation(null)}
+              className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-3 rounded-xl text-xs cursor-pointer text-center"
+            >
+              Fechar & Concluir
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
