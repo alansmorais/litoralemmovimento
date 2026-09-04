@@ -24,7 +24,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <script>
-      // 1. Force unregister any legacy service workers and clear stale caches to prevent blank screen lockups
+      // Clear any stale service workers or caches that could cause loading issues
       try {
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations().then(function(regs) {
@@ -33,53 +33,11 @@
             }
           }).catch(function() {});
         }
-        if (typeof window !== 'undefined' && 'caches' in window) {
-          caches.keys().then(function(names) {
-            for (var j = 0; j < names.length; j++) {
-              caches.delete(names[j]);
-            }
-          }).catch(function() {});
-        }
       } catch (e) {}
-
-      // 2. Fallback timeout to guarantee user is never stuck on a blank screen if script loading fails
-      window.__appLoaded = false;
-      setTimeout(function() {
-        if (!window.__appLoaded) {
-          var root = document.getElementById('root');
-          var fallback = document.getElementById('initial-loader-fallback');
-          if (fallback) {
-            fallback.style.display = 'block';
-          }
-        }
-      }, 4000);
     </script>
   </head>
-  <body class="bg-slate-900 text-slate-100 antialiased selection:bg-amber-500 selection:text-slate-950 min-h-screen" style="background-color: #020617; color: #f8fafc; margin: 0;">
-    <div id="root">
-      <!-- Branded Initial Shell: Prevents white screen while bundles load -->
-      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #020617; color: #f8fafc; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; padding: 24px; text-align: center;">
-        <div style="width: 72px; height: 72px; border-radius: 20px; overflow: hidden; margin-bottom: 20px; border: 2px solid #f59e0b; box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.3);">
-          <img src="./images/icon-logo.jpg" alt="Litoral em Movimento" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'" />
-        </div>
-        <h1 style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px 0; color: #ffffff;">Litoral em Movimento</h1>
-        <p style="font-size: 14px; color: #94a3b8; margin: 0 0 24px 0; max-width: 320px;">Transfer Executivo São Paulo & Litoral Norte</p>
-        <div style="width: 36px; height: 36px; border: 3px solid rgba(245, 158, 11, 0.2); border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
-        
-        <div id="initial-loader-fallback" style="display: none; margin-top: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid #1e293b; padding: 16px 24px; border-radius: 16px; max-width: 380px;">
-          <p style="font-size: 13px; color: #cbd5e1; margin: 0 0 12px 0;">O carregamento está demorando um pouco.</p>
-          <button onclick="localStorage.removeItem('litoral_reservations_v2'); sessionStorage.clear(); window.location.reload();" style="background: #f59e0b; color: #020617; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer;">
-            Recarregar Aplicação
-          </button>
-        </div>
-      </div>
-      <style>
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      </style>
-    </div>
+  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-amber-500 selection:text-slate-950 min-h-screen" style="background-color: #020617; color: #f8fafc; margin: 0;">
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
