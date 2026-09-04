@@ -343,14 +343,14 @@ export class StorageService {
       localStorage.setItem(GOOGLE_SCRIPT_STORAGE_KEY, url.trim());
       window.dispatchEvent(new CustomEvent('gas_url_updated', { detail: url.trim() }));
     } catch (e) {
-      console.error('Failed to save Google Apps Script URL', e);
+      console.error('Failed to save Servidor Cloud URL', e);
     }
   }
 
   public static async testGoogleScriptConnection(url?: string): Promise<{ success: boolean; message: string }> {
     const targetUrl = (url || this.getGoogleScriptUrl()).trim();
     if (!targetUrl) {
-      return { success: false, message: 'Nenhuma URL do Google Apps Script configurada.' };
+      return { success: false, message: 'Nenhuma URL do Servidor Cloud configurada.' };
     }
 
     try {
@@ -362,12 +362,12 @@ export class StorageService {
       const data = await res.json();
       return {
         success: true,
-        message: data.message || 'Conexão com Google Sheets validada com sucesso!',
+        message: data.message || 'Conexão com o Servidor Cloud validada com sucesso!',
       };
     } catch (err: any) {
       return {
         success: false,
-        message: `Falha na conexão: ${err.message || 'Verifique se a implantação do Apps Script está pública para "Qualquer pessoa"'}.`,
+        message: `Falha na conexão: ${err.message || 'Verifique se o Servidor Cloud está ativo'}.`,
       };
     }
   }
@@ -396,7 +396,7 @@ export class StorageService {
   ): Promise<{ success: boolean; message?: string }> {
     const scriptUrl = this.getGoogleScriptUrl();
     if (!scriptUrl) {
-      return { success: false, message: 'URL do Google Apps Script não configurada.' };
+      return { success: false, message: 'URL do Servidor Cloud não configurada.' };
     }
 
     try {
@@ -416,10 +416,10 @@ export class StorageService {
       this.setLastSyncTimestamp();
       return {
         success: true,
-        message: resData.message || 'Sincronização com Google Apps Script concluída!',
+        message: resData.message || 'Sincronização com o Servidor Cloud concluída!',
       };
     } catch (e: any) {
-      console.warn('Asynchronous Google Sheets sync warning:', e);
+      console.warn('Asynchronous Cloud sync warning:', e);
       return {
         success: false,
         message: `Aviso na sincronização: ${e.message || 'Erro de rede ou permissão'}.`,
@@ -463,13 +463,49 @@ export class StorageService {
         const getResUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getReservations` : `${scriptUrl}?action=getReservations`;
         const getMsgUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getContactMessages` : `${scriptUrl}?action=getContactMessages`;
         const getCfgUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getConfig` : `${scriptUrl}?action=getConfig`;
+        const getAdmUrl = scriptUrl.includes('?') ? `${scriptUrl}&action=getAdmins` : `${scriptUrl}?action=getAdmins`;
 
-        const [drvFetch, resFetch, msgFetch, cfgFetch] = await Promise.allSettled([
+        const [drvFetch, resFetch, msgFetch, cfgFetch, admFetch] = await Promise.allSettled([
           fetch(getDrvUrl),
           fetch(getResUrl),
           fetch(getMsgUrl),
           fetch(getCfgUrl),
+          fetch(getAdmUrl),
         ]);
+
+        // --- Process Admins from Google Sheets ---
+        if (admFetch.status === 'fulfilled' && admFetch.value.ok) {
+          try {
+            const sheetAdmins = await admFetch.value.json();
+            if (Array.isArray(sheetAdmins) && sheetAdmins.length > 0) {
+              const currentAdmins = this.getAdmins();
+              const adminMap = new Map<string, AdminAccount>();
+              for (const a of currentAdmins) {
+                adminMap.set(a.id, a);
+              }
+              for (const sa of sheetAdmins) {
+                if (!sa || !sa.id) continue;
+                const existing = adminMap.get(sa.id) || currentAdmins.find(a => a.username === sa.username);
+                const mergedAdmin: AdminAccount = {
+                  id: sa.id,
+                  name: sa.name || existing?.name || 'Administrador',
+                  username: sa.username || existing?.username || 'admin',
+                  password: sa.password || existing?.password || 'litoral2026',
+                  role: sa.role || existing?.role || 'Gestão Geral',
+                  email: sa.email || existing?.email || '',
+                  phone: sa.phone || existing?.phone || '(12) 98850-6597',
+                  status: sa.status || existing?.status || 'Ativo',
+                  mustChangePassword: sa.mustChangePassword !== undefined ? sa.mustChangePassword : (existing?.mustChangePassword ?? false),
+                };
+                adminMap.set(sa.id, mergedAdmin);
+              }
+              const mergedAdminsList = Array.from(adminMap.values());
+              this.saveAdmins(mergedAdminsList);
+            }
+          } catch (err) {
+            console.warn('Error parsing admins from Google Sheets:', err);
+          }
+        }
 
         // --- Process Drivers from Google Sheets ---
         if (drvFetch.status === 'fulfilled' && drvFetch.value.ok) {
@@ -642,14 +678,14 @@ export class StorageService {
           }
         }
 
-        // 3. Push complete consolidated state back to Google Sheets (2-way sync)
+        // 3. Push complete consolidated state back to Servidor Cloud (2-way sync)
         await this.syncAllToGoogleSheets();
       }
 
       this.setLastSyncTimestamp();
       return {
         success: true,
-        message: 'Sincronização bidirecional completa com Google Sheets e Servidor!',
+        message: 'Sincronização bidirecional completa com o Servidor Cloud!',
         details: {
           reservationsCount,
           driversCount,
@@ -698,7 +734,7 @@ export class StorageService {
     const res = await this.syncToGoogleSheets('syncAll', payload);
     return {
       success: res.success,
-      message: res.message || 'Todos os dados do Painel foram enviados e salvos no Google Sheets!',
+      message: res.message || 'Todos os dados do Painel foram enviados e salvos no Servidor Cloud!',
       details: {
         reservationsCount: reservations.length,
         driversCount: drivers.length,
@@ -712,7 +748,7 @@ export class StorageService {
     const res = await this.syncToGoogleSheets('syncAllReservations', { reservations });
     return {
       success: res.success,
-      message: res.message || `${reservations.length} reservas salvas no Google Sheets.`,
+      message: res.message || `${reservations.length} reservas salvas no Servidor Cloud.`,
       count: reservations.length,
     };
   }
@@ -722,7 +758,7 @@ export class StorageService {
     const res = await this.syncToGoogleSheets('syncAllDrivers', { drivers });
     return {
       success: res.success,
-      message: res.message || `${drivers.length} motoristas salvos no Google Sheets.`,
+      message: res.message || `${drivers.length} motoristas salvos no Servidor Cloud.`,
       count: drivers.length,
     };
   }
@@ -732,7 +768,7 @@ export class StorageService {
     const res = await this.syncToGoogleSheets('syncAllContactMessages', { contactMessages });
     return {
       success: res.success,
-      message: res.message || `${contactMessages.length} mensagens do SAC salvas no Google Sheets.`,
+      message: res.message || `${contactMessages.length} mensagens do SAC salvas no Servidor Cloud.`,
       count: contactMessages.length,
     };
   }

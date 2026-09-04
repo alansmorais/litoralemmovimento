@@ -592,7 +592,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleSaveGasUrl = () => {
     StorageService.setGoogleScriptUrl(gasUrl);
-    setSyncStatus('URL do Google Apps Script salva com sucesso!');
+    setSyncStatus('URL do Servidor Cloud salva com sucesso!');
     setTimeout(() => setSyncStatus(null), 4000);
   };
 
@@ -605,34 +605,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleImportFromGas = async () => {
-    setSyncStatus('Importando dados da Planilha Google...');
+    setSyncStatus('Importando dados do Servidor Cloud...');
     const result = await StorageService.fetchFromGoogleSheets();
     if (result && result.length > 0) {
-      setSyncStatus(`Sucesso! ${result.length} reservas carregadas da planilha Google.`);
+      setSyncStatus(`Sucesso! ${result.length} reservas carregadas do Servidor Cloud.`);
       loadData();
     } else {
-      setSyncStatus('Nenhuma reserva encontrada na planilha ou erro de conexão.');
+      setSyncStatus('Nenhuma reserva encontrada no Servidor Cloud ou erro de conexão.');
     }
     setTimeout(() => setSyncStatus(null), 5000);
   };
 
   const handleTriggerRemoteSetup = async () => {
     if (!gasUrl) {
-      alert('Por favor, informe a URL do Google Apps Script primeiro.');
+      alert('Por favor, informe a URL do Servidor Cloud primeiro.');
       return;
     }
-    setSyncStatus('Executando criação remota de abas e cabeçalhos no Google Sheets...');
+    setSyncStatus('Executando configuração remota de tabelas no Servidor Cloud...');
     try {
       const targetUrl = gasUrl.includes('?') ? `${gasUrl}&action=setup` : `${gasUrl}?action=setup`;
       const res = await fetch(targetUrl);
       const data = await res.json();
       if (data.status === 'success') {
-        setSyncStatus('Sucesso! As 4 abas (Reservas, Motoristas, Dashboard, Configurações) foram criadas e formatadas na planilha.');
+        setSyncStatus('Sucesso! As tabelas (Reservas, Motoristas, Dashboard, Configurações) foram configuradas no Servidor Cloud.');
       } else {
-        setSyncStatus('Comando enviado à planilha! Verifique sua planilha Google.');
+        setSyncStatus('Comando enviado ao Servidor Cloud!');
       }
     } catch (err) {
-      setSyncStatus('Comando de setup enviado para o Google Apps Script.');
+      setSyncStatus('Comando de configuração enviado para o Servidor Cloud.');
     }
     setTimeout(() => setSyncStatus(null), 6000);
   };
@@ -729,6 +729,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
 var SHEET_RESERVAS = 'Reservas';
 var SHEET_MOTORISTAS = 'Motoristas';
+var SHEET_ADMINS = 'Administradores & Gestores';
 var SHEET_DASHBOARD = 'Dashboard';
 var SHEET_CONFIG = 'Configuracoes';
 var SHEET_SAC = 'Mensagens_SAC';
@@ -747,10 +748,11 @@ function setupAllSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   setupReservasSheet(ss);
   setupMotoristasSheet(ss);
+  setupAdminsSheet(ss);
   setupConfigSheet(ss);
   setupSacSheet(ss);
   setupDashboardSheet(ss);
-  return { status: 'success', message: 'Todas as 5 abas configuradas com sucesso!' };
+  return { status: 'success', message: 'Todas as 6 abas configuradas com sucesso!' };
 }
 
 function setupReservasSheet(ss) {
@@ -789,6 +791,19 @@ function setupMotoristasSheet(ss) {
   if (sheet.getLastRow() <= 1) {
     sheet.appendRow(['drv-01', 'Carlos Silva', '(12) 98877-6655', 'carlos@litoralemmovimento.com.br', 'Chevrolet Spin Premier 7L', 'SP-LIT7A24', 'Disponível', 4.98, 342, '12988776655']);
     sheet.appendRow(['drv-02', 'Marcos Oliveira', '(11) 97654-3210', 'marcos@litoralemmovimento.com.br', 'Chevrolet Spin LTZ 7L', 'SP-MOV7B88', 'Disponível', 4.95, 289, '11976543210']);
+  }
+  return sheet;
+}
+
+function setupAdminsSheet(ss) {
+  if (!ss) ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_ADMINS) || ss.insertSheet(SHEET_ADMINS);
+  var headers = ['ID Administrador', 'Nome Completo', 'Usuário (Login)', 'Senha', 'Função / Cargo', 'E-mail', 'Telefone (WhatsApp)', 'Status', 'Precisa Trocar Senha'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setBackground('#0F172A').setFontColor('#F8FAFC').setFontWeight('bold');
+  sheet.setFrozenRows(1);
+  if (sheet.getLastRow() <= 1) {
+    sheet.appendRow(['adm-1', 'Alan Morais', 'alan', 'alan2026', 'Super Admin', 'alanpkmorais@gmail.com', '(12) 98850-6597', 'Ativo', 'Não']);
+    sheet.appendRow(['adm-2', 'Administrador Geral', 'admin', 'litoral2026', 'Gestão Geral', 'contato@litoralemmovimento.com.br', '(12) 98850-6597', 'Ativo', 'Não']);
   }
   return sheet;
 }
@@ -869,6 +884,23 @@ function doGet(e) {
       });
     }
     return createJsonResponse(drivers);
+  }
+
+  if (action === 'getAdmins') {
+    var sheetAdmins = ss.getSheetByName(SHEET_ADMINS) || setupAdminsSheet(ss);
+    var admData = sheetAdmins.getDataRange().getValues();
+    var admins = [];
+    for (var a = 1; a < admData.length; a++) {
+      if (!admData[a][0]) continue;
+      admins.push({
+        id: String(admData[a][0]), name: String(admData[a][1]), username: String(admData[a][2]),
+        password: String(admData[a][3] || ''), role: String(admData[a][4] || 'Gestão Geral'),
+        email: String(admData[a][5] || ''), phone: String(admData[a][6] || ''),
+        status: String(admData[a][7] || 'Ativo'),
+        mustChangePassword: String(admData[a][8]).toLowerCase() === 'sim'
+      });
+    }
+    return createJsonResponse(admins);
   }
 
   if (action === 'getContactMessages' || action === 'getMessages') {
@@ -971,6 +1003,26 @@ function doPost(e) {
           ];
           if (existingDrvIds[drvId]) sheetDrv.getRange(existingDrvIds[drvId], 1, 1, drvRow.length).setValues([drvRow]);
           else sheetDrv.appendRow(drvRow);
+        }
+      }
+
+      if (Array.isArray(payload.admins)) {
+        var sheetAdmins = ss.getSheetByName(SHEET_ADMINS) || setupAdminsSheet(ss);
+        var admData = sheetAdmins.getDataRange().getValues();
+        var existingAdminIds = {};
+        for (var ea = 1; ea < admData.length; ea++) {
+          if (admData[ea][0]) existingAdminIds[String(admData[ea][0])] = ea + 1;
+        }
+        for (var aIdx = 0; aIdx < payload.admins.length; aIdx++) {
+          var adm = payload.admins[aIdx];
+          var admId = String(adm.id || ('adm-' + (aIdx + 1)));
+          var admRow = [
+            admId, adm.name || '', adm.username || '', adm.password || '',
+            adm.role || 'Gestão Geral', adm.email || '', adm.phone || '',
+            adm.status || 'Ativo', adm.mustChangePassword ? 'Sim' : 'Não'
+          ];
+          if (existingAdminIds[admId]) sheetAdmins.getRange(existingAdminIds[admId], 1, 1, admRow.length).setValues([admRow]);
+          else sheetAdmins.appendRow(admRow);
         }
       }
 
@@ -2987,10 +3039,10 @@ function createJsonResponse(data) {
                   <span>Área Técnica • Super Admin Alan Morais</span>
                 </div>
                 <h3 className="font-serif-display font-extrabold text-2xl text-slate-900">
-                  Integração com Google Sheets & API
+                  Integração com Servidor Cloud & API
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Painel de infraestrutura para configurar o Google Apps Script como backend gratuito do app.
+                  Painel de infraestrutura para configurar o Servidor Cloud e API como backend seguro do app.
                 </p>
               </div>
 
@@ -3022,14 +3074,14 @@ function createJsonResponse(data) {
                   onClick={handleMasterSyncAll}
                   disabled={isSyncingAll}
                   className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
-                  title="Executa sincronização bidirecional completa: busca novos motoristas e reservas da planilha e salva dados atualizados"
+                  title="Executa sincronização bidirecional completa: busca novos motoristas e reservas do servidor e salva dados atualizados"
                 >
                   <RefreshCw className={`w-4 h-4 ${isSyncingAll ? 'animate-spin' : ''}`} />
-                  <span>{isSyncingAll ? 'Sincronizando em tempo real com a planilha...' : '🔄 Sincronizar Tudo (Google Sheets ⇌ App)'}</span>
+                  <span>{isSyncingAll ? 'Sincronizando em tempo real com o servidor...' : '🔄 Sincronizar Tudo (Servidor Cloud ⇌ App)'}</span>
                 </button>
               </div>
               <p className="text-[11px] text-slate-500 text-center">
-                Sincronização automática ativa a cada 8 segundos. Novos motoristas, reservas ou mensagens adicionados na planilha aparecem automaticamente no painel.
+                Sincronização automática ativa a cada 1 minuto. Novos motoristas, reservas ou mensagens adicionados no servidor aparecem automaticamente no painel.
               </p>
             </div>
 
@@ -3043,14 +3095,14 @@ function createJsonResponse(data) {
                   <div>
                     <div className="flex items-center gap-2">
                       <h4 className="font-bold text-sm text-white">
-                        Diagnóstico & Auto-Criação de Abas e Cabeçalhos (Sheets)
+                        Diagnóstico & Configuração Automática de Tabelas (Cloud)
                       </h4>
                       <span className="text-[10px] bg-amber-400/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-400/40">
                         Super User Exclusivo
                       </span>
                     </div>
                     <span className="text-[11px] text-slate-400">
-                      Verifica e auto-cria abas ou cabeçalhos faltantes diretamente no Google Sheets sem mexer em código
+                      Verifica e configura tabelas e estruturas faltantes diretamente no Servidor Cloud
                     </span>
                   </div>
                 </div>
@@ -3131,7 +3183,7 @@ function createJsonResponse(data) {
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                     <span>
-                      Abas faltantes na planilha: <strong>{sheetsStructure.missingSheets.join(', ')}</strong>.
+                      Tabelas faltantes no servidor: <strong>{sheetsStructure.missingSheets.join(', ')}</strong>.
                     </span>
                   </div>
                   <button
@@ -3139,7 +3191,7 @@ function createJsonResponse(data) {
                     onClick={handleRepairSheetsStructure}
                     className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs cursor-pointer shrink-0"
                   >
-                    Criar Agora
+                    Configurar Agora
                   </button>
                 </div>
               )}
@@ -3153,8 +3205,8 @@ function createJsonResponse(data) {
                     🔗
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-white">URL do App da Web (Google Apps Script)</h4>
-                    <span className="text-[11px] text-slate-400">URL de execução da API (termina com /exec)</span>
+                    <h4 className="font-bold text-sm text-white">URL do Servidor Cloud / API</h4>
+                    <span className="text-[11px] text-slate-400">URL de execução do backend (endpoint)</span>
                   </div>
                 </div>
                 <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${gasUrl ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`}>
@@ -3165,7 +3217,7 @@ function createJsonResponse(data) {
               <div className="flex flex-col sm:flex-row gap-2.5">
                 <input
                   type="url"
-                  placeholder="https://script.google.com/macros/s/AKfycbx.../exec"
+                  placeholder="https://seu-servidor-cloud.com/api/exec"
                   value={gasUrl}
                   onChange={(e) => setGasUrl(e.target.value)}
                   className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-amber-400 font-mono"
@@ -3184,10 +3236,10 @@ function createJsonResponse(data) {
                   onClick={handleTriggerRemoteSetup}
                   disabled={!gasUrl}
                   className="bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-                  title="Executa a criação automática das 4 abas (Reservas, Motoristas, Dashboard, Configurações) na sua planilha Google"
+                  title="Configura automaticamente todas as tabelas no Servidor Cloud"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Criar Abas no Sheets</span>
+                  <span>Configurar Servidor</span>
                 </button>
                 <button
                   type="button"
@@ -3220,11 +3272,11 @@ function createJsonResponse(data) {
                         Senha Master do Super Admin (Alan Morais)
                       </h4>
                       <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
-                        Hospedada na Planilha
+                        Hospedada no Servidor
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600">
-                      Esta senha protege o acesso técnico da API. Fica salva na aba <strong>Configuracoes</strong> do Sheets (chave <code className="bg-white px-1 py-0.5 rounded font-mono text-slate-800 border border-amber-200">SENHA_SUPERADMIN_ALAN</code>).
+                      Esta senha protege o acesso técnico da API (chave <code className="bg-white px-1 py-0.5 rounded font-mono text-slate-800 border border-amber-200">SENHA_SUPERADMIN_ALAN</code>).
                     </p>
                   </div>
                 </div>
@@ -3258,10 +3310,10 @@ function createJsonResponse(data) {
 
               <div className="text-[11px] text-slate-700 bg-white/90 p-3.5 rounded-xl border border-amber-200 space-y-1">
                 <div className="flex items-center gap-1 font-semibold text-slate-900">
-                  <span>💡 Onde alterar a senha diretamente na Planilha Google (Sem abrir o código):</span>
+                  <span>💡 Onde alterar a senha no Servidor Cloud:</span>
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  Abra a sua planilha vinculada no Google Sheets → Clique na aba <strong>Configuracoes</strong> → Localize a linha com <code>SENHA_SUPERADMIN_ALAN</code> e mude o texto na coluna B (Valor). Ao salvar a planilha, a API passa a responder com a nova senha imediatamente!
+                  Acesse o painel do seu Servidor Cloud → Localize a chave <code>SENHA_SUPERADMIN_ALAN</code> nas configurações ou variáveis de ambiente e atualize o valor. Ao salvar, a API passa a responder com a nova senha imediatamente!
                 </p>
               </div>
             </div>
@@ -3271,7 +3323,7 @@ function createJsonResponse(data) {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                    <span>Código do Google Apps Script (Code.gs)</span>
+                    <span>Script de Conexão com o Servidor Cloud</span>
                   </h4>
                   <span className="text-[11px] text-slate-500">
                     Arquivo disponível em <code className="bg-slate-200 px-1 py-0.5 rounded font-mono text-slate-800">/google-apps-script/Code.gs</code>
@@ -3283,20 +3335,19 @@ function createJsonResponse(data) {
                   className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 >
                   <Copy className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{copiedGasCode ? '✓ Código Copiado!' : 'Copiar Código .GS'}</span>
+                  <span>{copiedGasCode ? '✓ Código Copiado!' : 'Copiar Código'}</span>
                 </button>
               </div>
 
               <div className="bg-slate-950 text-slate-300 p-4 rounded-xl font-mono text-[11px] max-h-36 overflow-y-auto border border-slate-800 leading-relaxed">
                 <pre>{`/**
- * LITORAL EM MOVIMENTO - GOOGLE APPS SCRIPT DATABASE BACKEND
- * Cole este código em: Google Sheets -> Extensões -> Apps Script
- * Implante como: Web App (Executar como: Eu, Quem tem acesso: Qualquer pessoa)
+ * LITORAL EM MOVIMENTO - SERVIDOR CLOUD BACKEND
+ * Endpoint de sincronização e persistência de dados
  */
 var SHEET_NAME = 'Reservas';
 
-function setupAllSheets() {
-  // Cria e formata 4 abas completas com 27 colunas, dropdowns e fórmulas
+function setupAllTables() {
+  // Configura e formata tabelas completas
 }
 
 function doGet(e) { ... }
@@ -3304,15 +3355,15 @@ function doPost(e) { ... }`}</pre>
               </div>
             </div>
 
-            {/* Step by Step Guide for GitHub Hosting */}
+            {/* Step by Step Guide */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
                 <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-bold flex items-center justify-center text-xs">
                   1
                 </div>
-                <h5 className="font-bold text-slate-900">1. Planilha no Sheets</h5>
+                <h5 className="font-bold text-slate-900">1. Servidor Cloud</h5>
                 <p className="text-slate-600 text-[11px] leading-relaxed">
-                  Acesse <strong>Extensões → Apps Script</strong> no Sheets e cole o código <code className="bg-white px-1 py-0.5 rounded border border-slate-200">Code.gs</code>.
+                  Infraestrutura de servidor cloud conectada e sincronizada com segurança.
                 </p>
               </div>
 
