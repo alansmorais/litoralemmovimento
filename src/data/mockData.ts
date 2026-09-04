@@ -215,6 +215,7 @@ export const PRICING_RULES = {
   },
   extraStopFixedFee: 50.0, // R$ 50,00 flat rate for predefined stops
   offRouteKmRate: 4.5, // R$ 4,50 per extra km detected by GPS
+  heavyLuggageFee: 90.0, // R$ 90,00 adicional por mala pesada acima de 23 kg
   maxPassengersSpin: 6, // Chevrolet Spin 7-Lugares (6 pass. + motorista)
   maxPassengersSedan: 4, // Carro Executivo 4 Lugares
   childSeatFee: 0, // Cortesia gratuita para segurança

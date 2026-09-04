@@ -293,6 +293,7 @@ export class StorageService {
       time: cleanTimeString(r.time),
       passengers: Number(r.passengers) || 1,
       luggageCount: Number(r.luggageCount) || 1,
+      heavyLuggageCount: Number(r.heavyLuggageCount) || 0,
       hasChildSeat: !!r.hasChildSeat,
       extraStops: Array.isArray(r.extraStops) ? r.extraStops : [],
       estimatedDistanceKm: Number(r.estimatedDistanceKm) || 185,
@@ -1796,7 +1797,15 @@ _Olá! Por favor, confirme a disponibilidade deste transfer._`;
     extraStopsCount: number;
     crossesBalsaIsland?: boolean;
     vehicleCategory?: 'spin_7' | 'sedan_4';
-  }): { basePrice: number; stopsCost: number; totalPrice: number; depositAmount: number; remainingAmount: number } {
+    heavyLuggageCount?: number;
+  }): {
+    basePrice: number;
+    stopsCost: number;
+    heavyLuggageCost: number;
+    totalPrice: number;
+    depositAmount: number;
+    remainingAmount: number;
+  } {
     const isLitoralToLitoral =
       (params.origin.includes('São Sebastião') || params.origin.includes('Ilhabela') || params.origin.includes('Caraguatatuba')) &&
       (params.destination.includes('São Sebastião') || params.destination.includes('Ilhabela') || params.destination.includes('Caraguatatuba'));
@@ -1844,13 +1853,15 @@ _Olá! Por favor, confirme a disponibilidade deste transfer._`;
     }
 
     const stopsCost = params.extraStopsCount * PRICING_RULES.extraStopFixedFee;
-    const totalPrice = calculatedBase + stopsCost;
+    const heavyLuggageCost = (Number(params.heavyLuggageCount) || 0) * (PRICING_RULES.heavyLuggageFee || 90);
+    const totalPrice = calculatedBase + stopsCost + heavyLuggageCost;
     const depositAmount = Number((totalPrice * 0.5).toFixed(2));
     const remainingAmount = Number((totalPrice - depositAmount).toFixed(2));
 
     return {
       basePrice: calculatedBase,
       stopsCost,
+      heavyLuggageCost,
       totalPrice,
       depositAmount,
       remainingAmount,
@@ -1861,12 +1872,25 @@ _Olá! Por favor, confirme a disponibilidade deste transfer._`;
     try {
       const saved = localStorage.getItem(CONTACT_MESSAGES_STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed: ContactMessage[] = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter((m) => {
+            const name = String(m.name || '').toLowerCase();
+            const email = String(m.email || '').toLowerCase();
+            const ticket = String(m.ticketCode || '').toUpperCase();
+            if (ticket === 'FAL-101' || ticket === 'FAL-102' || ticket === 'FAL-103') return false;
+            if (name.includes('pedro silva') || name.includes('juliana mendes') || email.includes('fake@') || email.includes('teste@')) return false;
+            return true;
+          });
+          if (clean.length !== parsed.length) {
+            localStorage.setItem(CONTACT_MESSAGES_STORAGE_KEY, JSON.stringify(clean));
+          }
+          return clean;
+        }
       }
-      localStorage.setItem(CONTACT_MESSAGES_STORAGE_KEY, JSON.stringify(INITIAL_CONTACT_MESSAGES));
-      return INITIAL_CONTACT_MESSAGES;
+      return [];
     } catch {
-      return INITIAL_CONTACT_MESSAGES;
+      return [];
     }
   }
 

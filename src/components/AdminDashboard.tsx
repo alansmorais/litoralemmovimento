@@ -52,6 +52,9 @@ import {
   Zap,
   ShieldCheck,
   Layers,
+  ChevronDown,
+  BarChart3,
+  X,
 } from 'lucide-react';
 import { SuperAdminAuthModal } from './SuperAdminAuthModal';
 import {
@@ -117,6 +120,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [destinationFilter, setDestinationFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'reservations' | 'calendar' | 'messages' | 'stats' | 'gps-audit' | 'team'>('reservations');
+  const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+  const [assigningDriverReservation, setAssigningDriverReservation] = useState<Reservation | null>(null);
 
   // Selected reservation for modals
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
@@ -1371,95 +1376,156 @@ function createJsonResponse(data) {
         </div>
 
         {/* Tab Navigation & Toolbar */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-          {/* Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs">
+          {/* Main Primary Tabs */}
+          <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('reservations')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                 activeTab === 'reservations'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              📋 Tabela de Reservas ({reservations.length})
+              <span>📋 Reservas</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                activeTab === 'reservations' ? 'bg-slate-800 text-amber-400' : 'bg-slate-100 text-slate-600'
+              }`}>
+                {reservations.length}
+              </span>
             </button>
+
             <button
               onClick={() => setActiveTab('messages')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                 activeTab === 'messages'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               <Headphones className="w-3.5 h-3.5 text-amber-400" />
-              <span>Atendimento & Mensagens</span>
+              <span>Atendimento SAC</span>
               {pendingMessagesCount > 0 && (
-                <span className="bg-amber-400 text-slate-950 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">
+                <span className="bg-amber-400 text-slate-950 text-[10px] font-extrabold px-1.5 py-0.5 rounded-full">
                   {pendingMessagesCount}
                 </span>
               )}
             </button>
+
             <button
               onClick={() => setActiveTab('calendar')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                 activeTab === 'calendar'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              📅 Calendário de Viagens
+              <Calendar className="w-3.5 h-3.5 text-sky-400" />
+              <span>Calendário</span>
             </button>
-            <button
-              onClick={() => setActiveTab('stats')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'stats'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              📊 Métricas & Destinos
-            </button>
-            <button
-              onClick={() => setActiveTab('gps-audit')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'gps-audit'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              🛰️ Auditoria de Rota & GPS
-            </button>
-            <button
-              onClick={() => setActiveTab('team')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'team'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              👥 Equipe de Gestão ({admins.length})
-            </button>
+
+            {/* Compact More Tools Menu Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                  activeTab === 'stats' || activeTab === 'gps-audit' || activeTab === 'team'
+                    ? 'bg-slate-900 text-amber-400 border-slate-900 shadow-xs'
+                    : isToolsMenuOpen
+                    ? 'bg-slate-100 text-slate-900 border-slate-300'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>
+                  {activeTab === 'stats'
+                    ? '📊 Métricas & Destinos'
+                    : activeTab === 'gps-audit'
+                    ? '🛰️ Auditoria de GPS'
+                    : activeTab === 'team'
+                    ? `👥 Equipe (${admins.length})`
+                    : 'Mais Ferramentas'}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isToolsMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isToolsMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-20"
+                    onClick={() => setIsToolsMenuOpen(false)}
+                  />
+                  <div className="absolute left-0 mt-1.5 w-56 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-30 animate-in fade-in slide-in-from-top-1">
+                    <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                      Módulos de Gestão
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('stats');
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-bold flex items-center gap-2 transition-colors ${
+                        activeTab === 'stats' ? 'bg-amber-50 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <BarChart3 className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Métricas & Destinos</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('gps-audit');
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-bold flex items-center gap-2 transition-colors ${
+                        activeTab === 'gps-audit' ? 'bg-amber-50 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Navigation className="w-3.5 h-3.5 text-sky-600" />
+                      <span>Auditoria de Rota & GPS</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setActiveTab('team');
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-bold flex items-center gap-2 transition-colors ${
+                        activeTab === 'team' ? 'bg-amber-50 text-amber-900' : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Equipe de Gestão ({admins.length})</span>
+                    </button>
+
+                    <div className="my-1 border-t border-slate-100" />
+
+                    <button
+                      onClick={() => {
+                        exportCSV();
+                        setIsToolsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Exportar Relatório CSV</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
-          {/* Export & Sync buttons */}
+          {/* Quick CSV Export button (Red Sync Nuvem button removed since green button is in top header) */}
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={exportCSV}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
               title="Baixar Relatório em formato CSV"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 text-slate-600" />
               <span>Exportar CSV</span>
-            </button>
-
-            <button
-              onClick={handleSyncGoogleSheets}
-              className="bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
-              title="Sincronizar reservas com o banco de dados em nuvem"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Sync Nuvem</span>
             </button>
           </div>
         </div>
@@ -1611,68 +1677,40 @@ function createJsonResponse(data) {
                             </span>
                           </td>
 
-                          {/* Driver Assign with Dynamic Availability & Journey Protection */}
+                          {/* Driver Assign with Friendly Card / Modal Trigger */}
                           <td className="py-3.5 px-4">
-                            <select
-                              value={res.assignedDriverId || ''}
-                              onChange={(e) => handleDriverAssign(res.id, e.target.value)}
-                              className={`px-2 py-1 rounded-lg text-xs font-semibold border outline-none cursor-pointer ${
-                                res.assignedDriverId
-                                  ? 'bg-slate-900 text-white border-amber-400'
-                                  : 'bg-amber-50 text-amber-800 border-amber-300'
-                              }`}
-                            >
-                              <option value="">⚠️ Não Atribuído</option>
-                              <optgroup label="✅ Disponíveis nesta Jornada">
-                                {drivers
-                                  .filter((drv) => {
-                                    const avail = StorageService.checkDriverAvailabilityForTrip(
-                                      drv.id,
-                                      res.date,
-                                      res.time,
-                                      res.id,
-                                      reservations
-                                    );
-                                    return avail.isAvailable || res.assignedDriverId === drv.id;
-                                  })
-                                  .map((drv) => (
-                                    <option key={drv.id} value={drv.id}>
-                                      👤 {drv.name} {res.assignedDriverId === drv.id ? '(Atribuído)' : '(Disponível)'} - Spin {drv.plate.slice(-4)}
-                                    </option>
-                                  ))}
-                              </optgroup>
-                              <optgroup label="⛔ Ocupados nesta Jornada (Indisponíveis)">
-                                {drivers
-                                  .filter((drv) => {
-                                    const avail = StorageService.checkDriverAvailabilityForTrip(
-                                      drv.id,
-                                      res.date,
-                                      res.time,
-                                      res.id,
-                                      reservations
-                                    );
-                                    return !avail.isAvailable && res.assignedDriverId !== drv.id;
-                                  })
-                                  .map((drv) => {
-                                    const avail = StorageService.checkDriverAvailabilityForTrip(
-                                      drv.id,
-                                      res.date,
-                                      res.time,
-                                      res.id,
-                                      reservations
-                                    );
-                                    return (
-                                      <option key={drv.id} value={drv.id} disabled className="text-slate-400">
-                                        ❌ {drv.name} ({avail.reason || 'Ocupado na Jornada'})
-                                      </option>
-                                    );
-                                  })}
-                              </optgroup>
-                            </select>
-                            {res.assignedDriverName && (
-                              <span className="block text-[10px] text-slate-500 mt-0.5">
-                                {res.driverVehicle}
-                              </span>
+                            {res.assignedDriverId && res.assignedDriverName ? (
+                              <div className="flex items-center justify-between gap-2 bg-slate-900 text-white px-2.5 py-1.5 rounded-xl border border-amber-500/40 shadow-xs max-w-[210px]">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                                    {res.assignedDriverName.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="font-bold text-xs text-white truncate block leading-tight">
+                                      {res.assignedDriverName}
+                                    </span>
+                                    <span className="text-[10px] text-amber-300 truncate block">
+                                      {res.driverVehicle?.includes('Spin') ? 'Spin 7L' : res.driverVehicle || 'Spin 7L'} • {res.driverPlate?.slice(-7) || 'SP'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setAssigningDriverReservation(res)}
+                                  className="text-[10px] text-slate-300 hover:text-amber-400 bg-slate-800 hover:bg-slate-700 px-1.5 py-1 rounded-md transition-colors cursor-pointer shrink-0 font-medium"
+                                  title="Trocar ou reatribuir motorista"
+                                >
+                                  Trocar
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setAssigningDriverReservation(res)}
+                                className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 hover:border-amber-400 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer group"
+                                title="Clique para escolher e atribuir um motorista a esta viagem"
+                              >
+                                <UserPlus className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 transition-transform" />
+                                <span>+ Atribuir Motorista</span>
+                              </button>
                             )}
                           </td>
 
@@ -2754,6 +2792,178 @@ function createJsonResponse(data) {
           </div>
         )}
       </div>
+
+      {/* FRIENDLY ASSIGN DRIVER MODAL */}
+      {assigningDriverReservation && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
+            {/* Header */}
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                  <Car className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white">Atribuir Motorista à Viagem</h3>
+                  <p className="text-xs text-slate-400">Selecione o condutor oficial para esta corrida</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAssigningDriverReservation(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Trip Overview Card */}
+            <div className="p-4 bg-slate-50 border-b border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <span className="text-xs font-mono font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full">
+                  {assigningDriverReservation.code}
+                </span>
+                <span className="text-xs font-bold text-slate-700">
+                  📅 {assigningDriverReservation.date} às ⏰ {assigningDriverReservation.time}
+                </span>
+              </div>
+              <div className="font-bold text-slate-900 text-sm mb-1.5">
+                👤 {assigningDriverReservation.customerName} • 👥 {assigningDriverReservation.passengers} passageiro(s) • 🧳 {assigningDriverReservation.luggageCount} malas
+              </div>
+              <div className="text-xs text-slate-600 flex items-center gap-1.5 flex-wrap">
+                <span className="font-medium text-slate-800 bg-white px-2 py-1 rounded-lg border border-slate-200">
+                  Origem: {assigningDriverReservation.origin}
+                </span>
+                <span className="text-amber-500 font-bold">➔</span>
+                <span className="font-medium text-slate-800 bg-white px-2 py-1 rounded-lg border border-slate-200">
+                  Destino: {assigningDriverReservation.destination}
+                </span>
+              </div>
+            </div>
+
+            {/* Drivers List */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1">
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                Motoristas Oficiais ({drivers.length})
+              </div>
+
+              {drivers.map((drv) => {
+                const isCurrentlyAssigned = assigningDriverReservation.assignedDriverId === drv.id;
+                const availability = StorageService.checkDriverAvailabilityForTrip(
+                  drv.id,
+                  assigningDriverReservation.date,
+                  assigningDriverReservation.time,
+                  assigningDriverReservation.id,
+                  reservations
+                );
+
+                return (
+                  <div
+                    key={drv.id}
+                    className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      isCurrentlyAssigned
+                        ? 'bg-amber-50/70 border-amber-400 shadow-xs ring-2 ring-amber-400/20'
+                        : availability.isAvailable
+                        ? 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
+                        : 'bg-slate-50/80 border-slate-200 opacity-80'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 ${
+                        isCurrentlyAssigned
+                          ? 'bg-amber-500 text-slate-950 shadow-xs'
+                          : 'bg-slate-900 text-white'
+                      }`}>
+                        {drv.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-sm text-slate-900">{drv.name}</span>
+                          {isCurrentlyAssigned && (
+                            <span className="bg-amber-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              Atribuído Atual
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-600 mt-0.5 flex items-center gap-2 flex-wrap">
+                          <span>🚗 {drv.vehicleModel}</span>
+                          <span className="font-mono text-slate-400">• {drv.plate}</span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 flex-wrap">
+                          {availability.isAvailable ? (
+                            <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-emerald-600" /> Disponível nesta jornada
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3 text-rose-600" /> {availability.reason || 'Ocupado nesta jornada'}
+                            </span>
+                          )}
+                          <span className="text-slate-300">•</span>
+                          <a
+                            href={`https://wa.me/55${drv.phone.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] text-sky-600 hover:underline flex items-center gap-0.5"
+                          >
+                            <Phone className="w-3 h-3" /> {drv.phone}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 sm:self-center">
+                      {isCurrentlyAssigned ? (
+                        <button
+                          onClick={async () => {
+                            await handleDriverAssign(assigningDriverReservation.id, '');
+                            setAssigningDriverReservation(null);
+                          }}
+                          className="w-full sm:w-auto px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <UserX className="w-3.5 h-3.5" />
+                          <span>Desvincular</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            await handleDriverAssign(assigningDriverReservation.id, drv.id);
+                            setAssigningDriverReservation(null);
+                          }}
+                          className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>Atribuir Motorista</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
+              <button
+                onClick={async () => {
+                  if (assigningDriverReservation.assignedDriverId) {
+                    await handleDriverAssign(assigningDriverReservation.id, '');
+                  }
+                  setAssigningDriverReservation(null);
+                }}
+                className="text-xs font-bold text-slate-600 hover:text-rose-600 transition-colors cursor-pointer"
+              >
+                {assigningDriverReservation.assignedDriverId ? 'Desvincular motorista' : 'Cancelar'}
+              </button>
+              <button
+                onClick={() => setAssigningDriverReservation(null)}
+                className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SUPER ADMIN PASSWORD AUTH MODAL FOR ALAN MORAIS */}
       <SuperAdminAuthModal

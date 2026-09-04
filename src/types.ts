@@ -46,6 +46,7 @@ export interface Reservation {
   tripType: TripType;
   vehicleCategory?: VehicleCategory;
   luggageCount: number;
+  heavyLuggageCount?: number; // Malas pesadas (> 23 kg) com adicional de R$ 90/unidade
   hasChildSeat: boolean;
   extraStops: ExtraStop[];
   estimatedDistanceKm: number;

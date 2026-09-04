@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StorageService } from '../services/storageService';
 import { Reservation } from '../types';
+import { COMPANY_CONTACT } from '../data/mockData';
 import {
   Search,
   X,
@@ -15,6 +16,10 @@ import {
   ShieldCheck,
   User,
   Sparkles,
+  FileText,
+  Mail,
+  Copy,
+  Printer,
 } from 'lucide-react';
 
 interface TrackRideModalProps {
@@ -69,6 +74,72 @@ export const TrackRideModal: React.FC<TrackRideModalProps> = ({ isOpen, onClose,
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     performSearch(query);
+  };
+
+  const [copiedOSText, setCopiedOSText] = useState(false);
+
+  const generateOSText = (res: Reservation) => {
+    const originUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const trackingLink = `${originUrl}/?rastreio=${res.code}`;
+    const vehicleText = res.vehicleCategory === 'sedan_4' ? 'Sedã Executivo (Até 4 pass.)' : 'Chevrolet Spin 7 Lugares';
+    const statusText = res.depositPaid ? 'Sinal 50% Confirmado ✓' : 'Aguardando Pagamento do Sinal (50%)';
+
+    return `📋 *ORDEM DE SERVIÇO - LITORAL EM MOVIMENTO*
+*OS Nº:* #${res.code}
+*Status:* ${statusText}
+
+👤 *DADOS DO PASSAGEIRO(A):*
+• Nome: ${res.customerName}
+• WhatsApp: ${res.customerPhone}
+• E-mail: ${res.customerEmail}
+
+🚗 *DADOS DO TRANSFER & ROTA:*
+• Data da Viagem: ${res.date}
+• Horário Previsto: ${res.time}
+• Modalidade: ${res.tripType} (${vehicleText})
+• Origem: ${res.origin}
+  ↳ Local de Embarque: ${res.pickupAddress}
+• Destino: ${res.destination}
+  ↳ Local de Desembarque: ${res.dropoffAddress || 'Endereço fornecido na reserva'}
+• Passageiros: ${res.passengers}
+• Malas / Bagagens: ${res.luggageCount} volume(s)
+${res.assignedDriverName ? `• Motorista Oficial: ${res.assignedDriverName} (${res.driverVehicle || 'Spin 7L'} - ${res.driverPlate || ''})` : '• Motorista: Central em processo de escalação'}
+
+💰 *DEMONSTRATIVO FINANCEIRO:*
+• Valor Total da Viagem: R$ ${res.totalPrice.toFixed(2).replace('.', ',')}
+• Sinal de Confirmação (50%): R$ ${res.depositAmount.toFixed(2).replace('.', ',')} [${res.depositPaid ? 'QUITADO ✓' : 'PENDENTE'}]
+• Saldo Restante no Embarque (50%): R$ ${res.remainingAmount.toFixed(2).replace('.', ',')}
+
+🔑 *DADOS PIX PARA PAGAMENTO DO SINAL:*
+• Chave PIX (Celular): ${COMPANY_CONTACT.pixKey}
+• Favorecido: ${COMPANY_CONTACT.pixBeneficiary}
+• Banco: ${COMPANY_CONTACT.pixBank}
+
+🌐 *Acompanhar Corrida em Tempo Real:*
+${trackingLink}
+
+📞 Central de Atendimento & Suporte: ${COMPANY_CONTACT.phone}`;
+  };
+
+  const handleSendOSWhatsApp = (res: Reservation) => {
+    const text = generateOSText(res);
+    const cleanPhone = COMPANY_CONTACT.phone.replace(/\D/g, '');
+    const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleSendOSEmail = (res: Reservation) => {
+    const text = generateOSText(res);
+    const subject = `[Litoral em Movimento] Ordem de Serviço #${res.code} - ${res.customerName}`;
+    const mailto = `mailto:${res.customerEmail || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    window.location.href = mailto;
+  };
+
+  const handleCopyOSText = (res: Reservation) => {
+    const text = generateOSText(res);
+    navigator.clipboard.writeText(text);
+    setCopiedOSText(true);
+    setTimeout(() => setCopiedOSText(false), 2500);
   };
 
   // Get timeline step index (0 to 4)
@@ -326,6 +397,53 @@ export const TrackRideModal: React.FC<TrackRideModalProps> = ({ isOpen, onClose,
                     </span>
                   </div>
                 )}
+
+                {/* Ordem de Serviço (OS) Dispatch Card */}
+                <div className="bg-slate-900 text-white p-4 rounded-2xl border border-slate-700 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                      <FileText className="w-4 h-4" />
+                      Ordem de Serviço (OS) Oficial
+                    </span>
+                    <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">
+                      #{result.code}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    Envie a Ordem de Serviço detalhada com itinerário, horários e recibo diretamente por WhatsApp ou E-mail:
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSendOSWhatsApp(result)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Enviar OS via WhatsApp</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSendOSEmail(result)}
+                      className="bg-sky-700 hover:bg-sky-600 text-white font-bold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer shadow-xs"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Enviar OS por E-mail</span>
+                    </button>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyOSText(result)}
+                      className="text-[11px] text-slate-300 hover:text-white flex items-center gap-1 bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3 text-amber-400" />
+                      <span>{copiedOSText ? 'Texto da OS Copiado!' : 'Copiar Texto da OS'}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
