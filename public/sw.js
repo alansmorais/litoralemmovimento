@@ -20,7 +20,3 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Pass-through fetch without any caching
-self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request));
-});
