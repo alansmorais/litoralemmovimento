@@ -486,7 +486,7 @@ ${trackingLink}
           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 1 ? 'bg-amber-500 text-slate-950 font-black' : step > 1 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
             {step > 1 ? '✓' : '1'}
           </span>
-          <span>1. Rota & Horário</span>
+          <span>1. Rota</span>
         </div>
 
         <div className="h-0.5 flex-1 bg-slate-200 mx-3 hidden sm:block" />
@@ -495,7 +495,7 @@ ${trackingLink}
           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 2 ? 'bg-amber-500 text-slate-950 font-black' : step > 2 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
             {step > 2 ? '✓' : '2'}
           </span>
-          <span>2. Transfer Disponível</span>
+          <span>2. Data & Horário</span>
         </div>
 
         <div className="h-0.5 flex-1 bg-slate-200 mx-3 hidden sm:block" />
@@ -504,7 +504,7 @@ ${trackingLink}
           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 3 ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-200 text-slate-600'}`}>
             3
           </span>
-          <span>3. Confirmação & Pagamento</span>
+          <span>3. Dados & PIX</span>
         </div>
       </div>
 
@@ -514,15 +514,16 @@ ${trackingLink}
         {/* LEFT: Step Content */}
         <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
           
-          {/* STEP 1: ROUTE & TIME */}
+          {/* STAGE 1: ROUTE */}
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in duration-200">
               <div className="border-b border-slate-200 pb-3">
-                <h3 className="font-serif-display font-extrabold text-lg text-slate-900">
-                  Etapa 1: Onde você está indo e quando?
+                <span className="text-[10px] uppercase font-extrabold text-amber-600 tracking-wider">Etapa 1 de 3</span>
+                <h3 className="font-serif-display font-extrabold text-xl text-slate-900 mt-0.5">
+                  De onde você vai sair e para onde vai?
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Selecione os locais, data e horário do seu transfer.
+                  Selecione o trajeto do seu transfer privativo ou compartilhado.
                 </p>
               </div>
 
@@ -530,12 +531,12 @@ ${trackingLink}
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-900">
-                    FROM / Origem (Coleta) *
+                    📍 De onde você vai sair? (Origem / Coleta) *
                   </label>
                   <select
                     value={origin}
                     onChange={(e) => setOrigin(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
+                    className="w-full px-3.5 py-3 bg-slate-50 border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
                   >
                     <option value="São Paulo">São Paulo (Capital / Aeroportos GRU e CGH)</option>
                     <option value="São Sebastião">São Sebastião (Balsa & Centro Histórico)</option>
@@ -547,7 +548,7 @@ ${trackingLink}
                     placeholder="Endereço exato de coleta (Ex: GRU Terminal 2 ou Av. Paulista, 1000)"
                     value={pickupAddress}
                     onChange={(e) => setPickupAddress(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none mt-1.5"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none mt-1.5"
                   />
                 </div>
 
@@ -559,12 +560,12 @@ ${trackingLink}
 
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-900">
-                    TO / Destino Final *
+                    🎯 Para onde você vai? (Destino Final) *
                   </label>
                   <select
                     value={destination}
                     onChange={(e) => setDestination(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
+                    className="w-full px-3.5 py-3 bg-slate-50 border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none font-medium cursor-pointer"
                   >
                     <option value="São Sebastião">São Sebastião (Balsa & Centro Histórico)</option>
                     <option value="Ilhabela (Balsa São Sebastião)">Ilhabela (Balsa São Sebastião - Porto da Balsa)</option>
@@ -577,29 +578,65 @@ ${trackingLink}
                     placeholder="Endereço de destino (Ex: Hotel, Pousada ou Residência)"
                     value={dropoffAddress}
                     onChange={(e) => setDropoffAddress(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none mt-1.5"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none mt-1.5"
                   />
                 </div>
               </div>
 
+              {/* Continue CTA */}
+              <div className="pt-4">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+                >
+                  <span>Continuar (Data & Horário)</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STAGE 2: TRIP DETAILS + PRICE */}
+          {step === 2 && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] uppercase font-extrabold text-amber-600 tracking-wider">Etapa 2 de 3</span>
+                  <h3 className="font-serif-display font-extrabold text-xl text-slate-900 mt-0.5">
+                    Data, Horário & Passageiros
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Escolha quando deseja realizar o seu transfer.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-xs text-slate-600 hover:text-slate-900 font-bold underline cursor-pointer"
+                >
+                  ← Voltar
+                </button>
+              </div>
+
               {/* Date & Time with Calendar */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-slate-900">
-                    Data & Horário de Embarque *
+                    📅 Data & Horário de Embarque *
                   </label>
                   <div className="flex gap-1">
                     <button
                       type="button"
                       onClick={() => setQuickDate(1)}
-                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg cursor-pointer"
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg cursor-pointer"
                     >
                       Amanhã
                     </button>
                     <button
                       type="button"
                       onClick={() => setQuickDate(3)}
-                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg cursor-pointer"
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg cursor-pointer"
                     >
                       Em 3 dias
                     </button>
@@ -619,13 +656,13 @@ ${trackingLink}
 
               {/* Passengers & Luggage Controls */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-amber-600" />
+                      <Users className="w-4 h-4 text-amber-600" />
                       Passageiros:
                     </label>
-                    <span className="font-extrabold text-sm text-slate-900 bg-amber-400 px-2 py-0.5 rounded-lg">
+                    <span className="font-extrabold text-sm text-slate-900 bg-amber-400 px-2.5 py-0.5 rounded-lg">
                       {passengers} pessoa(s)
                     </span>
                   </div>
@@ -633,28 +670,28 @@ ${trackingLink}
                     <button
                       type="button"
                       onClick={() => setPassengers(Math.max(1, passengers - 1))}
-                      className="w-9 h-9 bg-white border border-slate-300 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
+                      className="w-10 h-10 bg-white border border-slate-300 rounded-xl text-lg font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
                     >
                       −
                     </button>
-                    <span className="text-xs text-slate-500 font-medium">Máx: 6 passageiros</span>
+                    <span className="text-xs text-slate-500 font-medium">Até 6 passageiros</span>
                     <button
                       type="button"
                       onClick={() => setPassengers(Math.min(6, passengers + 1))}
-                      className="w-9 h-9 bg-white border border-slate-300 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
+                      className="w-10 h-10 bg-white border border-slate-300 rounded-xl text-lg font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
                     >
                       +
                     </button>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <Briefcase className="w-3.5 h-3.5 text-sky-600" />
+                      <Briefcase className="w-4 h-4 text-sky-600" />
                       Bagagens / Malas:
                     </label>
-                    <span className="font-extrabold text-sm text-white bg-sky-700 px-2 py-0.5 rounded-lg">
+                    <span className="font-extrabold text-sm text-white bg-sky-700 px-2.5 py-0.5 rounded-lg">
                       {luggageCount} volume(s)
                     </span>
                   </div>
@@ -662,7 +699,7 @@ ${trackingLink}
                     <button
                       type="button"
                       onClick={() => setLuggageCount(Math.max(0, luggageCount - 1))}
-                      className="w-9 h-9 bg-white border border-slate-300 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
+                      className="w-10 h-10 bg-white border border-slate-300 rounded-xl text-lg font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
                     >
                       −
                     </button>
@@ -670,7 +707,7 @@ ${trackingLink}
                     <button
                       type="button"
                       onClick={() => setLuggageCount(Math.min(6, luggageCount + 1))}
-                      className="w-9 h-9 bg-white border border-slate-300 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
+                      className="w-10 h-10 bg-white border border-slate-300 rounded-xl text-lg font-bold text-slate-800 hover:bg-slate-100 cursor-pointer flex items-center justify-center shadow-2xs"
                     >
                       +
                     </button>
@@ -678,184 +715,74 @@ ${trackingLink}
                 </div>
               </div>
 
-              {/* Continue CTA */}
-              <div className="pt-3">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-amber-400 font-extrabold py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer border-2 border-amber-400"
-                >
-                  <span>Continuar para Escolha do Veículo</span>
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: AVAILABLE TRANSFER */}
-          {step === 2 && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
-                <div>
-                  <h3 className="font-serif-display font-extrabold text-lg text-slate-900">
-                    Etapa 2: Veículo & Transfer Disponível
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Selecione a modalidade ideal para sua viagem.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="text-xs text-slate-600 hover:text-slate-900 font-bold underline cursor-pointer"
-                >
-                  ← Voltar
-                </button>
-              </div>
-
-              {/* Transfer Options */}
-              <div className="space-y-4">
-                {/* Option 1: Chevrolet Spin 7 Lugares (Privativo) */}
-                <div
-                  onClick={() => {
-                    setVehicleCategory('spin_7');
-                    setTripType('Individual');
-                  }}
-                  className={`p-5 rounded-3xl border-2 transition-all cursor-pointer relative ${
-                    vehicleCategory === 'spin_7' && tripType === 'Individual'
-                      ? 'border-amber-500 bg-amber-50/50 shadow-md ring-2 ring-amber-400/30'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md">
-                        RECOMENDADO • PRIVATIVO
-                      </span>
-                      <h4 className="font-serif-display font-extrabold text-lg text-slate-900 mt-1">
-                        Chevrolet Spin Premier (7 Lugares)
-                      </h4>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs text-slate-500 block">Total do Transfer</span>
-                      <span className="text-xl font-extrabold text-amber-600">
-                        R$ {privatePriceInfo.totalPrice.toFixed(2).replace('.', ',')}
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-600 mb-3">
-                    Veículo 100% exclusivo para seu grupo. Ar-condicionado dual zone, bagageiro amplo e motorista profissional.
-                  </p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-700 py-2 border-t border-b border-slate-100 mb-3">
-                    <div>👥 Até {Math.max(passengers, 6)} passageiros</div>
-                    <div>🧳 Até {Math.max(luggageCount, 6)} malas</div>
-                    <div>⏱️ Duração: ~1h 35min</div>
-                    <div>🛡️ Seguro inclusão</div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Porta a porta garantido
+              {/* Trip Type selection simplified */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                <label className="block text-xs font-bold text-slate-900">
+                  Modalidade do Transfer:
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVehicleCategory('spin_7');
+                      setTripType('Individual');
+                    }}
+                    className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all text-left flex flex-col gap-1 cursor-pointer ${
+                      tripType === 'Individual'
+                        ? 'border-amber-500 bg-amber-50 text-amber-950 ring-2 ring-amber-400/30'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>🚗 Privativo (Exclusivo)</span>
+                    <span className="text-[11px] text-amber-700 font-extrabold">
+                      R$ {privatePriceInfo.totalPrice.toFixed(2).replace('.', ',')}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setVehicleCategory('spin_7');
-                        setTripType('Individual');
-                        setStep(3);
-                      }}
-                      className="bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
-                    >
-                      Selecionar Privativo →
-                    </button>
-                  </div>
-                </div>
-
-                {/* Option 2: Chevrolet Spin (Compartilhado por Vaga) */}
-                <div
-                  onClick={() => {
-                    setVehicleCategory('spin_7');
-                    setTripType('Compartilhada');
-                  }}
-                  className={`p-5 rounded-3xl border-2 transition-all cursor-pointer relative ${
-                    vehicleCategory === 'spin_7' && tripType === 'Compartilhada'
-                      ? 'border-amber-500 bg-amber-50/50 shadow-md ring-2 ring-amber-400/30'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider bg-sky-100 text-sky-800 px-2 py-0.5 rounded-md">
-                        ECONÔMICO • POR ASSENTO
-                      </span>
-                      <h4 className="font-serif-display font-extrabold text-lg text-slate-900 mt-1">
-                        Transfer Compartilhado (Por Vaga)
-                      </h4>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs text-slate-500 block">Por Passageiro</span>
-                      <span className="text-xl font-extrabold text-sky-700">
-                        R$ {(sharedPriceInfo.basePrice / Math.max(1, passengers)).toFixed(2).replace('.', ',')}
-                      </span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-600 mb-3">
-                    Compartilhe o veículo com outros passageiros na mesma rota. Ideal para quem viaja sozinho ou em duplas.
-                  </p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-700 py-2 border-t border-b border-slate-100 mb-3">
-                    <div>👥 Vaga garantida</div>
-                    <div>🧳 1 mala inclusa</div>
-                    <div>⏱️ Horário programado</div>
-                    <div>🛡️ Motorista experiente</div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Melhor custo-benefício
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVehicleCategory('spin_7');
+                      setTripType('Compartilhada');
+                    }}
+                    className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all text-left flex flex-col gap-1 cursor-pointer ${
+                      tripType === 'Compartilhada'
+                        ? 'border-sky-500 bg-sky-50 text-sky-950 ring-2 ring-sky-400/30'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>👥 Compartilhado (Por Vaga)</span>
+                    <span className="text-[11px] text-sky-700 font-extrabold">
+                      R$ {(sharedPriceInfo.basePrice / Math.max(1, passengers)).toFixed(2).replace('.', ',')} / pes.
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setVehicleCategory('spin_7');
-                        setTripType('Compartilhada');
-                        setStep(3);
-                      }}
-                      className="bg-sky-700 hover:bg-sky-600 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer"
-                    >
-                      Selecionar Compartilhado →
-                    </button>
-                  </div>
+                  </button>
                 </div>
               </div>
 
               {/* Proceed to Step 3 */}
-              <div className="pt-3">
+              <div className="pt-4">
                 <button
                   type="button"
                   onClick={() => setStep(3)}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-amber-400 font-extrabold py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer border-2 border-amber-400"
+                  className="w-full bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
                 >
-                  <span>Avançar para Confirmação & Pagamento</span>
+                  <span>Continuar para Pagamento PIX</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: CONFIRM & PAY */}
+          {/* STAGE 3: CUSTOMER DETAILS + PIX */}
           {step === 3 && (
             <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in duration-200">
               <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
                 <div>
-                  <h3 className="font-serif-display font-extrabold text-lg text-slate-900">
-                    Etapa 3: Dados do Passageiro & Pagamento PIX (50% Sinal)
+                  <span className="text-[10px] uppercase font-extrabold text-amber-600 tracking-wider">Etapa 3 de 3</span>
+                  <h3 className="font-serif-display font-extrabold text-xl text-slate-900 mt-0.5">
+                    Seus Dados & Pagamento PIX
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Preencha apenas o necessário para emitir sua Ordem de Serviço.
+                    Preencha o nome e WhatsApp para receber sua Ordem de Serviço imediata.
                   </p>
                 </div>
                 <button
@@ -868,9 +795,9 @@ ${trackingLink}
               </div>
 
               {/* Customer Contact Details */}
-              <div className="space-y-3.5 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <div className="space-y-3.5 bg-slate-50 p-5 rounded-2xl border border-slate-200">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Dados de Contato do Passageiro
+                  Informações de Contato
                 </h4>
 
                 <div className="space-y-3">
@@ -884,14 +811,14 @@ ${trackingLink}
                       placeholder="Ex: Carlos Eduardo Silveira"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none"
+                      className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-900 mb-1">
-                        Telefone / WhatsApp *
+                        WhatsApp (Com DDD) *
                       </label>
                       <input
                         type="tel"
@@ -899,12 +826,12 @@ ${trackingLink}
                         placeholder="(11) 98765-4321"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none"
+                        className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-900 mb-1">
-                        E-mail (para Ordem de Serviço) *
+                        E-mail (Para Ordem de Serviço) *
                       </label>
                       <input
                         type="email"
@@ -912,7 +839,7 @@ ${trackingLink}
                         placeholder="seu.email@dominio.com.br"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none"
+                        className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-sm text-slate-900 outline-none"
                       />
                     </div>
                   </div>
@@ -921,42 +848,39 @@ ${trackingLink}
                   {isAirportRoute && (
                     <div className="pt-2">
                       <label className="block text-xs font-bold text-slate-900 mb-1">
-                        Número do Voo (Monitoreo de Aterrizagem) *
+                        Número do Voo (Para monitoramento) *
                       </label>
                       <div className="relative">
-                        <Plane className="w-4 h-4 text-sky-600 absolute left-3 top-3" />
+                        <Plane className="w-4 h-4 text-sky-600 absolute left-3.5 top-3.5" />
                         <input
                           type="text"
                           required
                           placeholder="Ex: LA 3450 / G3 1240"
                           value={flightNumber}
                           onChange={(e) => setFlightNumber(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none font-mono"
+                          className="w-full pl-10 pr-3.5 py-3 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none font-mono"
                         />
                       </div>
-                      <span className="text-[10px] text-slate-500 mt-1 block">
-                        Permite ao motorista acompanhar possíveis atrasos de voo sem custo extra.
-                      </span>
                     </div>
                   )}
 
                   <div>
                     <label className="block text-xs font-bold text-slate-900 mb-1">
-                      Observações Especiais / Cadeirinha (Opcional)
+                      Observações (Opcional)
                     </label>
                     <input
                       type="text"
-                      placeholder="Ex: Preciso de cadeirinha infantil, pranchas de surf, etc."
+                      placeholder="Ex: Cadeirinha infantil, malas extras, etc."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none"
+                      className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-amber-500 rounded-xl text-xs text-slate-900 outline-none"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Financial & PIX Deposit Breakdown */}
-              <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-4 sm:p-5 space-y-3">
+              <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-5 space-y-3">
                 <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
                   <span className="text-xs font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-amber-600" />
@@ -969,15 +893,15 @@ ${trackingLink}
 
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Valor Total do Transfer:</span>
+                    <span className="text-slate-600">Valor Total da Viagem:</span>
                     <strong className="text-slate-900 text-sm">
                       R$ {finalTotalPrice.toFixed(2).replace('.', ',')}
                     </strong>
                   </div>
-                  <div className="flex justify-between bg-amber-400/20 p-2.5 rounded-xl border border-amber-400/50">
+                  <div className="flex justify-between bg-amber-400/20 p-3 rounded-xl border border-amber-400/50">
                     <div>
                       <strong className="text-amber-950 block">Sinal Obrigatório (50%):</strong>
-                      <span className="text-[10px] text-slate-600">Garante bloqueio da minivan Spin</span>
+                      <span className="text-[10px] text-slate-600">Garante bloqueio do veículo</span>
                     </div>
                     <span className="text-base font-black text-amber-700">
                       R$ {(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}
@@ -989,7 +913,7 @@ ${trackingLink}
                   </div>
                 </div>
 
-                <div className="bg-slate-950 text-white p-3 rounded-xl border border-slate-800 text-[11px] space-y-1">
+                <div className="bg-slate-950 text-white p-3.5 rounded-xl border border-slate-800 text-[11px] space-y-1">
                   <div className="flex justify-between">
                     <span className="text-slate-400">Chave PIX (Celular):</span>
                     <strong className="text-amber-300 font-mono">{COMPANY_CONTACT.pixKey}</strong>
@@ -1010,7 +934,7 @@ ${trackingLink}
                 >
                   <Send className="w-5 h-5 text-amber-400" />
                   <span>
-                    {isSubmitting ? 'GERANDO VOUCHER & ORDEM DE SERVIÇO...' : `Pagar 50% (R$ ${(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')}) com PIX`}
+                    {isSubmitting ? 'GERANDO VOUCHER & ORDEM DE SERVIÇO...' : `RESERVAR E PAGAR COM PIX (R$ ${(finalTotalPrice * 0.5).toFixed(2).replace('.', ',')})`}
                   </span>
                 </button>
               </div>
