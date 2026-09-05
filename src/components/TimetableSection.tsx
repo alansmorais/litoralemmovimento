@@ -13,16 +13,20 @@ import {
   Plane,
   Sparkles,
   Phone,
+  Headphones,
+  MessageSquare,
 } from 'lucide-react';
 
 interface TimetableSectionProps {
   onSelectRouteTime?: (origin: string, destination: string, time: string, tripType: 'Individual' | 'Compartilhada') => void;
   onScrollToBooking: () => void;
+  onOpenContactModal?: () => void;
 }
 
 export const TimetableSection: React.FC<TimetableSectionProps> = ({
   onSelectRouteTime,
   onScrollToBooking,
+  onOpenContactModal,
 }) => {
   const [activeTab, setActiveTab] = useState<'subida' | 'descida'>('subida');
 
@@ -443,31 +447,29 @@ export const TimetableSection: React.FC<TimetableSectionProps> = ({
           </div>
         )}
 
-        {/* WhatsApp Immediate Support Footer */}
+        {/* SAC / Atendimento Form Footer */}
         <div className="mt-10 p-5 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-              <Phone className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-slate-900 text-amber-400 flex items-center justify-center flex-shrink-0 shadow-xs">
+              <Headphones className="w-5 h-5" />
             </div>
             <div>
               <h4 className="font-bold text-slate-900 text-sm sm:text-base">
                 Precisa de um horário personalizado ou tirar dúvidas?
               </h4>
               <p className="text-xs text-slate-500">
-                Atendimento ágil pelo WhatsApp ({COMPANY_CONTACT.phone}) para confirmação imediata de vagas.
+                Envie sua solicitação diretamente para nossa equipe de Atendimento SAC no painel administrativo.
               </p>
             </div>
           </div>
 
-          <a
-            href={`https://wa.me/${COMPANY_CONTACT.phoneRaw}?text=Ol%C3%A1!%20Gostaria%20de%20consultar%20a%20disponibilidade%20de%20hor%C3%A1rios%20para%20o%20transfer.`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-5 py-3 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer flex-shrink-0 whitespace-nowrap"
+          <button
+            onClick={() => onOpenContactModal?.()}
+            className="bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs sm:text-sm px-5 py-3 rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer flex-shrink-0 whitespace-nowrap border border-amber-400/30"
           >
-            <span>Falar no WhatsApp</span>
+            <span>Solicitar Atendimento SAC</span>
             <ArrowRight className="w-4 h-4" />
-          </a>
+          </button>
         </div>
       </div>
     </section>

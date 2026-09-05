@@ -211,6 +211,7 @@ export default function App() {
             <TimetableSection
               onSelectRouteTime={handleSelectRouteTime}
               onScrollToBooking={scrollToBooking}
+              onOpenContactModal={() => setIsContactModalOpen(true)}
             />
 
             {/* 4. Booking Section Standard Inline */}

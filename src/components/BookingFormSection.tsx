@@ -190,6 +190,26 @@ export const BookingFormSection: React.FC<BookingFormSectionProps> = ({
   };
 
   // Price Calculation in real-time
+  const privatePriceInfo = StorageService.calculatePrice({
+    origin,
+    destination,
+    passengers,
+    tripType: 'Individual',
+    extraStopsCount: extraStops.length,
+    vehicleCategory,
+    heavyLuggageCount,
+  });
+
+  const sharedPriceInfo = StorageService.calculatePrice({
+    origin,
+    destination,
+    passengers,
+    tripType: 'Compartilhada',
+    extraStopsCount: extraStops.length,
+    vehicleCategory,
+    heavyLuggageCount,
+  });
+
   const rawPriceInfo = StorageService.calculatePrice({
     origin,
     destination,
@@ -430,25 +450,9 @@ ${trackingLink}
   const isAirportRoute = origin.toLowerCase().includes('aeroporto') || pickupAddress.toLowerCase().includes('aeroporto') || pickupAddress.toLowerCase().includes('gru') || pickupAddress.toLowerCase().includes('congonhas');
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto px-4 py-8 sm:py-12">
-      {/* Section Heading */}
-      <div className="max-w-4xl mx-auto mb-8 sm:mb-10 text-center space-y-3">
-        <div className="inline-flex items-center gap-2 bg-slate-900 text-amber-400 text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-xs">
-          <Calendar className="w-3.5 h-3.5" />
-          <span>Simulador Rápido • 3 Etapas Simples</span>
-        </div>
-
-        <h2 className="font-serif-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-          Reserve seu transfer em segundos
-        </h2>
-
-        <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-          Sem burocracia. Informe sua rota, escolha o veículo e confirme o sinal via PIX com segurança.
-        </p>
-      </div>
-
+    <div className="space-y-6 max-w-5xl mx-auto px-2 py-2 sm:py-4">
       {/* Rotas Populares Quick Presets */}
-      <div className="max-w-4xl mx-auto mb-8 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-2xs">
+      <div className="max-w-4xl mx-auto mb-6 bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-2xs">
         <div className="flex items-center gap-2 pb-2 mb-3 border-b border-slate-100 text-xs font-bold text-slate-800">
           <Compass className="w-4 h-4 text-amber-500" />
           <span>Sugestões Rápidas de Rotas Populares:</span>
@@ -735,7 +739,7 @@ ${trackingLink}
                     <div className="text-right">
                       <span className="text-xs text-slate-500 block">Total do Transfer</span>
                       <span className="text-xl font-extrabold text-amber-600">
-                        R$ {rawPriceInfo.totalPrice.toFixed(2).replace('.', ',')}
+                        R$ {privatePriceInfo.totalPrice.toFixed(2).replace('.', ',')}
                       </span>
                     </div>
                   </div>
@@ -793,7 +797,7 @@ ${trackingLink}
                     <div className="text-right">
                       <span className="text-xs text-slate-500 block">Por Passageiro</span>
                       <span className="text-xl font-extrabold text-sky-700">
-                        R$ {(rawPriceInfo.totalPrice / Math.max(1, passengers)).toFixed(2).replace('.', ',')}
+                        R$ {(sharedPriceInfo.basePrice / Math.max(1, passengers)).toFixed(2).replace('.', ',')}
                       </span>
                     </div>
                   </div>
