@@ -173,7 +173,7 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
     if (!validTimes.includes(selectedTime) && availableSlots.length > 0) {
       onTimeChange(availableSlots[0].time);
     }
-  }, [availableSlots, selectedTime, onTimeChange]);
+  }, [isSubida, isSelectedWeekend]);
 
   const selectedDateFormatted = useMemo(() => {
     if (!selectedDate) return '';
