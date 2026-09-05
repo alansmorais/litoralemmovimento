@@ -5,7 +5,6 @@ import {
   Clock,
   Calendar as CalendarIcon,
   Check,
-  MapPin,
   Sparkles,
 } from 'lucide-react';
 
@@ -35,7 +34,6 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
   onDateChange,
   onTimeChange,
 }) => {
-  // Parse initial selected date or fallback to tomorrow/today
   const initialDate = useMemo(() => {
     if (selectedDate) {
       const parts = selectedDate.split('-').map(Number);
@@ -48,7 +46,6 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
     return d;
   }, [selectedDate]);
 
-  // Calendar view month & year state
   const [viewDate, setViewDate] = useState<Date>(() => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
 
   const today = useMemo(() => {
@@ -58,23 +55,12 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
   }, []);
 
   const monthNames = [
-    'Janeiro',
-    'Fevereiro',
-    'Março',
-    'Abril',
-    'Maio',
-    'Junho',
-    'Julho',
-    'Agosto',
-    'Setembro',
-    'Outubro',
-    'Novembro',
-    'Dezembro',
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
   const weekDayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  // Navigation handlers
   const handlePrevMonth = () => {
     setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
   };
@@ -90,7 +76,6 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
     onDateChange(formatted);
   };
 
-  // Build grid of days for the view month
   const calendarDays = useMemo(() => {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
@@ -98,10 +83,8 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
 
-    const firstDayWeekday = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday...
+    const firstDayWeekday = firstDayOfMonth.getDay();
     const daysInMonth = lastDayOfMonth.getDate();
-
-    // Previous month overflow days
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     const days = [];
 
@@ -116,7 +99,6 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
       });
     }
 
-    // Current month days
     for (let day = 1; day <= daysInMonth; day++) {
       const d = new Date(year, month, day);
       d.setHours(0, 0, 0, 0);
@@ -128,7 +110,6 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
       });
     }
 
-    // Next month overflow days to complete 35 or 42 grid slots
     const targetLength = days.length <= 35 ? 35 : 42;
     const needed = targetLength - days.length;
 
@@ -146,7 +127,6 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
     return days;
   }, [viewDate, today]);
 
-  // Determine if currently selected date is weekend (Saturday or Sunday)
   const isSelectedWeekend = useMemo(() => {
     if (!selectedDate) return false;
     const parts = selectedDate.split('-').map(Number);
@@ -156,16 +136,13 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
     return day === 0 || day === 6;
   }, [selectedDate]);
 
-  // Determine direction: Subida (Litoral -> SP/GRU) vs Descida (SP/GRU -> Litoral)
   const isSubida = useMemo(() => {
     const orig = (origin || '').toLowerCase();
     return orig.includes('sebastião') || orig.includes('caraguatatuba') || orig.includes('ilhabela');
   }, [origin]);
 
-  // Master available departure slots: Official schedule
   const availableSlots: TimeSlot[] = useMemo(() => {
     if (isSubida) {
-      // Subida (Litoral ➔ São Paulo & GRU): 05:00, 08:30, 14:00, 18:30 (Diariamente)
       return [
         { time: '05:00', label: 'Saída 1', periodName: 'Madrugada' },
         { time: '08:30', label: 'Saída 2', periodName: 'Manhã' },
@@ -174,18 +151,15 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
       ];
     }
 
-    // Descida (São Paulo / GRU ➔ Litoral)
     if (isSelectedWeekend) {
-      // Sábados e Domingos: 11:30, 13:00, 17:30, 21:30
       return [
         { time: '11:30', label: 'Saída 1', periodName: 'Almoço' },
-        { time: '13:00', label: 'Saída 2 (Ajuste FDS)', periodName: '13:00', isAdjusted: true },
+        { time: '13:00', label: 'Saída 2 • Ajuste FDS', periodName: '13:00', isAdjusted: true },
         { time: '17:30', label: 'Saída 3', periodName: 'Fim de Tarde' },
-        { time: '21:30', label: 'Saída 4 (Ajuste FDS)', periodName: '21:30', isAdjusted: true },
+        { time: '21:30', label: 'Saída 4 • Ajuste FDS', periodName: '21:30', isAdjusted: true },
       ];
     }
 
-    // Segunda a Sexta-feira: 11:30, 14:30, 17:30, 22:00
     return [
       { time: '11:30', label: 'Saída 1', periodName: 'Almoço' },
       { time: '14:30', label: 'Saída 2', periodName: 'Tarde' },
@@ -194,7 +168,6 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
     ];
   }, [isSubida, isSelectedWeekend]);
 
-  // Ensure selectedTime is strictly one of the exact official available slots
   useEffect(() => {
     const validTimes = availableSlots.map((s) => s.time);
     if (!validTimes.includes(selectedTime) && availableSlots.length > 0) {
@@ -202,7 +175,6 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
     }
   }, [availableSlots, selectedTime, onTimeChange]);
 
-  // Formatted date details for selected day
   const selectedDateFormatted = useMemo(() => {
     if (!selectedDate) return '';
     const parts = selectedDate.split('-').map(Number);
@@ -217,230 +189,184 @@ export const MonthlyBookingCalendar: React.FC<MonthlyBookingCalendarProps> = ({
   }, [selectedDate]);
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-      {/* Calendar & Hours Grid - Two Column Responsive */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
-        {/* LEFT: Compact Minimalist Monthly Calendar (7 Cols on desktop) */}
-        <div className="lg:col-span-7 p-4 sm:p-5">
-          {/* Header Month / Year & Navigation */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center shadow-xs">
-                <CalendarIcon className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="font-serif-display font-bold text-base text-slate-900 leading-tight">
-                  {monthNames[viewDate.getMonth()]} {viewDate.getFullYear()}
-                </h4>
-                <span className="text-[10px] text-slate-400 block font-sans">
-                  Selecione a data da sua viagem
-                </span>
-              </div>
+    <div className="space-y-4">
+      {/* SECTION 1: CALENDAR SELECTOR */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-bold">
+              <CalendarIcon className="w-4 h-4" />
             </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={handleJumpToToday}
-                className="px-2 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer mr-1"
-                title="Ir para o mês atual"
-              >
-                Hoje
-              </button>
-              <button
-                type="button"
-                onClick={handlePrevMonth}
-                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-                aria-label="Mês anterior"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleNextMonth}
-                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-                aria-label="Próximo mês"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+            <div>
+              <h4 className="font-serif-display font-extrabold text-sm text-slate-900 capitalize">
+                {monthNames[viewDate.getMonth()]} {viewDate.getFullYear()}
+              </h4>
+              <span className="text-[11px] text-slate-500 block">Selecione o dia da viagem</span>
             </div>
           </div>
 
-          {/* Days of Week Header */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-1">
-            {weekDayLabels.map((day, idx) => (
-              <span
-                key={day}
-                className={`text-[11px] font-bold py-1 ${
-                  idx === 0 || idx === 6 ? 'text-amber-700' : 'text-slate-400'
-                }`}
-              >
-                {day}
-              </span>
-            ))}
-          </div>
-
-          {/* Monthly Calendar Days Grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((item, index) => {
-              const isSelected = item.dateString === selectedDate;
-              const isToday =
-                item.date.getDate() === today.getDate() &&
-                item.date.getMonth() === today.getMonth() &&
-                item.date.getFullYear() === today.getFullYear();
-
-              const dayOfWeek = item.date.getDay();
-              const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-              let buttonClass =
-                'relative h-9 w-full rounded-xl text-xs font-semibold flex flex-col items-center justify-center transition-all cursor-pointer ';
-
-              if (item.isPast) {
-                buttonClass += 'text-slate-300 bg-transparent cursor-not-allowed opacity-40 ';
-              } else if (isSelected) {
-                buttonClass += 'bg-slate-900 text-amber-400 font-bold ring-2 ring-amber-400 shadow-sm scale-105 z-10 ';
-              } else if (!item.isCurrentMonth) {
-                buttonClass += 'text-slate-300 hover:text-slate-600 hover:bg-slate-50 ';
-              } else {
-                buttonClass += isWeekend
-                  ? 'text-slate-900 hover:bg-amber-50 hover:text-amber-900 '
-                  : 'text-slate-800 hover:bg-slate-100 ';
-              }
-
-              return (
-                <button
-                  key={index}
-                  type="button"
-                  disabled={item.isPast}
-                  onClick={() => onDateChange(item.dateString)}
-                  className={buttonClass}
-                >
-                  <span className="relative">
-                    {item.date.getDate()}
-                    {isToday && !isSelected && (
-                      <span className="absolute -top-1 -right-1.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    )}
-                  </span>
-                  {!item.isPast && item.isCurrentMonth && !isSelected && (
-                    <span
-                      className={`w-1 h-1 rounded-full mt-0.5 ${
-                        isWeekend ? 'bg-amber-400' : 'bg-emerald-400'
-                      }`}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Mini Legend */}
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                <span>Dias de Semana</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-                <span>Fim de Semana (Horário Ajustado)</span>
-              </span>
-            </div>
-            <span className="text-slate-400 font-medium">Linha Regular Oficial</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleJumpToToday}
+              className="px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            >
+              Hoje
+            </button>
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* RIGHT: Official Available Hours (5 Cols on desktop) */}
-        <div className="lg:col-span-5 p-4 sm:p-5 bg-slate-50/50 flex flex-col justify-between">
-          <div>
-            {/* Header for Time Slots */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-amber-500" />
-                <h4 className="font-serif-display font-bold text-sm text-slate-900">
-                  Horários Oficiais
-                </h4>
-              </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-900 text-amber-300">
-                {isSubida
-                  ? 'Subida Diária'
-                  : isSelectedWeekend
-                  ? 'Descida FDS'
-                  : 'Descida Seg a Sex'}
-              </span>
-            </div>
-
-            <p className="text-[11px] text-slate-500 mb-3">
-              {isSubida
-                ? '4 saídas diárias de São Sebastião / Caraguá para SP e GRU.'
-                : isSelectedWeekend
-                ? 'Horários ajustados de fim de semana (saídas às 13:00 e 21:30).'
-                : '4 saídas de segunda a sexta-feira do Metrô Tietê / GRU para o Litoral.'}
-            </p>
-
-            {/* Exact 4 Slots Grid */}
-            <div className="grid grid-cols-2 gap-2">
-              {availableSlots.map((slot) => {
-                const isSelected = selectedTime === slot.time;
-                return (
-                  <button
-                    key={slot.time}
-                    type="button"
-                    onClick={() => onTimeChange(slot.time)}
-                    className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between gap-1 relative ${
-                      isSelected
-                        ? 'bg-slate-900 text-white border-amber-400 shadow-md ring-2 ring-amber-400'
-                        : 'bg-white text-slate-800 border-slate-200 hover:border-amber-300 hover:bg-amber-50/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className={`text-[10px] font-bold ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
-                        {slot.periodName}
-                      </span>
-                      {isSelected ? (
-                        <Check className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                      ) : (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
-                      )}
-                    </div>
-
-                    <div className="mt-1">
-                      <strong className={`font-mono text-xl font-extrabold block ${isSelected ? 'text-amber-300' : 'text-slate-900'}`}>
-                        {slot.time}
-                      </strong>
-                      <span className={`text-[10px] block ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
-                        {slot.label}
-                      </span>
-                    </div>
-
-                    {slot.isAdjusted && (
-                      <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-500">
-                        <Sparkles className="w-2.5 h-2.5" />
-                        Ajuste FDS
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Selection Confirmation Bar */}
-          <div className="mt-4 bg-white p-3 rounded-2xl border border-slate-200 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
-              <div className="truncate">
-                <span className="font-bold text-slate-900 block truncate text-xs">
-                  {selectedDateFormatted || selectedDate}
-                </span>
-                <span className="text-[11px] text-slate-500">
-                  Saída programada: <strong className="text-slate-900 font-mono text-xs">{selectedTime}</strong>
-                </span>
-              </div>
-            </div>
-            <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full flex-shrink-0">
-              Vaga Confirmada
+        {/* Days of Week */}
+        <div className="grid grid-cols-7 gap-1 text-center mb-1">
+          {weekDayLabels.map((day, idx) => (
+            <span
+              key={day}
+              className={`text-[11px] font-bold py-1 ${
+                idx === 0 || idx === 6 ? 'text-amber-600' : 'text-slate-400'
+              }`}
+            >
+              {day}
             </span>
+          ))}
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-1.5">
+          {calendarDays.map((item, index) => {
+            const isSelected = item.dateString === selectedDate;
+            const isToday =
+              item.date.getDate() === today.getDate() &&
+              item.date.getMonth() === today.getMonth() &&
+              item.date.getFullYear() === today.getFullYear();
+
+            const dayOfWeek = item.date.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+            let buttonClass =
+              'relative h-10 w-full rounded-xl text-xs font-bold flex flex-col items-center justify-center transition-all cursor-pointer ';
+
+            if (item.isPast) {
+              buttonClass += 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-40 ';
+            } else if (isSelected) {
+              buttonClass += 'bg-slate-900 text-amber-400 ring-2 ring-amber-400 shadow-md scale-105 z-10 ';
+            } else if (!item.isCurrentMonth) {
+              buttonClass += 'text-slate-300 hover:bg-slate-50 ';
+            } else {
+              buttonClass += isWeekend
+                ? 'text-slate-900 bg-amber-50/50 hover:bg-amber-100/70 border border-amber-200/50 '
+                : 'text-slate-800 bg-slate-50 hover:bg-slate-100 ';
+            }
+
+            return (
+              <button
+                key={index}
+                type="button"
+                disabled={item.isPast}
+                onClick={() => onDateChange(item.dateString)}
+                className={buttonClass}
+              >
+                <span>{item.date.getDate()}</span>
+                {isToday && !isSelected && (
+                  <span className="absolute bottom-1 w-1 h-1 rounded-full bg-amber-500" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+            Dias úteis
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+            Fim de semana (Horário Ajustado)
+          </span>
+        </div>
+      </div>
+
+      {/* SECTION 2: OFFICIAL TIME SLOTS */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-600" />
+            <h4 className="font-serif-display font-extrabold text-sm text-slate-900">
+              Horários Oficiais de Saída
+            </h4>
           </div>
+          <span className="text-[10px] uppercase font-bold bg-slate-900 text-amber-300 px-2 py-0.5 rounded-md">
+            {isSubida ? 'Subida (Litoral ➔ SP)' : isSelectedWeekend ? 'Descida FDS' : 'Descida Seg-Sex'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {availableSlots.map((slot) => {
+            const isSelected = selectedTime === slot.time;
+            return (
+              <button
+                key={slot.time}
+                type="button"
+                onClick={() => onTimeChange(slot.time)}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                  isSelected
+                    ? 'bg-slate-900 text-white border-amber-400 ring-2 ring-amber-400/50 shadow-sm'
+                    : 'bg-slate-50 text-slate-900 border-slate-200 hover:border-amber-300 hover:bg-amber-50/40'
+                }`}
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-mono text-xl font-black ${isSelected ? 'text-amber-400' : 'text-slate-950'}`}>
+                      {slot.time}
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isSelected ? 'bg-amber-400/20 text-amber-300' : 'bg-slate-200 text-slate-700'}`}>
+                      {slot.periodName}
+                    </span>
+                  </div>
+                  <span className={`text-xs block font-medium ${isSelected ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {slot.label}
+                  </span>
+                  {slot.isAdjusted && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 pt-0.5">
+                      <Sparkles className="w-3 h-3" />
+                      Horário especial FDS
+                    </span>
+                  )}
+                </div>
+
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-amber-400 text-slate-950 font-bold' : 'border border-slate-300 text-transparent'}`}>
+                  ✓
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selected Summary Badge */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between text-xs text-amber-950">
+          <div className="flex items-center gap-2 font-medium">
+            <span>📅 Data: <strong className="font-bold text-slate-900">{selectedDateFormatted || selectedDate}</strong></span>
+            <span>•</span>
+            <span>🕐 Horário: <strong className="font-bold text-slate-900 font-mono">{selectedTime}</strong></span>
+          </div>
+          <span className="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded text-[10px]">
+            Confirmado
+          </span>
         </div>
       </div>
     </div>
